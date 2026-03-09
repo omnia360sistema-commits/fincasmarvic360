@@ -1,64 +1,72 @@
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useGeoJSON } from '@/hooks/useGeoJSON';
-import { MapPin, Layers, ChevronRight } from 'lucide-react';
-
-const FARM_ORDER = ['Mudamiento', 'Callosa-Catral', 'San Isidro', 'Cieza'];
-
-const FARM_ICONS = ['🌿', '🌾', '🌻', '🍊'];
+import { Sun, Moon, Building2, User, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
 
 export default function FarmSelector() {
+  const [isDark, setIsDark] = useState(true);
   const navigate = useNavigate();
-  const { getFarmSummaries, loading } = useGeoJSON();
-  const summaries = getFarmSummaries();
 
-  const orderedFarms = FARM_ORDER.map(name => {
-    const found = summaries.find(s => s.name.toLowerCase() === name.toLowerCase());
-    return found || { name, parcelCount: 0, totalHectares: 0 };
-  });
+  const toggleTheme = () => {
+    setIsDark(!isDark);
+    document.documentElement.classList.toggle('dark');
+  };
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    navigate('/dashboard');
+  };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="px-6 pt-10 pb-6">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-            <Layers className="w-5 h-5 text-primary" />
+    <div className={`min-h-screen transition-all duration-700 flex flex-col items-center justify-center p-4 ${isDark ? 'bg-[#020617] text-slate-100' : 'bg-[#f8fafc] text-slate-900'}`}>
+      
+      {/* BOTÓN DE TEMA (Superior Izquierda) */}
+      <div className="fixed top-8 left-8 z-50">
+        <button 
+          onClick={toggleTheme}
+          className={`relative w-14 h-7 rounded-full border transition-all duration-500 flex items-center px-1 ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-300 shadow-inner'}`}
+        >
+          <div className={`absolute w-5 h-5 rounded-full transition-all duration-500 flex items-center justify-center shadow-lg ${isDark ? 'translate-x-7 bg-[#38bdf8]' : 'translate-x-0 bg-slate-200'}`}>
+            {isDark ? <Moon className="w-3 h-3 text-slate-900" /> : <Sun className="w-3 h-3 text-orange-500" />}
           </div>
-          <h1 className="text-2xl font-extrabold text-foreground tracking-tight">AgroGestión</h1>
-        </div>
-        <p className="text-muted-foreground text-sm mt-2">Selecciona una finca para comenzar</p>
+        </button>
+      </div>
+
+      <header className="flex flex-col items-center mb-12 text-center">
+        <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase">Agro<span className="text-[#38bdf8]">Gestión</span></h1>
+        <p className="text-[11px] tracking-[3px] font-bold uppercase opacity-70 mt-3 text-[#38bdf8]">
+          Inteligencia Agrícola Circular
+        </p>
       </header>
 
-      {/* Farm Cards */}
-      <main className="flex-1 px-4 pb-8 space-y-3">
-        {loading ? (
-          <div className="flex items-center justify-center h-40">
-            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
-        ) : (
-          orderedFarms.map((farm, i) => (
-            <button
-              key={farm.name}
-              onClick={() => navigate(`/farm/${encodeURIComponent(farm.name)}`)}
-              className="w-full glass rounded-2xl p-5 flex items-center gap-4 text-left active:scale-[0.98] transition-all duration-150 hover:border-primary/40 group"
-            >
-              <div className="w-14 h-14 rounded-2xl bg-primary/15 flex items-center justify-center text-2xl shrink-0">
-                {FARM_ICONS[i]}
+      <main className={`relative w-full max-w-[400px] rounded-[2rem] p-1 ${isDark ? 'bg-gradient-to-b from-slate-800 to-transparent' : 'bg-gradient-to-b from-slate-200 to-transparent'}`}>
+        <div className={`w-full h-full rounded-[1.9rem] p-8 backdrop-blur-xl ${isDark ? 'bg-slate-900/90' : 'bg-white/90 shadow-2xl'}`}>
+          <form className="space-y-6" onSubmit={handleLogin}>
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase font-bold tracking-widest opacity-50 ml-1">Empresa</label>
+              <div className="relative group">
+                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#38bdf8]" />
+                <input type="text" required placeholder="Nombre de la empresa" className={`w-full pl-12 pr-4 py-4 rounded-2xl text-sm transition-all border outline-none ${isDark ? 'bg-slate-950/50 border-slate-800 focus:border-[#38bdf8]' : 'bg-slate-50 border-slate-200 focus:border-[#38bdf8]'}`} />
               </div>
-              <div className="flex-1 min-w-0">
-                <h2 className="text-lg font-bold text-foreground truncate">{farm.name}</h2>
-                <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                  <span className="flex items-center gap-1">
-                    <MapPin className="w-3.5 h-3.5" />
-                    {farm.parcelCount} parcelas
-                  </span>
-                  <span>{farm.totalHectares.toFixed(2)} ha</span>
-                </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase font-bold tracking-widest opacity-50 ml-1">Usuario</label>
+              <div className="relative group">
+                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#38bdf8]" />
+                <input type="text" required placeholder="Nombre de usuario" className={`w-full pl-12 pr-4 py-4 rounded-2xl text-sm transition-all border outline-none ${isDark ? 'bg-slate-950/50 border-slate-800 focus:border-[#38bdf8]' : 'bg-slate-50 border-slate-200 focus:border-[#38bdf8]'}`} />
               </div>
-              <ChevronRight className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase font-bold tracking-widest opacity-50 ml-1">Clave Segura</label>
+              <div className="relative group">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#38bdf8]" />
+                <input type="password" required placeholder="••••••••" className={`w-full pl-12 pr-4 py-4 rounded-2xl text-sm transition-all border outline-none ${isDark ? 'bg-slate-950/50 border-slate-800 focus:border-[#38bdf8]' : 'bg-slate-50 border-slate-200 focus:border-[#38bdf8]'}`} />
+              </div>
+            </div>
+            <button type="submit" className="w-full mt-4 bg-[#38bdf8] hover:bg-[#0ea5e9] text-slate-950 font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-lg">
+              AUTENTIFICAR <ArrowRight className="w-5 h-5" />
             </button>
-          ))
-        )}
+          </form>
+        </div>
       </main>
     </div>
   );
