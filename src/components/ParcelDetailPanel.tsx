@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X, Shovel, Sprout, Wheat, History } from 'lucide-react';
 import type { ParcelFeature } from '@/types/farm';
-import { useParcelRecords } from '@/hooks/useParcelData';
+import { useParcelRecords, useParcelProduction } from '@/hooks/useParcelData';
 import RegisterWorkForm from './RegisterWorkForm';
 import RegisterPlantingForm from './RegisterPlantingForm';
 import RegisterHarvestForm from './RegisterHarvestForm';
@@ -16,34 +16,54 @@ interface Props {
 }
 
 export default function ParcelDetailPanel({ parcel, open, onClose }: Props) {
+
  const [activeForm, setActiveForm] = useState<ActiveForm>(null);
+
  const parcelId = parcel?.properties.parcel_id || null;
- const { plantings } = useParcelRecords(parcelId);
+
+ const { plantings, harvests } = useParcelRecords(parcelId);
+ const { data: production } = useParcelProduction(parcelId);
 
  if (!parcel) return null;
 
  const p = parcel.properties;
  const latestPlanting = plantings.data?.[0];
+ const latestHarvest = harvests.data?.[0];
 
  const handleCloseForm = () => setActiveForm(null);
 
  const area = p.superficie || 0;
 
- const cropProfiles: Record<string, { yield: number; plastic: number; drip: number }> = {
-   broccoli: { yield: 18000, plastic: 12000, drip: 8000 },
-   romanesco: { yield: 16000, plastic: 12000, drip: 8000 },
-   cabbage: { yield: 22000, plastic: 11000, drip: 7500 },
-   lettuce: { yield: 14000, plastic: 10000, drip: 7000 },
-   celery: { yield: 20000, plastic: 11000, drip: 7500 },
- };
+ /*
+ ========================================================
+ PRODUCCIÓN DESDE BASE DE DATOS
+ ========================================================
+ */
 
- const crop = latestPlanting?.crop || 'broccoli';
- const profile = cropProfiles[crop] || cropProfiles.broccoli;
+ const estimatedProduction = production?.estimated_production_kg ?? null;
+ const plasticMeters = production?.estimated_plastic_kg ?? null;
+ const dripMeters = production?.estimated_drip_meters ?? null;
+ const estimatedCost = production?.estimated_cost ?? null;
 
- const estimatedProduction = Math.round(area * profile.yield);
- const plasticMeters = Math.round(area * profile.plastic);
- const dripMeters = Math.round(area * profile.drip);
- const estimatedCost = Math.round(area * 650);
+ /*
+ ========================================================
+ COSECHA REAL
+ ========================================================
+ */
+
+ const realProduction = latestHarvest?.production_kg ?? null;
+ const priceKg = latestHarvest?.price_kg ?? null;
+
+ const realIncome =
+   realProduction && priceKg
+     ? Math.round(realProduction * priceKg)
+     : null;
+
+ /*
+ ========================================================
+ PLAN DE TRABAJO ESTIMADO
+ ========================================================
+ */
 
  const tractorHours = Math.round(area * 2);
  const plasticInstallHours = Math.round(area * 3);
@@ -109,12 +129,52 @@ export default function ParcelDetailPanel({ parcel, open, onClose }: Props) {
            <h3 className="text-sm font-bold mb-3">Planificación de cultivo</h3>
 
            <div className="grid grid-cols-2 gap-3">
-             <InfoCard label="Producción estimada" value={`${estimatedProduction} kg`} />
-             <InfoCard label="Plástico necesario" value={`${plasticMeters} m`} />
-             <InfoCard label="Cinta de riego" value={`${dripMeters} m`} />
-             <InfoCard label="Coste preparación" value={`${estimatedCost} €`} />
+             <InfoCard
+               label="Producción estimada"
+               value={estimatedProduction ? `${estimatedProduction} kg` : '—'}
+             />
+
+             <InfoCard
+               label="Plástico necesario"
+               value={plasticMeters ? `${plasticMeters} kg` : '—'}
+             />
+
+             <InfoCard
+               label="Cinta de riego"
+               value={dripMeters ? `${dripMeters} m` : '—'}
+             />
+
+             <InfoCard
+               label="Coste preparación"
+               value={estimatedCost ? `${estimatedCost} €` : '—'}
+             />
            </div>
          </div>
+
+         {realProduction && (
+           <div className="px-5 pb-4">
+             <h3 className="text-sm font-bold mb-3">Resultado de cosecha</h3>
+
+             <div className="grid grid-cols-2 gap-3">
+
+               <InfoCard
+                 label="Producción real"
+                 value={`${realProduction} kg`}
+               />
+
+               <InfoCard
+                 label="Precio venta"
+                 value={priceKg ? `${priceKg} €/kg` : '—'}
+               />
+
+               <InfoCard
+                 label="Ingresos"
+                 value={realIncome ? `${realIncome} €` : '—'}
+               />
+
+             </div>
+           </div>
+         )}
 
          <div className="px-5 pb-4">
            <h3 className="text-sm font-bold mb-3">Plan de trabajo estimado</h3>
