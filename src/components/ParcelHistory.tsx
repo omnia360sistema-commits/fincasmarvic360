@@ -1,19 +1,36 @@
-import { useParcelRecords, useParcelProduction } from '@/hooks/useParcelData';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft } from 'lucide-react';
+import {
+  useParcelRecords,
+  useParcelProduction,
+  useParcelTickets,
+  useParcelResiduos,
+  useParcelCertification
+} from '@/hooks/useParcelData'
+
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger
+} from '@/components/ui/tabs'
+
+import { ArrowLeft } from 'lucide-react'
 
 export default function ParcelHistory({
   parcelId,
   onClose
 }: {
-  parcelId: string;
-  onClose: () => void;
+  parcelId: string
+  onClose: () => void
 }) {
 
-  const { workRecords, plantings, harvests } = useParcelRecords(parcelId);
-  const { data: production } = useParcelProduction(parcelId);
+  const { workRecords, plantings, harvests } = useParcelRecords(parcelId)
+  const { data: production } = useParcelProduction(parcelId)
 
-  const estimatedProduction = production?.estimated_production_kg || null;
+  const { data: tickets } = useParcelTickets(parcelId)
+  const { data: residuos } = useParcelResiduos(parcelId)
+  const { data: certification } = useParcelCertification(parcelId)
+
+  const estimatedProduction = production?.estimated_production_kg || null
 
   return (
     <div className="px-5 pb-6">
@@ -33,6 +50,7 @@ export default function ParcelHistory({
       <Tabs defaultValue="work">
 
         <TabsList className="w-full bg-secondary rounded-xl">
+
           <TabsTrigger value="work" className="flex-1 rounded-lg text-xs">
             Trabajos
           </TabsTrigger>
@@ -44,6 +62,19 @@ export default function ParcelHistory({
           <TabsTrigger value="harvests" className="flex-1 rounded-lg text-xs">
             Cosechas
           </TabsTrigger>
+
+          <TabsTrigger value="tickets" className="flex-1 rounded-lg text-xs">
+            Tickets
+          </TabsTrigger>
+
+          <TabsTrigger value="residuos" className="flex-1 rounded-lg text-xs">
+            Residuos
+          </TabsTrigger>
+
+          <TabsTrigger value="certificacion" className="flex-1 rounded-lg text-xs">
+            Certificación
+          </TabsTrigger>
+
         </TabsList>
 
         {/* ===================================================== */}
@@ -53,7 +84,6 @@ export default function ParcelHistory({
         <TabsContent value="work" className="mt-3 space-y-2">
 
           {workRecords.isLoading && <LoadingIndicator />}
-
           {workRecords.data?.length === 0 && <EmptyState />}
 
           {workRecords.data?.map(r => (
@@ -87,7 +117,6 @@ export default function ParcelHistory({
         <TabsContent value="plantings" className="mt-3 space-y-2">
 
           {plantings.isLoading && <LoadingIndicator />}
-
           {plantings.data?.length === 0 && <EmptyState />}
 
           {plantings.data?.map(r => (
@@ -121,7 +150,6 @@ export default function ParcelHistory({
         <TabsContent value="harvests" className="mt-3 space-y-2">
 
           {harvests.isLoading && <LoadingIndicator />}
-
           {harvests.data?.length === 0 && <EmptyState />}
 
           {harvests.data?.map(r => {
@@ -171,10 +199,108 @@ export default function ParcelHistory({
 
         </TabsContent>
 
+        {/* ===================================================== */}
+        {/* TICKETS */}
+        {/* ===================================================== */}
+
+        <TabsContent value="tickets" className="mt-3 space-y-2">
+
+          {tickets?.length === 0 && <EmptyState />}
+
+          {tickets?.map(t => (
+
+            <RecordCard key={t.id}>
+
+              <p className="text-sm font-semibold text-foreground">
+                Ticket pesaje
+              </p>
+
+              <p className="text-xs text-muted-foreground">
+                Peso neto: {t.peso_neto_kg || 0} kg
+              </p>
+
+              <p className="text-xs text-muted-foreground">
+                {t.created_at}
+              </p>
+
+            </RecordCard>
+
+          ))}
+
+        </TabsContent>
+
+        {/* ===================================================== */}
+        {/* RESIDUOS */}
+        {/* ===================================================== */}
+
+        <TabsContent value="residuos" className="mt-3 space-y-2">
+
+          {residuos?.length === 0 && <EmptyState />}
+
+          {residuos?.map(r => (
+
+            <RecordCard key={r.id}>
+
+              <p className="text-sm font-semibold text-foreground">
+                {r.tipo_residuo}
+              </p>
+
+              <p className="text-xs text-muted-foreground">
+                Instalado: {r.kg_instalados || 0} kg
+              </p>
+
+              {r.kg_retirados && (
+                <p className="text-xs text-muted-foreground">
+                  Retirado: {r.kg_retirados} kg
+                </p>
+              )}
+
+            </RecordCard>
+
+          ))}
+
+        </TabsContent>
+
+        {/* ===================================================== */}
+        {/* CERTIFICACIÓN */}
+        {/* ===================================================== */}
+
+        <TabsContent value="certificacion" className="mt-3 space-y-2">
+
+          {!certification && <EmptyState />}
+
+          {certification && (
+
+            <RecordCard>
+
+              <p className="text-sm font-semibold text-foreground">
+  {certification.entidad_certificadora}
+</p>
+
+              <p className="text-xs text-muted-foreground">
+                Estado: {certification.estado}
+              </p>
+
+              <p className="text-xs text-muted-foreground">
+                Inicio: {certification.fecha_inicio}
+              </p>
+
+              {certification.fecha_fin && (
+                <p className="text-xs text-muted-foreground">
+                  Fin: {certification.fecha_fin}
+                </p>
+              )}
+
+            </RecordCard>
+
+          )}
+
+        </TabsContent>
+
       </Tabs>
 
     </div>
-  );
+  )
 }
 
 /* ===================================================== */
@@ -186,7 +312,7 @@ function RecordCard({ children }: { children: React.ReactNode }) {
     <div className="rounded-xl bg-secondary/50 p-3">
       {children}
     </div>
-  );
+  )
 }
 
 function LoadingIndicator() {
@@ -194,7 +320,7 @@ function LoadingIndicator() {
     <div className="py-6 flex justify-center">
       <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
     </div>
-  );
+  )
 }
 
 function EmptyState() {
@@ -202,5 +328,5 @@ function EmptyState() {
     <p className="text-sm text-muted-foreground text-center py-6">
       Sin registros
     </p>
-  );
+  )
 }
