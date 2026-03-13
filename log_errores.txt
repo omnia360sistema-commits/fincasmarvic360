@@ -1,0 +1,19 @@
+open supabase/.temp/profile: no such file or directory
+Supabase CLI 2.75.0
+Using profile: supabase (supabase.co)
+supabase start is already running.
+Stopped services: [supabase_kong_xdkzseijrbmrxtgdmelq supabase_auth_xdkzseijrbmrxtgdmelq supabase_inbucket_xdkzseijrbmrxtgdmelq supabase_realtime_xdkzseijrbmrxtgdmelq supabase_rest_xdkzseijrbmrxtgdmelq supabase_storage_xdkzseijrbmrxtgdmelq supabase_imgproxy_xdkzseijrbmrxtgdmelq supabase_pg_meta_xdkzseijrbmrxtgdmelq supabase_studio_xdkzseijrbmrxtgdmelq supabase_edge_runtime_xdkzseijrbmrxtgdmelq supabase_analytics_xdkzseijrbmrxtgdmelq supabase_vector_xdkzseijrbmrxtgdmelq supabase_pooler_xdkzseijrbmrxtgdmelq]
+supabase local development setup is running.
+
+
+
+╭───────────────────────────────────────────────────────────────╮
+│ ⛁ Database                                                    │
+├─────┬─────────────────────────────────────────────────────────┤
+│ URL │ postgresql://postgres:postgres@127.0.0.1:54322/postgres │
+╰─────┴─────────────────────────────────────────────────────────╯
+
+
+
+A new version of Supabase CLI is available: v2.78.1 (currently installed v2.75.0)
+We recommend updating regularly for new features and bug fixes: https://supabase.com/docs/guides/cli/getting-started#updating-the-supabase-cli
