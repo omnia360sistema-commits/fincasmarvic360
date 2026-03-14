@@ -12,33 +12,35 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
+      analisis_suelo: {
+        Row: {
+          fecha: string | null
+          id: string
+          materia_organica: number | null
+          observaciones: string | null
+          parcel_id: string | null
+          ph: number | null
+        }
+        Insert: {
+          fecha?: string | null
+          id?: string
+          materia_organica?: number | null
+          observaciones?: string | null
+          parcel_id?: string | null
+          ph?: number | null
+        }
+        Update: {
+          fecha?: string | null
+          id?: string
+          materia_organica?: number | null
+          observaciones?: string | null
+          parcel_id?: string | null
+          ph?: number | null
+        }
+        Relationships: []
+      }
       camiones: {
         Row: {
           activo: boolean | null
@@ -194,6 +196,30 @@ export type Database = {
         }
         Relationships: []
       }
+      fotos_campo: {
+        Row: {
+          descripcion: string | null
+          fecha: string | null
+          id: string
+          parcel_id: string | null
+          url_imagen: string | null
+        }
+        Insert: {
+          descripcion?: string | null
+          fecha?: string | null
+          id?: string
+          parcel_id?: string | null
+          url_imagen?: string | null
+        }
+        Update: {
+          descripcion?: string | null
+          fecha?: string | null
+          id?: string
+          parcel_id?: string | null
+          url_imagen?: string | null
+        }
+        Relationships: []
+      }
       harvests: {
         Row: {
           created_at: string | null
@@ -231,6 +257,65 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "harvests_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["parcel_id"]
+          },
+        ]
+      }
+      lecturas_sensor_planta: {
+        Row: {
+          fecha: string | null
+          id: string
+          indice_salud: number | null
+          nivel_estres: number | null
+          observaciones: string | null
+          parcel_id: string | null
+        }
+        Insert: {
+          fecha?: string | null
+          id?: string
+          indice_salud?: number | null
+          nivel_estres?: number | null
+          observaciones?: string | null
+          parcel_id?: string | null
+        }
+        Update: {
+          fecha?: string | null
+          id?: string
+          indice_salud?: number | null
+          nivel_estres?: number | null
+          observaciones?: string | null
+          parcel_id?: string | null
+        }
+        Relationships: []
+      }
+      parcel_photos: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string
+          parcel_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url: string
+          parcel_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string
+          parcel_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parcel_photos_parcel_id_fkey"
             columns: ["parcel_id"]
             isOneToOne: false
             referencedRelation: "parcels"
@@ -375,6 +460,33 @@ export type Database = {
           },
         ]
       }
+      registros_estado_parcela: {
+        Row: {
+          cultivo: string | null
+          estado: string | null
+          fecha: string | null
+          id: string
+          observaciones: string | null
+          parcel_id: string | null
+        }
+        Insert: {
+          cultivo?: string | null
+          estado?: string | null
+          fecha?: string | null
+          id?: string
+          observaciones?: string | null
+          parcel_id?: string | null
+        }
+        Update: {
+          cultivo?: string | null
+          estado?: string | null
+          fecha?: string | null
+          id?: string
+          observaciones?: string | null
+          parcel_id?: string | null
+        }
+        Relationships: []
+      }
       residuos_operacion: {
         Row: {
           created_at: string | null
@@ -497,6 +609,30 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      vuelos_dron: {
+        Row: {
+          fecha_vuelo: string | null
+          id: string
+          observaciones: string | null
+          parcel_id: string | null
+          url_imagen: string | null
+        }
+        Insert: {
+          fecha_vuelo?: string | null
+          id?: string
+          observaciones?: string | null
+          parcel_id?: string | null
+          url_imagen?: string | null
+        }
+        Update: {
+          fecha_vuelo?: string | null
+          id?: string
+          observaciones?: string | null
+          parcel_id?: string | null
+          url_imagen?: string | null
+        }
+        Relationships: []
       }
       work_records: {
         Row: {
@@ -757,9 +893,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       estado_certificacion: ["vigente", "suspendida", "en_tramite", "caducada"],

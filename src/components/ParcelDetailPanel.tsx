@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Shovel, Sprout, Wheat, History } from 'lucide-react';
+import { X, Shovel, Sprout, Wheat, History, Activity } from 'lucide-react';
 import type { ParcelFeature } from '@/types/farm';
 
 import {
@@ -14,8 +14,10 @@ import RegisterWorkForm from './RegisterWorkForm';
 import RegisterPlantingForm from './RegisterPlantingForm';
 import RegisterHarvestForm from './RegisterHarvestForm';
 import ParcelHistory from './ParcelHistory';
+import RegisterParcelEstadoForm from './RegisterParcelEstadoForm';
+import UploadParcelPhoto from './UploadParcelPhoto';
 
-type ActiveForm = 'work' | 'planting' | 'harvest' | 'history' | null;
+type ActiveForm = 'work' | 'planting' | 'harvest' | 'history' | 'estado' | 'photo' | null;
 
 interface Props {
   parcel: ParcelFeature | null;
@@ -49,24 +51,12 @@ export default function ParcelDetailPanel({ parcel, open, onClose }: Props) {
 
   const area = p.superficie || 0;
 
-  /*
-  ========================================================
-  PRODUCCIÓN ESTIMADA
-  ========================================================
-  */
-
   const estimatedProduction = production?.estimated_production_kg ?? null;
   const plasticKg = production?.estimated_plastic_kg ?? null;
   const dripMeters = production?.estimated_drip_meters ?? null;
 
   const estimatedCost =
     estimatedProduction ? Math.round(area * 650) : null;
-
-  /*
-  ========================================================
-  COSECHA REAL
-  ========================================================
-  */
 
   const realProduction = latestHarvest?.production_kg ?? null;
   const priceKg = latestHarvest?.price_kg ?? null;
@@ -76,35 +66,11 @@ export default function ParcelDetailPanel({ parcel, open, onClose }: Props) {
       ? Math.round(realProduction * priceKg)
       : null;
 
-  /*
-  ========================================================
-  CERTIFICACIÓN
-  ========================================================
-  */
-
   const certificationStatus = certification?.estado ?? null;
-
-  /*
-  ========================================================
-  RESIDUOS
-  ========================================================
-  */
 
   const residuosCount = residuos?.length ?? 0;
 
-  /*
-  ========================================================
-  TICKETS
-  ========================================================
-  */
-
   const ticketsCount = tickets?.length ?? 0;
-
-  /*
-  ========================================================
-  PLAN DE TRABAJO
-  ========================================================
-  */
 
   const tractorHours = Math.round(area * 2);
   const plasticInstallHours = Math.round(area * 3);
@@ -176,25 +142,10 @@ export default function ParcelDetailPanel({ parcel, open, onClose }: Props) {
             <h3 className="text-sm font-bold mb-3">Planificación de cultivo</h3>
 
             <div className="grid grid-cols-2 gap-3">
-              <InfoCard
-                label="Producción estimada"
-                value={estimatedProduction ? `${estimatedProduction} kg` : '—'}
-              />
-
-              <InfoCard
-                label="Plástico necesario"
-                value={plasticKg ? `${plasticKg} kg` : '—'}
-              />
-
-              <InfoCard
-                label="Cinta de riego"
-                value={dripMeters ? `${dripMeters} m` : '—'}
-              />
-
-              <InfoCard
-                label="Coste preparación"
-                value={estimatedCost ? `${estimatedCost} €` : '—'}
-              />
+              <InfoCard label="Producción estimada" value={estimatedProduction ? `${estimatedProduction} kg` : '—'} />
+              <InfoCard label="Plástico necesario" value={plasticKg ? `${plasticKg} kg` : '—'} />
+              <InfoCard label="Cinta de riego" value={dripMeters ? `${dripMeters} m` : '—'} />
+              <InfoCard label="Coste preparación" value={estimatedCost ? `${estimatedCost} €` : '—'} />
             </div>
           </div>
 
@@ -203,19 +154,9 @@ export default function ParcelDetailPanel({ parcel, open, onClose }: Props) {
               <h3 className="text-sm font-bold mb-3">Resultado de cosecha</h3>
 
               <div className="grid grid-cols-2 gap-3">
-
                 <InfoCard label="Producción real" value={`${realProduction} kg`} />
-
-                <InfoCard
-                  label="Precio venta"
-                  value={priceKg ? `${priceKg} €/kg` : '—'}
-                />
-
-                <InfoCard
-                  label="Ingresos"
-                  value={realIncome ? `${realIncome} €` : '—'}
-                />
-
+                <InfoCard label="Precio venta" value={priceKg ? `${priceKg} €/kg` : '—'} />
+                <InfoCard label="Ingresos" value={realIncome ? `${realIncome} €` : '—'} />
               </div>
             </div>
           )}
@@ -237,6 +178,20 @@ export default function ParcelDetailPanel({ parcel, open, onClose }: Props) {
 
           {!activeForm && (
             <div className="px-5 pb-6 grid grid-cols-2 gap-3">
+
+              <ActionButton
+                icon={<Activity className="w-5 h-5" />}
+                label="Estado Parcela"
+                onClick={() => setActiveForm('estado')}
+                color="bg-yellow-200 text-yellow-800"
+              />
+
+              <ActionButton
+                icon={<Activity className="w-5 h-5" />}
+                label="Subir Foto"
+                onClick={() => setActiveForm('photo')}
+                color="bg-blue-200 text-blue-800"
+              />
 
               <ActionButton
                 icon={<Shovel className="w-5 h-5" />}
@@ -267,6 +222,20 @@ export default function ParcelDetailPanel({ parcel, open, onClose }: Props) {
               />
 
             </div>
+          )}
+
+          {activeForm === 'estado' && parcelId && (
+            <RegisterParcelEstadoForm
+              parcelId={parcelId}
+              onClose={handleCloseForm}
+            />
+          )}
+
+          {activeForm === 'photo' && parcelId && (
+            <UploadParcelPhoto
+              parcelId={parcelId}
+              onClose={handleCloseForm}
+            />
           )}
 
           {activeForm === 'work' && (
