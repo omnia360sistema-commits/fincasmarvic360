@@ -1,118 +1,201 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Menu, X, LayoutDashboard, 
-  History, FileText, Map as MapIcon, 
-  Download, Sun, Moon, CheckCircle2 
+import {
+  X, LayoutDashboard, History, FileText,
+  Map as MapIcon, Download, CheckCircle2,
+  Activity, Server, Wifi
 } from 'lucide-react';
 
-// Nombre corregido: Mudamiento
-const FINCAS = ['Mudamiento', 'Callosa-Catral', 'San Isidro', 'Cieza'];
+const FINCAS = [
+  { nombre: 'LA CONCEPCION',            ruta: 'LA CONCEPCION',            ha: 28.37,  sectores: 24 },
+  { nombre: 'LONSORDO',                 ruta: 'LONSORDO',                 ha: 10.54,  sectores: 16 },
+  { nombre: 'FINCA COLLADOS',           ruta: 'FINCA COLLADOS',           ha: 46.06,  sectores: 18 },
+  { nombre: 'FINCA BRAZO DE LA VIRGEN', ruta: 'FINCA BRAZO DE LA VIRGEN', ha: 7.08,   sectores: 4  },
+  { nombre: 'FINCA LA BARDA',           ruta: 'FINCA LA BARDA',           ha: 74.70,  sectores: 28 },
+  { nombre: 'FINCA LA NUEVA',           ruta: 'FINCA LA NUEVA',           ha: 15.66,  sectores: 13 },
+  { nombre: 'FINCA MAYORAZGO',          ruta: 'FINCA MAYORAZGO',          ha: 29.53,  sectores: 16 },
+];
 
 export default function Dashboard() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isDark, setIsDark] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [showModal, setShowModal]       = useState(false);
+  const [hoveredFinca, setHoveredFinca] = useState<string | null>(null);
+  const [now, setNow]                   = useState(new Date());
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   const handleDownload = () => {
     setShowModal(true);
     setTimeout(() => setShowModal(false), 3000);
   };
 
-  return (
-    <div className={`min-h-screen flex flex-col transition-colors duration-700 ${isDark ? 'bg-[#020617] text-white' : 'bg-slate-50 text-slate-900'}`}>
-      
-      {/* HEADER */}
-      <header className="w-full p-8 flex justify-between items-center z-50">
-        <button 
-          onClick={() => setIsMenuOpen(true)}
-          className={`p-3 rounded-2xl border transition-all ${isDark ? 'bg-slate-900 border-slate-800 text-[#38bdf8] shadow-[0_0_20px_rgba(56,189,248,0.15)]' : 'bg-white border-slate-200 shadow-md text-slate-600'}`}
-        >
-          <Menu className="w-8 h-8" />
-        </button>
+  const horaStr  = now.toTimeString().slice(0, 8);
+  const fechaStr = now.toLocaleDateString('es-ES', {
+    weekday: 'short', day: '2-digit', month: '2-digit', year: 'numeric'
+  }).toUpperCase();
 
-        <button 
-          onClick={() => setIsDark(!isDark)}
-          className={`relative w-16 h-8 rounded-full border transition-all duration-500 flex items-center px-1 ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-slate-200 border-slate-300'}`}
-        >
-          <div className={`w-6 h-6 rounded-full transition-all duration-500 flex items-center justify-center shadow-lg ${isDark ? 'translate-x-8 bg-[#38bdf8]' : 'translate-x-0 bg-white'}`}>
-            {isDark ? <Moon className="w-4 h-4 text-slate-900" /> : <Sun className="w-4 h-4 text-orange-500" />}
+  return (
+    <div className="min-h-screen bg-[#020617] text-white flex flex-col">
+
+      {/* ── BARRA SUPERIOR ───────────────────────────── */}
+      <header className="w-full bg-slate-900/80 border-b border-white/10 px-6 py-2 flex items-center justify-between z-50">
+        <div className="flex items-center gap-3">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+          <span className="text-[10px] font-black text-green-400 uppercase tracking-widest">Sistema Operativo</span>
+          <span className="text-[10px] text-slate-600 mx-2">|</span>
+          <span className="text-[10px] text-slate-400 font-mono">{fechaStr}</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5">
+            <Wifi className="w-3 h-3 text-green-400" />
+            <span className="text-[10px] text-green-400 font-bold uppercase tracking-widest">Online</span>
           </div>
-        </button>
+          <div className="flex items-center gap-1.5">
+            <Server className="w-3 h-3 text-[#38bdf8]" />
+            <span className="text-[10px] text-slate-400 font-mono">{horaStr}</span>
+          </div>
+        </div>
       </header>
 
-      {/* LOGO CENTRAL CON EFECTO GLOW REFORZADO */}
-      <main className="flex-1 flex flex-col items-center justify-center -mt-20 p-6 overflow-visible">
-        <div className="relative flex flex-col items-center w-full overflow-visible">
-          {isDark && (
-            <div className={`absolute w-[700px] h-[450px] bg-[#38bdf8]/20 rounded-full blur-[160px] transition-all duration-1000 ${hoveredItem ? 'opacity-80 scale-110' : 'opacity-40'}`}></div>
-          )}
-          <img 
-            src="/MARVIC_logo.png" 
-            style={{
-              filter: isDark ? `drop-shadow(0 0 35px rgba(56, 189, 248, ${hoveredItem ? '0.9' : '0.4'}))` : 'none'
-            }}
-            className={`w-full max-w-[750px] transition-all duration-700 animate-pulse-slow ${isDark ? 'brightness-0 invert' : ''} ${hoveredItem ? 'scale-105' : 'scale-100'}`}
+      {/* ── CONTENIDO PRINCIPAL ───────────────────────── */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-8">
+
+        {/* LOGO + IDENTIDAD */}
+        <div className="flex flex-col items-center mb-10 relative">
+          <div className="absolute w-[600px] h-[300px] bg-[#38bdf8]/10 rounded-full blur-[120px] opacity-50 pointer-events-none" />
+          <img
+            src="/MARVIC_logo.png"
+            className="w-full max-w-[480px] brightness-0 invert opacity-90 relative z-10"
+            style={{ filter: 'brightness(0) invert(1) drop-shadow(0 0 30px rgba(56,189,248,0.3))' }}
           />
-          <div className={`mt-12 h-[1px] w-96 ${isDark ? 'bg-gradient-to-r from-transparent via-[#38bdf8]/60 to-transparent' : 'bg-gradient-to-r from-transparent via-slate-300 to-transparent'}`}></div>
-          <p className="mt-8 text-[12px] tracking-[0.6em] uppercase font-black opacity-60">
-            {hoveredItem ? `Acceso: ${hoveredItem}` : 'Panel de Control Operativo'}
+          <div className="mt-4 h-px w-64 bg-gradient-to-r from-transparent via-[#38bdf8]/40 to-transparent" />
+          <p className="mt-3 text-[10px] tracking-[0.5em] uppercase font-black text-slate-500">
+            Panel de Control Operativo
           </p>
         </div>
+
+        {/* KPIs GLOBALES */}
+        <div className="grid grid-cols-3 gap-4 mb-10 w-full max-w-lg">
+          {[
+            { label: 'Fincas',    value: '7',      icon: MapIcon  },
+            { label: 'Sectores',  value: '119',    icon: Activity },
+            { label: 'Hectáreas', value: '211.94', icon: Server   },
+          ].map(({ label, value, icon: Icon }) => (
+            <div
+              key={label}
+              className="bg-slate-900/60 border border-white/10 rounded-lg px-4 py-3 text-center"
+            >
+              <Icon className="w-4 h-4 text-[#38bdf8] mx-auto mb-1" />
+              <p className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{label}</p>
+              <p className="text-xl font-black text-white mt-0.5">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* GRID DE FINCAS */}
+        <div className="w-full max-w-3xl">
+          <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-3 flex items-center gap-2">
+            <MapIcon className="w-3.5 h-3.5 text-[#38bdf8]" />
+            Acceso directo por finca
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+            {FINCAS.map(({ nombre, ruta, ha, sectores }) => (
+              <button
+                key={ruta}
+                onMouseEnter={() => setHoveredFinca(nombre)}
+                onMouseLeave={() => setHoveredFinca(null)}
+                onClick={() => navigate(`/farm/${encodeURIComponent(ruta)}`)}
+                className={`text-left p-3 rounded-lg border transition-all duration-200 ${
+                  hoveredFinca === nombre
+                    ? 'bg-[#38bdf8]/10 border-[#38bdf8]/50 shadow-[0_0_15px_rgba(56,189,248,0.1)]'
+                    : 'bg-slate-900/50 border-white/10 hover:border-white/20'
+                }`}
+              >
+                <p className={`text-[10px] font-black uppercase tracking-wide transition-colors ${
+                  hoveredFinca === nombre ? 'text-[#38bdf8]' : 'text-white'
+                }`}>
+                  {nombre}
+                </p>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <span className="text-[9px] text-slate-500">{sectores} sect.</span>
+                  <span className="text-[9px] text-slate-600">·</span>
+                  <span className="text-[9px] text-slate-500">{ha} ha</span>
+                </div>
+                <div className={`mt-2 h-px transition-all ${
+                  hoveredFinca === nombre
+                    ? 'bg-[#38bdf8]/40'
+                    : 'bg-white/5'
+                }`} />
+                <div className="flex items-center gap-1 mt-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
+                  <span className="text-[8px] text-slate-600 uppercase tracking-widest">Vacía</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ACCIONES SECUNDARIAS */}
+        <div className="mt-8 w-full max-w-3xl flex items-center gap-3 flex-wrap">
+          <button
+            onClick={() => navigate('/estado-general')}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-slate-900/50 hover:border-[#38bdf8]/30 hover:text-[#38bdf8] transition-all text-[10px] font-black uppercase tracking-widest text-slate-400"
+          >
+            <LayoutDashboard className="w-3.5 h-3.5" />
+            Estado General
+          </button>
+          <button
+            onClick={() => navigate('/historicos')}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 bg-slate-900/50 hover:border-[#38bdf8]/30 hover:text-[#38bdf8] transition-all text-[10px] font-black uppercase tracking-widest text-slate-400"
+          >
+            <History className="w-3.5 h-3.5" />
+            Históricos
+          </button>
+          <button
+            onClick={handleDownload}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#38bdf8]/20 bg-[#38bdf8]/5 hover:bg-[#38bdf8]/10 transition-all text-[10px] font-black uppercase tracking-widest text-[#38bdf8] ml-auto"
+          >
+            <FileText className="w-3.5 h-3.5" />
+            Exportar PDF
+            <Download className="w-3.5 h-3.5" />
+          </button>
+        </div>
+
       </main>
 
-      {/* MENU LATERAL CON BOTONES ACTIVOS */}
-      <div className={`fixed inset-y-0 left-0 w-80 z-[100] transform transition-transform duration-500 ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'} ${isDark ? 'bg-[#020617] border-r border-slate-800' : 'bg-white border-r border-slate-200'}`}>
-        <div className="h-full p-8 flex flex-col">
-          <div className="flex justify-between items-center mb-10">
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#38bdf8]">Menú Principal</span>
-            <button onClick={() => setIsMenuOpen(false)}><X className="w-7 h-7 text-slate-500" /></button>
-          </div>
+      {/* ── BARRA INFERIOR DE ESTADO ─────────────────── */}
+      <footer className="w-full bg-slate-900/80 border-t border-white/10 px-6 py-1.5 flex items-center gap-6">
+        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
+          Marvic 360 · v3.0
+        </span>
+        <span className="text-[10px] text-slate-600">|</span>
+        <span className="text-[10px] text-slate-500">
+          7 fincas · 119 sectores · 211.94 ha
+        </span>
+        <span className="text-[10px] font-mono text-slate-600 ml-auto">{horaStr}</span>
+      </footer>
 
-          <nav className="flex-1 space-y-8 overflow-y-auto">
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 text-[#38bdf8] font-black text-xs uppercase tracking-widest"><MapIcon className="w-5 h-5" /> Fincas</div>
-              {FINCAS.map(finca => (
-                <button 
-                  key={finca} 
-                  onMouseEnter={() => setHoveredItem(finca)}
-                  onMouseLeave={() => setHoveredItem(null)}
-                  onClick={() => navigate(`/farm/${finca.toLowerCase()}`)}
-                  className={`w-full text-left p-4 rounded-xl border text-[11px] font-bold uppercase tracking-widest transition-all ${isDark ? 'bg-slate-900/50 border-slate-800 hover:border-[#38bdf8] hover:text-[#38bdf8]' : 'bg-slate-50 hover:border-slate-300'}`}
-                >
-                  {finca}
-                </button>
-              ))}
-            </div>
-
-            <button onClick={() => navigate('/estado-general')} className="w-full flex items-center gap-4 text-xs font-bold uppercase tracking-widest opacity-60 hover:opacity-100 hover:text-[#38bdf8] transition-all"><LayoutDashboard className="w-5 h-5" /> Estado General</button>
-            <button onClick={() => navigate('/historicos')} className="w-full flex items-center gap-4 text-xs font-bold uppercase tracking-widest opacity-60 hover:opacity-100 hover:text-[#38bdf8] transition-all"><History className="w-5 h-5" /> Históricos</button>
-            
-            <div className="pt-6 border-t border-slate-800/50">
-              <button onClick={handleDownload} className={`w-full p-5 rounded-2xl border flex items-center justify-between group transition-all ${isDark ? 'bg-[#38bdf8]/5 border-[#38bdf8]/20 hover:bg-[#38bdf8]/10' : 'bg-slate-100'}`}>
-                <div className="flex items-center gap-3"><FileText className="w-5 h-5 text-[#38bdf8]" /> <div className="text-left"><p className="text-[10px] font-black uppercase text-[#38bdf8]">Informes</p><p className="text-[9px] text-slate-500 font-bold uppercase">Exportar PDF</p></div></div>
-                <Download className="w-5 h-5 text-[#38bdf8]" />
-              </button>
-            </div>
-          </nav>
-        </div>
-      </div>
-
-      {/* MODAL DE INFORMES */}
+      {/* ── MODAL INFORMES ────────────────────────────── */}
       {showModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 backdrop-blur-xl">
-          <div className={`p-10 rounded-3xl border text-center space-y-6 ${isDark ? 'bg-slate-950 border-slate-800' : 'bg-white shadow-2xl'}`}>
-            <img src="/MARVIC_logo.png" className={`h-10 mx-auto ${isDark ? 'brightness-0 invert' : ''}`} />
-            <CheckCircle2 className="w-12 h-12 text-[#38bdf8] mx-auto animate-bounce" />
-            <h3 className="text-xl font-black uppercase tracking-widest">Generando PDF</h3>
-            <p className="text-slate-500 text-sm">El reporte de Agrícola Marvic se está preparando...</p>
+          <div className="bg-slate-900 border border-white/10 rounded-xl p-8 text-center space-y-4 shadow-2xl">
+            <img src="/MARVIC_logo.png" className="h-8 mx-auto brightness-0 invert opacity-80" />
+            <CheckCircle2 className="w-10 h-10 text-[#38bdf8] mx-auto animate-bounce" />
+            <h3 className="text-sm font-black uppercase tracking-widest">Generando PDF</h3>
+            <p className="text-slate-500 text-xs">El reporte de Agrícola Marvic se está preparando...</p>
+            <button
+              onClick={() => setShowModal(false)}
+              className="mt-2 text-[10px] text-slate-600 hover:text-slate-400 uppercase tracking-widest"
+            >
+              Cerrar
+            </button>
           </div>
         </div>
       )}
 
-      {isMenuOpen && <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[90]" onClick={() => setIsMenuOpen(false)} />}
     </div>
   );
 }
