@@ -3,7 +3,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { toast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Camera, Image, Upload, Loader2 } from 'lucide-react'
+import { ArrowLeft, Camera, Image, Upload } from 'lucide-react'
 
 type Props = {
   parcelId: string
@@ -148,7 +148,7 @@ export default function UploadParcelPhoto({ parcelId, onClose }: Props) {
           className="w-full h-12 rounded-2xl text-base font-bold"
         >
           {uploading ? (
-            <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Subiendo...</>
+            <><div className="w-4 h-4 border-2 border-[#38bdf8] border-t-transparent rounded-full animate-spin mr-2" /> Subiendo...</>
           ) : (
             <><Upload className="w-4 h-4 mr-2" /> Subir foto</>
           )}

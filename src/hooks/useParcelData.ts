@@ -27,7 +27,6 @@ export function useCropCatalog() {
 /*
 ================================================
 PRODUCCIÓN ESTIMADA DE PARCELA
-(calculada desde catálogo + área, sin tabla propia)
 ================================================
 */
 
@@ -50,21 +49,21 @@ export function useParcelProduction(parcelId: string | null, crop: string | null
           .single()
       ])
 
-      const area = parcelRes.data?.area_hectares ?? 0
+      const area    = parcelRes.data?.area_hectares ?? 0
       const cultivo = cultivoRes.data
 
       if (!cultivo) return null
 
       return {
-        parcel_id: parcelId,
+        parcel_id:                parcelId,
         crop,
-        area_hectares: area,
-        estimated_production_kg: Math.round(area * (cultivo.rendimiento_kg_ha ?? 18000)),
-        estimated_plastic_kg:    Math.round(area * (cultivo.kg_plastico_por_ha ?? 1200)),
-        estimated_drip_meters:   Math.round(area * (cultivo.m_cinta_riego_por_ha ?? 8000)),
-        marco_lineas_cm:         cultivo.marco_std_entre_lineas_cm,
-        marco_plantas_cm:        cultivo.marco_std_entre_plantas_cm,
-        ciclo_dias:              cultivo.ciclo_dias,
+        area_hectares:            area,
+        estimated_production_kg:  Math.round(area * (cultivo.rendimiento_kg_ha ?? 18000)),
+        estimated_plastic_kg:     Math.round(area * (cultivo.kg_plastico_por_ha ?? 1200)),
+        estimated_drip_meters:    Math.round(area * (cultivo.m_cinta_riego_por_ha ?? 8000)),
+        marco_lineas_cm:          cultivo.marco_std_entre_lineas_cm,
+        marco_plantas_cm:         cultivo.marco_std_entre_plantas_cm,
+        ciclo_dias:               cultivo.ciclo_dias,
       }
     },
     enabled: !!parcelId && !!crop,
@@ -83,17 +82,11 @@ export function useParcelTickets(parcelId: string | null) {
     queryKey: ['parcel_tickets', parcelId],
     queryFn: async () => {
       if (!parcelId) return []
-
       const { data, error } = await supabase
         .from('tickets_pesaje')
-        .select(`
-          *,
-          harvests!inner(parcel_id, crop, date),
-          camiones(matricula, empresa_transporte)
-        `)
+        .select(`*, harvests!inner(parcel_id, crop, date), camiones(matricula, empresa_transporte)`)
         .eq('harvests.parcel_id', parcelId)
         .order('created_at', { ascending: false })
-
       if (error) throw error
       return data ?? []
     },
@@ -113,13 +106,11 @@ export function useParcelResiduos(parcelId: string | null) {
     queryKey: ['parcel_residuos', parcelId],
     queryFn: async () => {
       if (!parcelId) return []
-
       const { data, error } = await supabase
         .from('residuos_operacion')
         .select('*')
         .eq('parcel_id', parcelId)
         .order('created_at', { ascending: false })
-
       if (error) throw error
       return data ?? []
     },
@@ -139,7 +130,6 @@ export function useParcelCertification(parcelId: string | null) {
     queryKey: ['parcel_certificacion', parcelId],
     queryFn: async () => {
       if (!parcelId) return null
-
       const { data, error } = await supabase
         .from('certificaciones_parcela')
         .select('*')
@@ -147,7 +137,6 @@ export function useParcelCertification(parcelId: string | null) {
         .order('fecha_inicio', { ascending: false })
         .limit(1)
         .single()
-
       if (error && error.code !== 'PGRST116') throw error
       return data ?? null
     },
@@ -257,6 +246,78 @@ export function useParcelRecords(parcelId: string | null) {
 
 /*
 ================================================
+ANÁLISIS DE SUELO DE UNA PARCELA
+================================================
+*/
+
+export function useParcelAnalisisSuelo(parcelId: string | null) {
+  return useQuery({
+    queryKey: ['analisis_suelo', parcelId],
+    queryFn: async () => {
+      if (!parcelId) return []
+      const { data, error } = await supabase
+        .from('analisis_suelo')
+        .select('*')
+        .eq('parcel_id', parcelId)
+        .order('fecha', { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!parcelId,
+    staleTime: 60000
+  })
+}
+
+/*
+================================================
+LECTURAS SENSOR PLANTA (NDVI/SPAD) DE UNA PARCELA
+================================================
+*/
+
+export function useParcelLecturasSensor(parcelId: string | null) {
+  return useQuery({
+    queryKey: ['lecturas_sensor', parcelId],
+    queryFn: async () => {
+      if (!parcelId) return []
+      const { data, error } = await supabase
+        .from('lecturas_sensor_planta')
+        .select('*')
+        .eq('parcel_id', parcelId)
+        .order('fecha', { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!parcelId,
+    staleTime: 60000
+  })
+}
+
+/*
+================================================
+ANÁLISIS DE AGUA POR FINCA
+================================================
+*/
+
+export function useFincaAnalisisAgua(finca: string | null) {
+  return useQuery({
+    queryKey: ['analisis_agua', finca],
+    queryFn: async () => {
+      if (!finca) return []
+      const { data, error } = await supabase
+        .from('analisis_agua')
+        .select('*')
+        .eq('finca', finca)
+        .order('fecha', { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!finca,
+    staleTime: 60000
+  })
+}
+
+/*
+================================================
 ESTADO DE PARCELAS EN EL MAPA
 ================================================
 */
@@ -306,7 +367,7 @@ export function useFarmParcelStatuses(parcelIds: string[]) {
         const h = latestHarvest[id]
         const w = latestWork[id]
 
-        if (!p && !h && !w)          statuses[id] = 'vacia'
+        if (!p && !h && !w)           statuses[id] = 'vacia'
         else if (h && (!p || h >= p)) statuses[id] = 'cosechada'
         else if (p && (!h || p > h))  statuses[id] = 'plantada'
         else if (w && !p && !h)       statuses[id] = 'preparacion'
@@ -328,7 +389,6 @@ INSERTAR TRABAJO
 
 export function useInsertWorkRecord() {
   const qc = useQueryClient()
-
   return useMutation({
     mutationFn: async (record: TablesInsert<'work_records'>) => {
       const { data, error } = await supabase
@@ -354,7 +414,6 @@ INSERTAR PLANTACIÓN
 
 export function useInsertPlanting() {
   const qc = useQueryClient()
-
   return useMutation({
     mutationFn: async (record: TablesInsert<'plantings'>) => {
       const { data, error } = await supabase
@@ -381,7 +440,6 @@ INSERTAR COSECHA
 
 export function useInsertHarvest() {
   const qc = useQueryClient()
-
   return useMutation({
     mutationFn: async (record: TablesInsert<'harvests'>) => {
       const { data, error } = await supabase
@@ -407,7 +465,6 @@ INSERTAR RESIDUO
 
 export function useInsertResiduo() {
   const qc = useQueryClient()
-
   return useMutation({
     mutationFn: async (record: TablesInsert<'residuos_operacion'>) => {
       const { data, error } = await supabase
@@ -432,14 +489,11 @@ INSERTAR TICKET DE PESAJE
 
 export function useInsertTicketPesaje() {
   const qc = useQueryClient()
-
   return useMutation({
     mutationFn: async (record: TablesInsert<'tickets_pesaje'>) => {
-      // Generar número de albarán automático: MRV-YYYYMMDD-XXXX
-      const fecha = new Date().toISOString().slice(0, 10).replace(/-/g, '')
-      const aleatorio = Math.floor(1000 + Math.random() * 9000)
+      const fecha          = new Date().toISOString().slice(0, 10).replace(/-/g, '')
+      const aleatorio      = Math.floor(1000 + Math.random() * 9000)
       const numero_albaran = `MRV-${fecha}-${aleatorio}`
-
       const { data, error } = await supabase
         .from('tickets_pesaje')
         .insert({ ...record, numero_albaran })
@@ -463,7 +517,6 @@ INSERTAR CAMIÓN
 
 export function useInsertCamion() {
   const qc = useQueryClient()
-
   return useMutation({
     mutationFn: async (record: TablesInsert<'camiones'>) => {
       const { data, error } = await supabase
@@ -488,7 +541,6 @@ INSERTAR CUADRILLA
 
 export function useInsertCuadrilla() {
   const qc = useQueryClient()
-
   return useMutation({
     mutationFn: async (record: TablesInsert<'cuadrillas'>) => {
       const { data, error } = await supabase
@@ -501,6 +553,120 @@ export function useInsertCuadrilla() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cuadrillas'] })
+    }
+  })
+}
+
+/*
+================================================
+INSERTAR ANÁLISIS DE SUELO
+================================================
+*/
+
+export function useInsertAnalisisSuelo() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (record: {
+      parcel_id: string
+      ph?: number
+      conductividad_ec?: number
+      salinidad_ppm?: number
+      temperatura_suelo?: number
+      materia_organica?: number
+      sodio_ppm?: number
+      nitrogeno_ppm?: number
+      fosforo_ppm?: number
+      potasio_ppm?: number
+      textura?: string
+      profundidad_cm?: number
+      num_muestras?: number
+      operario?: string
+      herramienta?: string
+      observaciones?: string
+    }) => {
+      const { data, error } = await supabase
+        .from('analisis_suelo')
+        .insert(record)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['analisis_suelo', vars.parcel_id] })
+    }
+  })
+}
+
+/*
+================================================
+INSERTAR LECTURA SENSOR PLANTA (NDVI/SPAD)
+================================================
+*/
+
+export function useInsertLecturaSensor() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (record: {
+      parcel_id: string
+      indice_salud?: number
+      nivel_estres?: number
+      clorofila?: number
+      ndvi?: number
+      cultivo?: string
+      num_plantas_medidas?: number
+      operario?: string
+      herramienta?: string
+      observaciones?: string
+    }) => {
+      const { data, error } = await supabase
+        .from('lecturas_sensor_planta')
+        .insert(record)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['lecturas_sensor', vars.parcel_id] })
+    }
+  })
+}
+
+/*
+================================================
+INSERTAR ANÁLISIS DE AGUA
+================================================
+*/
+
+export function useInsertAnalisisAgua() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (record: {
+      finca: string
+      fuente: string
+      ph?: number
+      conductividad_ec?: number
+      salinidad_ppm?: number
+      temperatura?: number
+      sodio_ppm?: number
+      cloruros_ppm?: number
+      nitratos_ppm?: number
+      dureza_total?: number
+      operario?: string
+      herramienta?: string
+      observaciones?: string
+    }) => {
+      const { data, error } = await supabase
+        .from('analisis_agua')
+        .insert(record)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['analisis_agua', vars.finca] })
     }
   })
 }

@@ -14,30 +14,227 @@ export type Database = {
   }
   public: {
     Tables: {
-      analisis_suelo: {
+      ai_proposal_validations: {
         Row: {
-          fecha: string | null
+          decided_at: string
+          decided_by: string | null
+          decision: Database["public"]["Enums"]["ai_validation_decision"]
           id: string
-          materia_organica: number | null
-          observaciones: string | null
-          parcel_id: string | null
-          ph: number | null
+          note: string | null
+          proposal_id: string
         }
         Insert: {
-          fecha?: string | null
+          decided_at?: string
+          decided_by?: string | null
+          decision: Database["public"]["Enums"]["ai_validation_decision"]
           id?: string
-          materia_organica?: number | null
-          observaciones?: string | null
-          parcel_id?: string | null
-          ph?: number | null
+          note?: string | null
+          proposal_id: string
         }
         Update: {
-          fecha?: string | null
+          decided_at?: string
+          decided_by?: string | null
+          decision?: Database["public"]["Enums"]["ai_validation_decision"]
           id?: string
-          materia_organica?: number | null
+          note?: string | null
+          proposal_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_proposal_validations_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "ai_proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_proposals: {
+        Row: {
+          category: Database["public"]["Enums"]["ai_proposal_category"]
+          created_at: string
+          created_by: string | null
+          executed_at: string | null
+          execution_error: string | null
+          hash: string | null
+          id: string
+          input_json: Json
+          model: string | null
+          output_json: Json
+          proposal_reason: string | null
+          proposal_version: number
+          provider: string | null
+          related_campaign: string | null
+          related_parcel_id: string | null
+          related_work_record_id: string | null
+          source: string | null
+          status: Database["public"]["Enums"]["ai_proposal_status"]
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["ai_proposal_category"]
+          created_at?: string
+          created_by?: string | null
+          executed_at?: string | null
+          execution_error?: string | null
+          hash?: string | null
+          id?: string
+          input_json?: Json
+          model?: string | null
+          output_json?: Json
+          proposal_reason?: string | null
+          proposal_version?: number
+          provider?: string | null
+          related_campaign?: string | null
+          related_parcel_id?: string | null
+          related_work_record_id?: string | null
+          source?: string | null
+          status?: Database["public"]["Enums"]["ai_proposal_status"]
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["ai_proposal_category"]
+          created_at?: string
+          created_by?: string | null
+          executed_at?: string | null
+          execution_error?: string | null
+          hash?: string | null
+          id?: string
+          input_json?: Json
+          model?: string | null
+          output_json?: Json
+          proposal_reason?: string | null
+          proposal_version?: number
+          provider?: string | null
+          related_campaign?: string | null
+          related_parcel_id?: string | null
+          related_work_record_id?: string | null
+          source?: string | null
+          status?: Database["public"]["Enums"]["ai_proposal_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      analisis_agua: {
+        Row: {
+          cloruros_ppm: number | null
+          conductividad_ec: number | null
+          created_at: string | null
+          dureza_total: number | null
+          fecha: string | null
+          finca: string
+          fuente: string
+          herramienta: string | null
+          id: string
+          nitratos_ppm: number | null
+          observaciones: string | null
+          operario: string | null
+          ph: number | null
+          salinidad_ppm: number | null
+          sodio_ppm: number | null
+          temperatura: number | null
+        }
+        Insert: {
+          cloruros_ppm?: number | null
+          conductividad_ec?: number | null
+          created_at?: string | null
+          dureza_total?: number | null
+          fecha?: string | null
+          finca: string
+          fuente: string
+          herramienta?: string | null
+          id?: string
+          nitratos_ppm?: number | null
           observaciones?: string | null
+          operario?: string | null
+          ph?: number | null
+          salinidad_ppm?: number | null
+          sodio_ppm?: number | null
+          temperatura?: number | null
+        }
+        Update: {
+          cloruros_ppm?: number | null
+          conductividad_ec?: number | null
+          created_at?: string | null
+          dureza_total?: number | null
+          fecha?: string | null
+          finca?: string
+          fuente?: string
+          herramienta?: string | null
+          id?: string
+          nitratos_ppm?: number | null
+          observaciones?: string | null
+          operario?: string | null
+          ph?: number | null
+          salinidad_ppm?: number | null
+          sodio_ppm?: number | null
+          temperatura?: number | null
+        }
+        Relationships: []
+      }
+      analisis_suelo: {
+        Row: {
+          conductividad_ec: number | null
+          fecha: string | null
+          fosforo_ppm: number | null
+          herramienta: string | null
+          id: string
+          informe_url: string | null
+          materia_organica: number | null
+          nitrogeno_ppm: number | null
+          num_muestras: number | null
+          observaciones: string | null
+          operario: string | null
+          parcel_id: string | null
+          ph: number | null
+          potasio_ppm: number | null
+          profundidad_cm: number | null
+          salinidad_ppm: number | null
+          sodio_ppm: number | null
+          temperatura_suelo: number | null
+          textura: string | null
+        }
+        Insert: {
+          conductividad_ec?: number | null
+          fecha?: string | null
+          fosforo_ppm?: number | null
+          herramienta?: string | null
+          id?: string
+          informe_url?: string | null
+          materia_organica?: number | null
+          nitrogeno_ppm?: number | null
+          num_muestras?: number | null
+          observaciones?: string | null
+          operario?: string | null
           parcel_id?: string | null
           ph?: number | null
+          potasio_ppm?: number | null
+          profundidad_cm?: number | null
+          salinidad_ppm?: number | null
+          sodio_ppm?: number | null
+          temperatura_suelo?: number | null
+          textura?: string | null
+        }
+        Update: {
+          conductividad_ec?: number | null
+          fecha?: string | null
+          fosforo_ppm?: number | null
+          herramienta?: string | null
+          id?: string
+          informe_url?: string | null
+          materia_organica?: number | null
+          nitrogeno_ppm?: number | null
+          num_muestras?: number | null
+          observaciones?: string | null
+          operario?: string | null
+          parcel_id?: string | null
+          ph?: number | null
+          potasio_ppm?: number | null
+          profundidad_cm?: number | null
+          salinidad_ppm?: number | null
+          sodio_ppm?: number | null
+          temperatura_suelo?: number | null
+          textura?: string | null
         }
         Relationships: []
       }
@@ -201,24 +398,32 @@ export type Database = {
           descripcion: string | null
           fecha: string | null
           id: string
-          parcel_id: string | null
+          parcel_id: string
           url_imagen: string | null
         }
         Insert: {
           descripcion?: string | null
           fecha?: string | null
           id?: string
-          parcel_id?: string | null
+          parcel_id: string
           url_imagen?: string | null
         }
         Update: {
           descripcion?: string | null
           fecha?: string | null
           id?: string
-          parcel_id?: string | null
+          parcel_id?: string
           url_imagen?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fotos_campo_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["parcel_id"]
+          },
+        ]
       }
       harvests: {
         Row: {
@@ -266,27 +471,45 @@ export type Database = {
       }
       lecturas_sensor_planta: {
         Row: {
+          clorofila: number | null
+          cultivo: string | null
           fecha: string | null
+          herramienta: string | null
           id: string
           indice_salud: number | null
+          ndvi: number | null
           nivel_estres: number | null
+          num_plantas_medidas: number | null
           observaciones: string | null
+          operario: string | null
           parcel_id: string | null
         }
         Insert: {
+          clorofila?: number | null
+          cultivo?: string | null
           fecha?: string | null
+          herramienta?: string | null
           id?: string
           indice_salud?: number | null
+          ndvi?: number | null
           nivel_estres?: number | null
+          num_plantas_medidas?: number | null
           observaciones?: string | null
+          operario?: string | null
           parcel_id?: string | null
         }
         Update: {
+          clorofila?: number | null
+          cultivo?: string | null
           fecha?: string | null
+          herramienta?: string | null
           id?: string
           indice_salud?: number | null
+          ndvi?: number | null
           nivel_estres?: number | null
+          num_plantas_medidas?: number | null
           observaciones?: string | null
+          operario?: string | null
           parcel_id?: string | null
         }
         Relationships: []
@@ -467,7 +690,7 @@ export type Database = {
           fecha: string | null
           id: string
           observaciones: string | null
-          parcel_id: string | null
+          parcel_id: string
         }
         Insert: {
           cultivo?: string | null
@@ -475,7 +698,7 @@ export type Database = {
           fecha?: string | null
           id?: string
           observaciones?: string | null
-          parcel_id?: string | null
+          parcel_id: string
         }
         Update: {
           cultivo?: string | null
@@ -483,9 +706,17 @@ export type Database = {
           fecha?: string | null
           id?: string
           observaciones?: string | null
-          parcel_id?: string | null
+          parcel_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "registros_estado_parcela_parcel_id_fkey"
+            columns: ["parcel_id"]
+            isOneToOne: false
+            referencedRelation: "parcels"
+            referencedColumns: ["parcel_id"]
+          },
+        ]
       }
       residuos_operacion: {
         Row: {
@@ -739,6 +970,156 @@ export type Database = {
           },
         ]
       }
+      inventario_categorias: {
+        Row: {
+          id:     string
+          nombre: string
+          slug:   string
+          icono:  string
+          orden:  number
+        }
+        Insert: {
+          id?:    string
+          nombre: string
+          slug:   string
+          icono:  string
+          orden:  number
+        }
+        Update: {
+          id?:     string
+          nombre?: string
+          slug?:   string
+          icono?:  string
+          orden?:  number
+        }
+        Relationships: []
+      }
+      inventario_ubicaciones: {
+        Row: {
+          id:          string
+          nombre:      string
+          descripcion: string | null
+          foto_url:    string | null
+          activa:      boolean
+          orden:       number
+        }
+        Insert: {
+          id?:          string
+          nombre:       string
+          descripcion?: string | null
+          foto_url?:    string | null
+          activa?:      boolean
+          orden:        number
+        }
+        Update: {
+          id?:          string
+          nombre?:      string
+          descripcion?: string | null
+          foto_url?:    string | null
+          activa?:      boolean
+          orden?:       number
+        }
+        Relationships: []
+      }
+      inventario_registros: {
+        Row: {
+          id:           string
+          ubicacion_id: string
+          categoria_id: string
+          cantidad:     number
+          unidad:       string
+          descripcion:  string | null
+          foto_url:     string | null
+          notas:        string | null
+          created_at:   string
+        }
+        Insert: {
+          id?:           string
+          ubicacion_id:  string
+          categoria_id:  string
+          cantidad:      number
+          unidad:        string
+          descripcion?:  string | null
+          foto_url?:     string | null
+          notas?:        string | null
+          created_at?:   string
+        }
+        Update: {
+          id?:           string
+          ubicacion_id?: string
+          categoria_id?: string
+          cantidad?:     number
+          unidad?:       string
+          descripcion?:  string | null
+          foto_url?:     string | null
+          notas?:        string | null
+          created_at?:   string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventario_registros_ubicacion_id_fkey"
+            columns: ["ubicacion_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_ubicaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventario_registros_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_categorias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventario_informes: {
+        Row: {
+          id:           string
+          tipo:         "mensual_auto" | "manual" | "comparativa"
+          fecha_inicio: string
+          fecha_fin:    string
+          ubicacion_id: string | null
+          categoria_id: string | null
+          contenido:    Json
+          generado_at:  string
+        }
+        Insert: {
+          id?:           string
+          tipo:          "mensual_auto" | "manual" | "comparativa"
+          fecha_inicio:  string
+          fecha_fin:     string
+          ubicacion_id?: string | null
+          categoria_id?: string | null
+          contenido:     Json
+          generado_at?:  string
+        }
+        Update: {
+          id?:           string
+          tipo?:         "mensual_auto" | "manual" | "comparativa"
+          fecha_inicio?: string
+          fecha_fin?:    string
+          ubicacion_id?: string | null
+          categoria_id?: string | null
+          contenido?:    Json
+          generado_at?:  string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventario_informes_ubicacion_id_fkey"
+            columns: ["ubicacion_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_ubicaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventario_informes_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_categorias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -747,6 +1128,14 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
+      ai_proposal_category: "analysis" | "planning" | "report"
+      ai_proposal_status:
+        | "pending"
+        | "approved"
+        | "rejected"
+        | "executed"
+        | "failed"
+      ai_validation_decision: "approved" | "rejected"
       estado_certificacion: "vigente" | "suspendida" | "en_tramite" | "caducada"
       estado_parcela:
         | "activa"
@@ -895,6 +1284,15 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      ai_proposal_category: ["analysis", "planning", "report"],
+      ai_proposal_status: [
+        "pending",
+        "approved",
+        "rejected",
+        "executed",
+        "failed",
+      ],
+      ai_validation_decision: ["approved", "rejected"],
       estado_certificacion: ["vigente", "suspendida", "en_tramite", "caducada"],
       estado_parcela: [
         "activa",
