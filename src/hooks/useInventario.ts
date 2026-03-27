@@ -151,6 +151,8 @@ export function useAddRegistro() {
       qc.invalidateQueries({ queryKey: ['inventario_registros',      vars.ubicacion_id, vars.categoria_id] })
       qc.invalidateQueries({ queryKey: ['inventario_ultimo_registro', vars.ubicacion_id, vars.categoria_id] })
       qc.invalidateQueries({ queryKey: ['inventario_resumen_ubicacion', vars.ubicacion_id] })
+      qc.invalidateQueries({ queryKey: ['inventario_total_registros'] })
+      qc.invalidateQueries({ queryKey: ['inventario_conteos_ubicaciones'] })
     }
   })
 }
@@ -228,6 +230,118 @@ export function useConteosUbicaciones() {
 INFORMES — listar por rango de fechas y ubicación
 ================================================
 */
+
+/*
+================================================
+CATÁLOGO DE PRODUCTOS
+================================================
+*/
+
+export function useProductosCatalogo(categoriaId: string | null) {
+  return useQuery({
+    queryKey: ['inventario_productos_catalogo', categoriaId],
+    queryFn: async () => {
+      if (!categoriaId) return []
+      const { data, error } = await supabase
+        .from('inventario_productos_catalogo')
+        .select('*')
+        .eq('categoria_id', categoriaId)
+        .eq('activo', true)
+        .order('nombre')
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!categoriaId,
+    staleTime: 60000,
+  })
+}
+
+export function useAddProductoCatalogo() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (record: TablesInsert<'inventario_productos_catalogo'>) => {
+      const { data, error } = await supabase
+        .from('inventario_productos_catalogo')
+        .insert(record)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['inventario_productos_catalogo', vars.categoria_id] })
+    },
+  })
+}
+
+export function useUpdatePrecioProducto() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, precio_unitario }: { id: string; precio_unitario: number }) => {
+      const { data, error } = await supabase
+        .from('inventario_productos_catalogo')
+        .update({ precio_unitario })
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['inventario_productos_catalogo'] })
+    },
+  })
+}
+
+/*
+================================================
+MOVIMIENTOS ENTRE UBICACIONES
+================================================
+*/
+
+export function useMovimientos(ubicacionId: string | null, categoriaId: string | null) {
+  return useQuery({
+    queryKey: ['inventario_movimientos', ubicacionId, categoriaId],
+    queryFn: async () => {
+      if (!ubicacionId || !categoriaId) return []
+      const { data, error } = await supabase
+        .from('inventario_movimientos')
+        .select('*')
+        .eq('categoria_id', categoriaId)
+        .or(`ubicacion_origen_id.eq.${ubicacionId},ubicacion_destino_id.eq.${ubicacionId}`)
+        .order('fecha', { ascending: false })
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!ubicacionId && !!categoriaId,
+    staleTime: 30000,
+  })
+}
+
+export function useAddMovimiento() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (record: TablesInsert<'inventario_movimientos'>) => {
+      const { data, error } = await supabase
+        .from('inventario_movimientos')
+        .insert(record)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['inventario_movimientos',     vars.ubicacion_origen_id,  vars.categoria_id] })
+      qc.invalidateQueries({ queryKey: ['inventario_movimientos',     vars.ubicacion_destino_id, vars.categoria_id] })
+      qc.invalidateQueries({ queryKey: ['inventario_registros',       vars.ubicacion_origen_id,  vars.categoria_id] })
+      qc.invalidateQueries({ queryKey: ['inventario_registros',       vars.ubicacion_destino_id, vars.categoria_id] })
+      qc.invalidateQueries({ queryKey: ['inventario_ultimo_registro',  vars.ubicacion_origen_id,  vars.categoria_id] })
+      qc.invalidateQueries({ queryKey: ['inventario_ultimo_registro',  vars.ubicacion_destino_id, vars.categoria_id] })
+      qc.invalidateQueries({ queryKey: ['inventario_resumen_ubicacion', vars.ubicacion_origen_id]  })
+      qc.invalidateQueries({ queryKey: ['inventario_resumen_ubicacion', vars.ubicacion_destino_id] })
+    },
+  })
+}
 
 export function useInformes(ubicacionId?: string | null, desde?: string, hasta?: string) {
   return useQuery({

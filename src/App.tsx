@@ -9,6 +9,11 @@ import FarmMap from "./pages/FarmMap";
 import Dashboard from "./pages/Dashboard";
 import Inventario from "./pages/Inventario";
 import InventarioUbicacion from "./pages/InventarioUbicacion";
+import ParteDiario from "./pages/ParteDiario";
+import Trabajos from "./pages/Trabajos";
+import Logistica from "./pages/Logistica";
+import Maquinaria from "./pages/Maquinaria";
+import Personal from "./pages/Personal";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +31,11 @@ const App = () => (
             <Route path="/farm/:farmName" element={<FarmMap />} />
             <Route path="/inventario" element={<Inventario />} />
             <Route path="/inventario/:ubicacionId" element={<InventarioUbicacion />} />
+            <Route path="/parte-diario" element={<ParteDiario />} />
+            <Route path="/trabajos" element={<Trabajos />} />
+            <Route path="/logistica" element={<Logistica />} />
+            <Route path="/maquinaria" element={<Maquinaria />} />
+            <Route path="/personal" element={<Personal />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

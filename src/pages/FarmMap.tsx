@@ -157,6 +157,7 @@ export default function FarmMap() {
   const mapContainerRef = useRef<HTMLDivElement>(null)
   const geoJsonLayerRef = useRef<L.GeoJSON | null>(null)
   const labelsRef       = useRef<L.Marker[]>([])
+  const fitDoneRef      = useRef(false)
 
   const decodedFarm = decodeURIComponent(farmName || '')
   const parcels     = getFarmParcels(decodedFarm)
@@ -234,7 +235,10 @@ export default function FarmMap() {
 
     geoJsonLayerRef.current = geojsonLayer
     const bounds = geojsonLayer.getBounds()
-    if (bounds.isValid()) map.fitBounds(bounds, { padding: [30, 30] })
+    if (bounds.isValid() && !fitDoneRef.current) {
+      map.fitBounds(bounds, { padding: [30, 30] })
+      fitDoneRef.current = true
+    }
 
     const onZoom = () => {
       labelsRef.current.forEach((marker, i) => {
@@ -282,7 +286,10 @@ export default function FarmMap() {
             img.onload = () => {
               const canvas = document.createElement('canvas')
               canvas.width = img.naturalWidth; canvas.height = img.naturalHeight
-              canvas.getContext('2d')!.drawImage(img, 0, 0)
+              const ctx = canvas.getContext('2d')!
+              ctx.fillStyle = '#ffffff'
+              ctx.fillRect(0, 0, canvas.width, canvas.height)
+              ctx.drawImage(img, 0, 0)
               const data = canvas.toDataURL('image/jpeg', 0.8)
               URL.revokeObjectURL(img.src)
               resolve({ data, w: img.naturalWidth, h: img.naturalHeight })

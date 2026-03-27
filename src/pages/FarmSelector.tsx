@@ -1,72 +1,91 @@
-import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sun, Moon, Building2, User, Lock, ArrowRight, ShieldCheck } from 'lucide-react';
+import { Map as MapIcon, ChevronRight, ArrowLeft, Activity } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
+
+const FINCAS = [
+  { nombre: 'LA CONCEPCION',            sectores: 24, ha: 28.37 },
+  { nombre: 'LONSORDO',                 sectores: 16, ha: 10.54 },
+  { nombre: 'FINCA COLLADOS',           sectores: 18, ha: 46.06 },
+  { nombre: 'FINCA BRAZO DE LA VIRGEN', sectores:  4, ha:  7.08 },
+  { nombre: 'FINCA LA BARDA',           sectores: 28, ha: 74.70 },
+  { nombre: 'FINCA LA NUEVA',           sectores: 13, ha: 15.66 },
+  { nombre: 'FINCA MAYORAZGO',          sectores: 16, ha: 29.53 },
+];
 
 export default function FarmSelector() {
-  const [isDark, setIsDark] = useState(true);
-  const navigate = useNavigate();
-
-  const toggleTheme = () => {
-    setIsDark(!isDark);
-    document.documentElement.classList.toggle('dark');
-  };
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    navigate('/dashboard');
-  };
+  const navigate  = useNavigate();
+  const { theme } = useTheme();
+  const isDark    = theme === 'dark';
 
   return (
-    <div className={`min-h-screen transition-all duration-700 flex flex-col items-center justify-center p-4 ${isDark ? 'bg-[#020617] text-slate-100' : 'bg-[#f8fafc] text-slate-900'}`}>
-      
-      {/* BOTÓN DE TEMA (Superior Izquierda) */}
-      <div className="fixed top-8 left-8 z-50">
-        <button 
-          onClick={toggleTheme}
-          className={`relative w-14 h-7 rounded-full border transition-all duration-500 flex items-center px-1 ${isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-300 shadow-inner'}`}
-        >
-          <div className={`absolute w-5 h-5 rounded-full transition-all duration-500 flex items-center justify-center shadow-lg ${isDark ? 'translate-x-7 bg-[#38bdf8]' : 'translate-x-0 bg-slate-200'}`}>
-            {isDark ? <Moon className="w-3 h-3 text-slate-900" /> : <Sun className="w-3 h-3 text-orange-500" />}
-          </div>
-        </button>
-      </div>
+    <div className="min-h-screen bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-white flex flex-col transition-colors duration-300">
 
-      <header className="flex flex-col items-center mb-12 text-center">
-        <h1 className="text-4xl md:text-5xl font-black tracking-tighter uppercase">Agro<span className="text-[#38bdf8]">Gestión</span></h1>
-        <p className="text-[11px] tracking-[3px] font-bold uppercase opacity-70 mt-3 text-[#38bdf8]">
-          Inteligencia Agrícola Circular
-        </p>
+      {/* BARRA SUPERIOR */}
+      <header className="w-full bg-white/90 dark:bg-slate-900/80 border-b border-slate-200 dark:border-white/10 px-6 py-3 flex items-center gap-4">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-2 text-slate-400 hover:text-[#38bdf8] transition-colors"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-[10px] font-black uppercase tracking-widest">Dashboard</span>
+        </button>
+        <span className="text-[10px] text-slate-300 dark:text-slate-600">|</span>
+        <div className="flex items-center gap-2">
+          <MapIcon className="w-3.5 h-3.5 text-[#22c55e]" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            Seleccionar Finca
+          </span>
+        </div>
       </header>
 
-      <main className={`relative w-full max-w-[400px] rounded-[2rem] p-1 ${isDark ? 'bg-gradient-to-b from-slate-800 to-transparent' : 'bg-gradient-to-b from-slate-200 to-transparent'}`}>
-        <div className={`w-full h-full rounded-[1.9rem] p-8 backdrop-blur-xl ${isDark ? 'bg-slate-900/90' : 'bg-white/90 shadow-2xl'}`}>
-          <form className="space-y-6" onSubmit={handleLogin}>
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase font-bold tracking-widest opacity-50 ml-1">Empresa</label>
-              <div className="relative group">
-                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#38bdf8]" />
-                <input type="text" required placeholder="Nombre de la empresa" className={`w-full pl-12 pr-4 py-4 rounded-2xl text-sm transition-all border outline-none ${isDark ? 'bg-slate-950/50 border-slate-800 focus:border-[#38bdf8]' : 'bg-slate-50 border-slate-200 focus:border-[#38bdf8]'}`} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase font-bold tracking-widest opacity-50 ml-1">Usuario</label>
-              <div className="relative group">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#38bdf8]" />
-                <input type="text" required placeholder="Nombre de usuario" className={`w-full pl-12 pr-4 py-4 rounded-2xl text-sm transition-all border outline-none ${isDark ? 'bg-slate-950/50 border-slate-800 focus:border-[#38bdf8]' : 'bg-slate-50 border-slate-200 focus:border-[#38bdf8]'}`} />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase font-bold tracking-widest opacity-50 ml-1">Clave Segura</label>
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#38bdf8]" />
-                <input type="password" required placeholder="••••••••" className={`w-full pl-12 pr-4 py-4 rounded-2xl text-sm transition-all border outline-none ${isDark ? 'bg-slate-950/50 border-slate-800 focus:border-[#38bdf8]' : 'bg-slate-50 border-slate-200 focus:border-[#38bdf8]'}`} />
-              </div>
-            </div>
-            <button type="submit" className="w-full mt-4 bg-[#38bdf8] hover:bg-[#0ea5e9] text-slate-950 font-black py-4 rounded-2xl transition-all flex items-center justify-center gap-3 shadow-lg">
-              AUTENTIFICAR <ArrowRight className="w-5 h-5" />
-            </button>
-          </form>
+      {/* CONTENIDO */}
+      <main className="flex-1 flex flex-col items-center px-6 py-10">
+
+        <div className="w-full max-w-2xl">
+          <div className="flex items-center gap-3 mb-6">
+            <img
+              src="/MARVIC_logo.png"
+              className="h-7 opacity-80"
+              style={{ filter: isDark ? 'brightness(0) invert(1)' : 'none' }}
+            />
+            <div className="h-px flex-1 bg-gradient-to-r from-[#22c55e]/30 to-transparent" />
+            <span className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-400 dark:text-slate-500">
+              7 Fincas · 211.94 ha
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {FINCAS.map((f) => (
+              <button
+                key={f.nombre}
+                onClick={() => navigate(`/farm/${encodeURIComponent(f.nombre)}`)}
+                className="group text-left p-4 rounded-xl border bg-white dark:bg-slate-900/50 border-slate-200 dark:border-white/10 hover:border-[#22c55e]/50 hover:shadow-md dark:hover:shadow-none hover:scale-[1.01] transition-all duration-200"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center bg-[#22c55e]/10">
+                      <MapIcon className="w-4 h-4 text-[#22c55e]" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-black text-slate-800 dark:text-white uppercase tracking-wide leading-tight">
+                        {f.nombre}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-[9px] text-slate-400 dark:text-slate-500 flex items-center gap-1">
+                          <Activity className="w-2.5 h-2.5" />{f.sectores} sectores
+                        </span>
+                        <span className="text-[9px] text-slate-300 dark:text-slate-600">·</span>
+                        <span className="text-[9px] text-slate-400 dark:text-slate-500">{f.ha} ha</span>
+                      </div>
+                    </div>
+                  </div>
+                  <ChevronRight className="w-4 h-4 text-slate-300 dark:text-slate-600 group-hover:text-[#22c55e] transition-colors mt-1" />
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
+
       </main>
     </div>
   );
