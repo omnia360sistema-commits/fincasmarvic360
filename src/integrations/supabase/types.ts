@@ -386,6 +386,37 @@ export type Database = {
         }
         Relationships: []
       }
+      // MANUAL ADDITION — tabla ganaderos (creada 27/03/2026)
+      ganaderos: {
+        Row: {
+          id:         string
+          nombre:     string
+          telefono:   string | null
+          direccion:  string | null
+          activo:     boolean
+          notas:      string | null
+          created_at: string
+        }
+        Insert: {
+          id?:         string
+          nombre:      string
+          telefono?:   string | null
+          direccion?:  string | null
+          activo?:     boolean
+          notas?:      string | null
+          created_at?: string
+        }
+        Update: {
+          id?:         string
+          nombre?:     string
+          telefono?:   string | null
+          direccion?:  string | null
+          activo?:     boolean
+          notas?:      string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       cultivos_catalogo: {
         Row: {
           ciclo_dias: number
@@ -728,28 +759,31 @@ export type Database = {
       }
       registros_estado_parcela: {
         Row: {
-          cultivo: string | null
-          estado: string | null
-          fecha: string | null
-          id: string
+          cultivo:       string | null
+          estado:        string | null
+          fecha:         string | null
+          id:            string
           observaciones: string | null
-          parcel_id: string
+          parcel_id:     string
+          foto_url:      string | null
         }
         Insert: {
-          cultivo?: string | null
-          estado?: string | null
-          fecha?: string | null
-          id?: string
+          cultivo?:       string | null
+          estado?:        string | null
+          fecha?:         string | null
+          id?:            string
           observaciones?: string | null
-          parcel_id: string
+          parcel_id:      string
+          foto_url?:      string | null
         }
         Update: {
-          cultivo?: string | null
-          estado?: string | null
-          fecha?: string | null
-          id?: string
+          cultivo?:       string | null
+          estado?:        string | null
+          fecha?:         string | null
+          id?:            string
           observaciones?: string | null
-          parcel_id?: string
+          parcel_id?:     string
+          foto_url?:      string | null
         }
         Relationships: [
           {
@@ -1478,6 +1512,9 @@ export type Database = {
           hora_llegada_ganadero: string | null
           hora_regreso_nave:     string | null
           notas_descarga:        string | null
+          foto_url:              string | null
+          personal_id:           string | null
+          ganadero_id:           string | null
           created_at:            string
         }
         Insert: {
@@ -1489,6 +1526,9 @@ export type Database = {
           hora_llegada_ganadero?: string | null
           hora_regreso_nave?:     string | null
           notas_descarga?:        string | null
+          foto_url?:              string | null
+          personal_id?:           string | null
+          ganadero_id?:           string | null
           created_at?:            string
         }
         Update: {
@@ -1500,6 +1540,9 @@ export type Database = {
           hora_llegada_ganadero?: string | null
           hora_regreso_nave?:     string | null
           notas_descarga?:        string | null
+          foto_url?:              string | null
+          personal_id?:           string | null
+          ganadero_id?:           string | null
           created_at?:            string
         }
         Relationships: [
@@ -2128,6 +2171,8 @@ export type Database = {
         | "cosechada"
         | "vacia"
         | "baja"
+        | "en_produccion"
+        | "acolchado"
       tipo_residuo:
         | "plastico_acolchado"
         | "cinta_riego"
@@ -2285,6 +2330,8 @@ export const Constants = {
         "cosechada",
         "vacia",
         "baja",
+        "en_produccion",
+        "acolchado",
       ],
       tipo_residuo: [
         "plastico_acolchado",

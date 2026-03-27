@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Truck, Tractor, Users, UserCheck,
@@ -13,6 +13,9 @@ import {
   useKPIsTrabajos,
   TipoBloque, TrabajoRegistro, TrabajoIncidencia,
 } from '../hooks/useTrabajos';
+import { useParcelas } from '../hooks/useParcelData';
+import { usePersonal } from '../hooks/usePersonal';
+import { supabase } from '@/integrations/supabase/client';
 import jsPDF from 'jspdf';
 
 // ── Constantes ───────────────────────────────────────────────
@@ -31,7 +34,8 @@ const BLOQUES: { id: TipoBloque; label: string; icon: React.ElementType; color: 
 
 const TIPOS_TRABAJO = [
   'Plantación', 'Cosecha', 'Poda', 'Deshierbe', 'Riego', 'Abonado',
-  'Tratamiento fitosanitario', 'Preparación terreno', 'Colocación plástico',
+  'Tratamiento fitosanitario', 'Preparación suelo', 'Labores tractor',
+  'Acolchado', 'Desbrozado', 'Siembra', 'Colocación plástico',
   'Retirada plástico', 'Transporte', 'Mantenimiento', 'Inspección', 'Otro',
 ];
 
@@ -44,32 +48,68 @@ interface ModalRegistroProps {
 function ModalRegistro({ tipoBloque, onClose }: ModalRegistroProps) {
   const bloque   = BLOQUES.find(b => b.id === tipoBloque)!;
   const addMut   = useAddTrabajoRegistro();
-  const [form, setForm] = useState({
-    finca: '', parcel_id: '', tipo_trabajo: '', num_operarios: '',
-    nombres_operarios: '', notas: '',
-    hora_inicio: new Date().toISOString().slice(0, 16),
-    hora_fin: '',
-  });
+  const { data: personal = [] }  = usePersonal();
+  const [finca, setFinca]        = useState('');
+  const [parcelId, setParcelId]  = useState('');
+  const [tipoTrabajo, setTipoTrabajo] = useState('');
+  const [horaInicio, setHoraInicio]   = useState(new Date().toISOString().slice(0, 16));
+  const [horaFin, setHoraFin]         = useState('');
+  const [nombresSelec, setNombresSelec] = useState<string[]>([]);
+  const [nombreLibre, setNombreLibre]  = useState('');
+  const [notas, setNotas]             = useState('');
+  const [foto, setFoto]               = useState<File | null>(null);
+  const [uploading, setUploading]     = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
 
-  const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
+  const { data: parcelas = [] } = useParcelas(finca || undefined);
+
+  const addNombrePersonal = (nombre: string) => {
+    if (nombre && !nombresSelec.includes(nombre)) {
+      setNombresSelec(p => [...p, nombre]);
+    }
+  };
+  const addNombreLibre = () => {
+    if (nombreLibre.trim() && !nombresSelec.includes(nombreLibre.trim())) {
+      setNombresSelec(p => [...p, nombreLibre.trim()]);
+      setNombreLibre('');
+    }
+  };
+  const removeNombre = (n: string) => setNombresSelec(p => p.filter(x => x !== n));
 
   const handleSubmit = async () => {
-    if (!form.tipo_trabajo.trim()) return;
-    await addMut.mutateAsync({
-      tipo_bloque:       tipoBloque,
-      fecha:             new Date().toISOString().slice(0, 10),
-      hora_inicio:       form.hora_inicio || null,
-      hora_fin:          form.hora_fin || null,
-      finca:             form.finca || null,
-      parcel_id:         form.parcel_id || null,
-      tipo_trabajo:      form.tipo_trabajo,
-      num_operarios:     form.num_operarios ? Number(form.num_operarios) : null,
-      nombres_operarios: form.nombres_operarios || null,
-      foto_url:          null,
-      notas:             form.notas || null,
-      created_by:        'JuanPe',
-    });
-    onClose();
+    if (!tipoTrabajo.trim()) return;
+    setUploading(true);
+    try {
+      let foto_url: string | null = null;
+      if (foto) {
+        const ext  = foto.name.split('.').pop() ?? 'jpg';
+        const path = `trabajos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from('parcel-images')
+          .upload(path, foto, { upsert: true });
+        if (!upErr) {
+          foto_url = supabase.storage.from('parcel-images').getPublicUrl(path).data.publicUrl;
+        }
+      }
+      const nombresStr = nombresSelec.join(', ') || null;
+      await addMut.mutateAsync({
+        tipo_bloque:       tipoBloque,
+        fecha:             new Date().toISOString().slice(0, 10),
+        hora_inicio:       horaInicio || null,
+        hora_fin:          horaFin    || null,
+        finca:             finca      || null,
+        parcel_id:         parcelId   || null,
+        tipo_trabajo:      tipoTrabajo,
+        num_operarios:     nombresSelec.length || null,
+        nombres_operarios: nombresStr,
+        foto_url,
+        notas:             notas || null,
+        created_by:        'JuanPe',
+      });
+      onClose();
+    } finally {
+      setUploading(false);
+    }
   };
 
   const IconComp = bloque.icon;
@@ -93,14 +133,15 @@ function ModalRegistro({ tipoBloque, onClose }: ModalRegistroProps) {
 
         {/* Body */}
         <div className="p-5 space-y-3 max-h-[70vh] overflow-y-auto">
+
           {/* Tipo de trabajo */}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">
               Tipo de trabajo *
             </label>
             <select
-              value={form.tipo_trabajo}
-              onChange={e => set('tipo_trabajo', e.target.value)}
+              value={tipoTrabajo}
+              onChange={e => setTipoTrabajo(e.target.value)}
               className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none"
             >
               <option value="">Seleccionar…</option>
@@ -108,88 +149,138 @@ function ModalRegistro({ tipoBloque, onClose }: ModalRegistroProps) {
             </select>
           </div>
 
-          {/* Finca */}
+          {/* Finca + Parcela */}
           <div>
-            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">
-              Finca
-            </label>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Finca</label>
             <select
-              value={form.finca}
-              onChange={e => set('finca', e.target.value)}
+              value={finca}
+              onChange={e => { setFinca(e.target.value); setParcelId(''); }}
               className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none"
             >
               <option value="">— Todas / No aplica —</option>
               {FINCAS.map(f => <option key={f} value={f}>{f}</option>)}
             </select>
           </div>
+          {finca && parcelas.length > 0 && (
+            <div>
+              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Parcela / Sector</label>
+              <select
+                value={parcelId}
+                onChange={e => setParcelId(e.target.value)}
+                className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none"
+              >
+                <option value="">— Finca completa —</option>
+                {parcelas.map(p => <option key={p.parcel_id} value={p.parcel_id}>{p.parcel_number}</option>)}
+              </select>
+            </div>
+          )}
 
           {/* Hora inicio / fin */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">
-                Hora inicio
-              </label>
+              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Hora inicio</label>
               <input
                 type="datetime-local"
-                value={form.hora_inicio}
-                onChange={e => set('hora_inicio', e.target.value)}
+                value={horaInicio}
+                onChange={e => setHoraInicio(e.target.value)}
                 className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none"
               />
             </div>
             <div>
-              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">
-                Hora fin
-              </label>
+              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Hora fin</label>
               <input
                 type="datetime-local"
-                value={form.hora_fin}
-                onChange={e => set('hora_fin', e.target.value)}
+                value={horaFin}
+                onChange={e => setHoraFin(e.target.value)}
                 className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none"
               />
             </div>
           </div>
 
           {/* Operarios */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">
-                Nº operarios
-              </label>
-              <input
-                type="number" min="0"
-                value={form.num_operarios}
-                onChange={e => set('num_operarios', e.target.value)}
-                placeholder="0"
-                className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none"
-              />
-            </div>
-            <div>
-              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">
-                Nombres
-              </label>
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">
+              Operarios ({nombresSelec.length})
+            </label>
+            {/* Selector desde Personal */}
+            <select
+              value=""
+              onChange={e => { addNombrePersonal(e.target.value); e.target.value = ''; }}
+              className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none mb-2"
+            >
+              <option value="">+ Añadir desde Personal…</option>
+              {personal.filter(p => p.activo).map(p => (
+                <option key={p.id} value={p.nombre}>{p.nombre}</option>
+              ))}
+            </select>
+            {/* Campo libre */}
+            <div className="flex gap-2">
               <input
                 type="text"
-                value={form.nombres_operarios}
-                onChange={e => set('nombres_operarios', e.target.value)}
-                placeholder="Pedro, Ana…"
-                className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none"
+                value={nombreLibre}
+                onChange={e => setNombreLibre(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && addNombreLibre()}
+                placeholder="Nombre manual…"
+                className="flex-1 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none"
               />
+              <button
+                type="button"
+                onClick={addNombreLibre}
+                className="px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-700 text-white hover:bg-slate-600 transition-colors"
+              >+</button>
             </div>
+            {/* Lista nombres */}
+            {nombresSelec.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {nombresSelec.map(n => (
+                  <span key={n} className="flex items-center gap-1 px-2 py-1 bg-slate-700 rounded-full text-[10px] text-white">
+                    {n}
+                    <button type="button" onClick={() => removeNombre(n)} className="text-slate-400 hover:text-red-400">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Notas */}
           <div>
-            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">
-              Notas
-            </label>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Notas</label>
             <textarea
-              value={form.notas}
-              onChange={e => set('notas', e.target.value)}
+              value={notas}
+              onChange={e => setNotas(e.target.value)}
               rows={2}
               placeholder="Observaciones…"
               className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white resize-none focus:border-[#38bdf8]/50 focus:outline-none"
             />
           </div>
+
+          {/* Foto obligatoria */}
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">
+              Foto <span style={{ color: bloque.color }}>*</span>
+            </label>
+            {foto ? (
+              <div className="flex items-center gap-3 p-2 bg-slate-800 rounded-lg border border-white/10">
+                <img src={URL.createObjectURL(foto)} alt="preview" className="w-12 h-12 object-cover rounded shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] text-white truncate">{foto.name}</p>
+                  <p className="text-[9px] text-slate-500">{(foto.size / 1024).toFixed(0)} KB</p>
+                </div>
+                <button type="button" onClick={() => setFoto(null)} className="text-slate-500 hover:text-red-400">×</button>
+              </div>
+            ) : (
+              <label className="flex items-center gap-3 p-2 bg-slate-800 rounded-lg border border-dashed border-white/20 cursor-pointer hover:border-white/40 transition-colors">
+                <Camera className="w-4 h-4 text-slate-500" />
+                <span className="text-[10px] text-slate-400">Tomar foto o seleccionar</span>
+                <input
+                  ref={fileRef}
+                  type="file" accept="image/*" capture="environment" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) setFoto(f); }}
+                />
+              </label>
+            )}
+          </div>
+
         </div>
 
         {/* Footer */}
@@ -202,11 +293,11 @@ function ModalRegistro({ tipoBloque, onClose }: ModalRegistroProps) {
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!form.tipo_trabajo || addMut.isPending}
-            className="flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors disabled:opacity-40"
+            disabled={!tipoTrabajo || !foto || uploading || addMut.isPending}
+            className="flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors disabled:opacity-40 flex items-center justify-center gap-1"
             style={{ backgroundColor: bloque.color, color: '#000' }}
           >
-            {addMut.isPending ? 'Guardando…' : 'Guardar'}
+            {(uploading || addMut.isPending) ? 'Guardando…' : 'Guardar'}
           </button>
         </div>
       </div>

@@ -670,3 +670,30 @@ export function useInsertAnalisisAgua() {
     }
   })
 }
+
+/*
+================================================
+PARCELAS POR FINCA (para selectores en formularios)
+================================================
+*/
+
+export interface ParcelaOption {
+  parcel_id: string
+  parcel_number: string
+}
+
+export function useParcelas(finca?: string) {
+  return useQuery<ParcelaOption[]>({
+    queryKey: ['parcelas_por_finca', finca ?? ''],
+    enabled: !!finca,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('parcels')
+        .select('parcel_id, parcel_number')
+        .eq('farm', finca!)
+        .order('parcel_number', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as ParcelaOption[]
+    },
+  })
+}

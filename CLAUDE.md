@@ -217,11 +217,14 @@ partes_diarios           — id UUID PK, fecha DATE UNIQUE, responsable TEXT DEF
 parte_estado_finca       — id UUID PK, parte_id UUID FK, finca TEXT, parcel_id TEXT, estado TEXT, num_operarios INT, nombres_operarios TEXT, foto_url TEXT, foto_url_2 TEXT, notas TEXT, created_at
 parte_trabajo            — id UUID PK, parte_id UUID FK, tipo_trabajo TEXT, finca TEXT, ambito TEXT, parcelas TEXT[], num_operarios INT, nombres_operarios TEXT, hora_inicio TIMESTAMPTZ, hora_fin TIMESTAMPTZ, foto_url TEXT, foto_url_2 TEXT, notas TEXT, created_at
 parte_personal           — id UUID PK, parte_id UUID FK, texto TEXT, con_quien TEXT, donde TEXT, foto_url TEXT, fecha_hora TIMESTAMPTZ, created_at
-parte_residuos_vegetales — id UUID PK, parte_id UUID FK, nombre_conductor TEXT, hora_salida_nave TIMESTAMPTZ, nombre_ganadero TEXT, hora_llegada_ganadero TIMESTAMPTZ, hora_regreso_nave TIMESTAMPTZ, foto_url TEXT, notas_descarga TEXT, created_at
+parte_residuos_vegetales — id UUID PK, parte_id UUID FK, nombre_conductor TEXT, personal_id UUID FK→personal, hora_salida_nave TIMESTAMPTZ, nombre_ganadero TEXT, ganadero_id UUID FK→ganaderos, hora_llegada_ganadero TIMESTAMPTZ, hora_regreso_nave TIMESTAMPTZ, foto_url TEXT, notas_descarga TEXT, created_at
+
+-- GANADEROS
+ganaderos — id UUID PK, nombre TEXT NOT NULL, telefono TEXT, direccion TEXT, activo BOOL DEFAULT true, notas TEXT, created_at
 ```
 
 **ENUMs:**
-- `estado_parcela`: activa | plantada | preparacion | cosechada | **vacia** | baja
+- `estado_parcela`: activa | plantada | preparacion | cosechada | **vacia** | baja | **en_produccion** | **acolchado**
 - `tipo_riego`: goteo | tradicional | aspersion | ninguno
 - `tipo_residuo`: plastico_acolchado | cinta_riego | rafia | envase_fitosanitario | otro
 - `estado_certificacion`: vigente | suspendida | en_tramite | caducada
@@ -252,17 +255,31 @@ parte_residuos_vegetales — id UUID PK, parte_id UUID FK, nombre_conductor TEXT
 - Botón tema oscuro/claro (único punto de control del tema)
 - **ELIMINADO**: grid de fincas directas — ahora el acceso a fincas es vía módulo CAMPO
 
-### FarmMap.tsx
+### FarmMap.tsx — ACTUALIZADO 27/03/2026
 - Mapa Leaflet con 119 sectores reales GeoJSON WGS84
-- 6 módulos: SECTORES, REGISTRAR, ANÁLISIS, TRAZABILIDAD (placeholder), ALERTAS (placeholder), HISTÓRICO
-- Formularios: trabajo, plantación, cosecha 2 pasos, estado parcela, foto
-- Análisis: suelo (Hanna HI9814 + LaMotte), sensor NDVI/SPAD, agua por fuente
+- 7 módulos: SECTORES, REGISTRAR, ANÁLISIS, TRAZABILIDAD (placeholder), ALERTAS (placeholder), HISTÓRICO + INFORME PDF
+- **REGISTRAR** tiene 3 opciones: Trabajo (`work`), Estado/Análisis (`estado_unificado`), Subir Foto (`photo`)
+- **ANÁLISIS** redirige al formulario unificado `RegisterEstadoUnificadoForm`
+- 6 formularios separados eliminados: RegisterPlantingForm, RegisterHarvestForm, RegisterParcelEstadoForm, RegisterAnalisisSueloForm, RegisterLecturaSensorForm, RegisterAnalisisAguaForm
+- **`RegisterEstadoUnificadoForm.tsx`** — formulario unificado completo (ver sección abajo)
 - **Botón Informe PDF** con modal 3 opciones:
   - Por Sector y fechas (trabajos + plantaciones + cosechas + tickets)
   - Por Tipo y fechas (6 tipos × toda la finca, agrupado por sector)
   - Estado actual finca (último dato de cada sector)
 - Generación PDF con jsPDF: `loadImage + addPhoto` para fotos embebidas
 - **Fix fondo blanco PDFs:** canvas rellena `#ffffff` antes de `drawImage` para que el logo PNG (transparente) sea visible correctamente en todos los PDFs de la app
+
+### RegisterEstadoUnificadoForm.tsx — NUEVO 27/03/2026
+- Formulario unificado que reemplaza los 6 formularios separados de FarmMap
+- **Modo standalone** (sin parcelId): selector finca → selector parcela en cascada via `useParcelas(finca)`
+- **Modo FarmMap** (con parcelId): muestra finca+parcela como header readonly
+- 6 botones de estado: `vacía | preparación | plantada | cosechada | en producción | acolchado`
+- Sección plantación condicional (`plantada|en_produccion`): cultivo del catálogo, fecha, variedad, fecha estimada cosecha auto-calculada
+- Sección cosecha condicional (`cosechada`): cultivo, kg producidos, fecha
+- 3 secciones colapsables con toggle: Análisis Suelo (pH/EC/salinidad/temp/NPK/textura), Análisis Agua (fuente/pH/EC/salinidad), Sensor Planta (índice salud/estrés/clorofila/NDVI)
+- Foto **obligatoria** con `capture="environment"` y preview inmediato
+- `handleSubmit`: sube foto → inserta `registros_estado_parcela` (con foto_url) → actualiza `parcels.status` → inserta plantings/harvests/analisis_suelo/analisis_agua/lecturas_sensor_planta (cada uno independiente, fallo parcial no bloquea)
+- Submit deshabilitado si `!activeParcelId || !estado || !foto`
 
 ### Módulo Inventario de Activos Físicos — COMPLETO
 - **6 tablas Supabase**: ubicaciones, categorías, productos_catalogo, registros, movimientos, informes
@@ -282,30 +299,30 @@ parte_residuos_vegetales — id UUID PK, parte_id UUID FK, nombre_conductor TEXT
 - **`doc/generar_seed_inventario.py`** — parser Excel → SQL con `parse_cantidad()` robusto para valores no numéricos
 - **`doc/seed_inventario_historico.sql`** — SQL listo para Supabase, BEGIN/COMMIT, upsert con ON CONFLICT
 
-### Módulo Parte Diario — COMPLETO
-- **5 tablas Supabase**: `partes_diarios`, `parte_estado_finca`, `parte_trabajo`, `parte_personal`, `parte_residuos_vegetales`
+### Módulo Parte Diario — COMPLETO + MEJORADO 27/03/2026
+- **5 tablas Supabase + tabla ganaderos**: `partes_diarios`, `parte_estado_finca`, `parte_trabajo`, `parte_personal`, `parte_residuos_vegetales`, `ganaderos`
   - `partes_diarios` tiene `UNIQUE(fecha)` — un parte por día, creado automáticamente al entrar
-- **`src/hooks/useParteDiario.ts`** — 12 hooks: usePartePorFecha, useEnsureParteHoy, useEstadosFinca, useAddEstadoFinca, useTrabajos, useAddTrabajo, usePersonales, useAddPersonal, useResiduos, useAddResiduos, useUpdateParteDiario, useDeleteEntradaParte
+- **`src/hooks/useParteDiario.ts`** — 14 hooks: usePartePorFecha, useEnsureParteHoy, useEstadosFinca, useAddEstadoFinca, useTrabajos, useAddTrabajo, usePersonales, useAddPersonal, useResiduos, useAddResiduos, useUpdateParteDiario, useDeleteEntradaParte, **useGanaderos**, **useAddGanadero**
 - **`src/pages/ParteDiario.tsx`** — 4 bloques + PDF ultra-detallado:
   - **Bloque A** — Estado finca/parcela: finca, sector, estado, operarios (nº + nombres), 2 fotos, notas
   - **Bloque B** — Trabajo en curso: tipo, finca, ámbito (finca completa / parcelas concretas), operarios, hora inicio/fin, 2 fotos, notas
   - **Bloque C** — Parte personal JuanPe: texto libre, con quién, dónde, foto
-  - **Bloque D** — Residuos vegetales: conductor, hora salida nave, ganadero destino, hora llegada, hora regreso, notas, foto
+  - **Bloque D** — Residuos vegetales: **conductor desde selector Personal** (`conductor_camion`), hora salida nave, **ganadero desde tabla `ganaderos`** (con opción "+ Nuevo ganadero" inline), hora llegada, hora regreso, notas, **foto obligatoria**; guarda `personal_id` + `ganadero_id` + `foto_url`
   - Navegador de fechas (← →) para consultar partes anteriores en modo lectura
   - Botón "Generar PDF" → `Parte_Diario_YYYY-MM-DD.pdf`:
     - Logo MARVIC en cabecera de cada página
     - Orden cronológico estricto mezclando los 4 bloques
     - Foto **inmediatamente después** de cada entrada que la tenga
     - Trazabilidad completa: quién, dónde, qué hora, con quién
-- **Bucket Storage** `partes-images` — fotos subidas desde los 4 bloques
-- **NOTA:** `parte_personal` y `parte_residuos_vegetales` requieren `ALTER TABLE ... ADD COLUMN foto_url TEXT` para activar la foto en esos bloques
+- **Bucket Storage** `partes-images` — fotos subidas desde los bloques
+- `parte_residuos_vegetales` tiene columnas nuevas: `personal_id UUID FK→personal`, `ganadero_id UUID FK→ganaderos`, `foto_url TEXT`
 
-### Módulo TRABAJOS — COMPLETO (26/03/2026)
+### Módulo TRABAJOS — COMPLETO + MEJORADO 27/03/2026
 - **2 tablas Supabase**: `trabajos_registro`, `trabajos_incidencias`
 - **`src/hooks/useTrabajos.ts`** — 6 hooks completos con KPIs
 - **`src/pages/Trabajos.tsx`**:
   - 4 sub-bloques con colores propios: Logística (violeta), Maquinaria Agrícola (naranja), M.O. Interna (verde), M.O. Externa (azul)
-  - Modal registro por bloque: tipo trabajo, finca, hora inicio/fin, operarios, notas
+  - Modal registro mejorado: **selector parcela en cascada** (finca → parcel via `useParcelas`), **18 tipos de trabajo** completos, **selector Personal** con chips + campo texto libre, `num_operarios` auto-calculado, **foto obligatoria** subida a `parcel-images/trabajos/<timestamp>/`
   - Incidencias urgentes (rojo pulsante) y no urgentes con ciclo de estados: abierta → en_proceso → resuelta
   - PDF descargable: `Trabajos_YYYY-MM-DD.pdf` con registros por bloque + incidencias
 
@@ -350,11 +367,22 @@ parte_residuos_vegetales — id UUID PK, parte_id UUID FK, nombre_conductor TEXT
 - Sustituye la versión anterior que mostraba fincas de prueba/BD
 
 ### Hooks y componentes
-- `useParcelData.ts` — hooks completos: tickets, residuos, certificaciones, análisis suelo/sensor/agua, estados mapa
+- `useParcelData.ts` — hooks completos: tickets, residuos, certificaciones, análisis suelo/sensor/agua, estados mapa + **`useParcelas(finca?)`** (selector cascada finca→parcelas)
 - `ParcelHistory.tsx` — 6 tabs: Trabajos, Plantaciones, Cosechas, Tickets, Residuos, Certificación
 - `UploadParcelPhoto.tsx` — spinner CSS (no Loader2, que causaba error DOM)
 - `FINCAS_MARVIC_FINAL.geojson` — 119 sectores reales WGS84
 - **Fix zoom mapa:** `fitDoneRef` evita re-zoom al volver al mapa con finca ya cargada
+
+### Formularios de campo unificados — 27/03/2026
+- Nuevos estados ENUM: `en_produccion` y `acolchado` → `STATUS_COLORS` y `STATUS_LABELS` actualizados en `types/farm.ts`
+- Tabla `ganaderos` creada en Supabase con RLS `anon`
+- `registros_estado_parcela` tiene columna nueva `foto_url TEXT`
+- `useParcelas(finca?)` añadido a `useParcelData.ts` — query Supabase con `enabled: !!finca`
+- `useGanaderos()` y `useAddGanadero()` añadidos a `useParteDiario.ts`
+- `RegisterEstadoUnificadoForm.tsx` — nuevo componente que unifica 6 formularios separados
+- `FarmMap.tsx` — integra el formulario unificado, elimina 6 imports viejos, REGISTRAR=3 opciones
+- `Trabajos.tsx` — selector parcela cascada + 18 tipos trabajo + selector Personal + foto obligatoria
+- `ParteDiario.tsx` — Bloque D: conductor desde Personal, ganadero desde tabla ganaderos con creación inline, foto obligatoria
 
 ### Limpieza estructural BD — 27/03/2026
 - `parcel_id` es **TEXT en todas las tablas sin excepción** — consistencia total
@@ -367,16 +395,11 @@ parte_residuos_vegetales — id UUID PK, parte_id UUID FK, nombre_conductor TEXT
 
 ### PRIORIDAD 1 — INMEDIATO
 
-**P1.1 — Módulo TRABAJOS con conexión automática a Campo**
-- Trabajos.tsx ya existe con 4 sub-bloques e incidencias
-- Conectar con FarmMap: al registrar un trabajo desde el mapa, que se grabe también en `trabajos_registro`
-- Vincular parcel_id y finca de forma automática desde el contexto del mapa
-
-**P1.2 — FarmMap tema oscuro/claro**
+**P1.1 — FarmMap tema oscuro/claro**
 - FarmMap.tsx usa clases hardcoded oscuras — NO respeta el tema claro
 - Añadir variantes `dark:` a todos los elementos
 
-**P1.3 — Sistema QR cuadrillas**
+**P1.2 — Sistema QR cuadrillas**
 - `QRCuadrilla.tsx` ya existe pero NO tiene ruta registrada en App.tsx
 - Página `/qr/:cuadrilla_id` — pantalla fullscreen móvil, sin login, max 2 taps
 - Registra `hora_entrada` en work_records al escanear entrada
@@ -420,7 +443,7 @@ parte_residuos_vegetales — id UUID PK, parte_id UUID FK, nombre_conductor TEXT
 - Informe mensual automático inventario: Supabase Edge Function + pg_cron
 - Fotos reales de ubicaciones en inventario (actualmente usa logo como watermark)
 - Integración ERP actual de Marvic (pendiente identificar el sistema)
-- Foto en Bloque C y D Parte Diario (requiere `ALTER TABLE parte_personal ADD COLUMN foto_url TEXT` y `ALTER TABLE parte_residuos_vegetales ADD COLUMN foto_url TEXT` en Supabase)
+- Foto en Bloque C Parte Diario (requiere `ALTER TABLE parte_personal ADD COLUMN foto_url TEXT` en Supabase — Bloque D ya tiene foto_url desde 27/03/2026)
 
 ### PRIORIDAD 4
 

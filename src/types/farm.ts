@@ -28,21 +28,25 @@ export interface FarmSummary {
 export type ParcelStatus = EstadoParcela;
 
 export const STATUS_COLORS: Record<ParcelStatus, string> = {
-  activa:       '#22c55e',
-  plantada:     '#eab308',
-  preparacion:  '#3b82f6',
-  cosechada:    '#ef4444',
-  vacia:        '#6b7280',
-  baja:         '#1f2937',
+  activa:        '#22c55e',
+  plantada:      '#eab308',
+  preparacion:   '#3b82f6',
+  cosechada:     '#ef4444',
+  vacia:         '#6b7280',
+  baja:          '#1f2937',
+  en_produccion: '#f97316',
+  acolchado:     '#a855f7',
 };
 
 export const STATUS_LABELS: Record<ParcelStatus, string> = {
-  activa:       'Activa',
-  plantada:     'Plantada',
-  preparacion:  'Preparación',
-  cosechada:    'Cosechada',
-  vacia:        'Vacía',
-  baja:         'Baja',
+  activa:        'Activa',
+  plantada:      'Plantada',
+  preparacion:   'Preparación',
+  cosechada:     'Cosechada',
+  vacia:         'Vacía',
+  baja:          'Baja',
+  en_produccion: 'En producción',
+  acolchado:     'Acolchado',
 };
 
 // Interfaces para entidades nuevas

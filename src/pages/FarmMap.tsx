@@ -16,15 +16,10 @@ import { supabase } from '@/integrations/supabase/client'
 import type { ParcelFeature, ParcelStatus } from '@/types/farm'
 import { STATUS_COLORS, STATUS_LABELS } from '@/types/farm'
 
-import RegisterWorkForm             from '@/components/RegisterWorkForm'
-import RegisterPlantingForm         from '@/components/RegisterPlantingForm'
-import RegisterHarvestForm          from '@/components/RegisterHarvestForm'
-import RegisterParcelEstadoForm     from '@/components/RegisterParcelEstadoForm'
-import UploadParcelPhoto            from '@/components/UploadParcelPhoto'
-import ParcelHistory                from '@/components/ParcelHistory'
-import RegisterAnalisisSueloForm    from '@/components/RegisterAnalisisSueloForm'
-import RegisterLecturaSensorForm    from '@/components/RegisterLecturaSensorForm'
-import RegisterAnalisisAguaForm     from '@/components/RegisterAnalisisAguaForm'
+import RegisterWorkForm               from '@/components/RegisterWorkForm'
+import UploadParcelPhoto              from '@/components/UploadParcelPhoto'
+import ParcelHistory                  from '@/components/ParcelHistory'
+import RegisterEstadoUnificadoForm    from '@/components/RegisterEstadoUnificadoForm'
 
 // ── LEYENDA ───────────────────────────────────────────
 function MapLegend() {
@@ -60,8 +55,7 @@ const MENU_ITEMS = [
 ] as const
 
 type MenuId           = typeof MENU_ITEMS[number]['id']
-type RegisterAction   = 'work' | 'planting' | 'harvest' | 'estado' | 'photo' | null
-type AnalisisAction   = 'suelo' | 'sensor' | 'agua' | null
+type RegisterAction   = 'work' | 'estado_unificado' | 'photo' | null
 type InformeFincaTipo = 'sector' | 'tipo' | 'estado'
 type InformeTipoDato  = 'trabajos' | 'plantaciones' | 'cosechas' | 'tickets' | 'residuos' | 'certificaciones'
 
@@ -135,10 +129,9 @@ export default function FarmMap() {
 
   const [selectedParcel, setSelectedParcel] = useState<ParcelFeature | null>(null)
   const [tooltipParcel, setTooltipParcel]   = useState<ParcelFeature | null>(null)
-  const [activeMenu, setActiveMenu]         = useState<MenuId | null>(null)
-  const [activeModal, setActiveModal]       = useState<RegisterAction>(null)
-  const [analisisModal, setAnalisisModal]   = useState<AnalisisAction>(null)
-  const [now, setNow]                       = useState(new Date())
+  const [activeMenu, setActiveMenu]   = useState<MenuId | null>(null)
+  const [activeModal, setActiveModal] = useState<RegisterAction>(null)
+  const [now, setNow]                 = useState(new Date())
   const [coords, setCoords]                 = useState({ lat: 0, lng: 0 })
 
   // ── Informe PDF state ─────────────────────────────────────────
@@ -607,8 +600,7 @@ export default function FarmMap() {
   const parcelId        = selectedParcel?.properties.parcel_id ?? null
   const parcelNombre    = selectedParcel?.properties.parcela ?? ''
 
-  const closeModal         = () => setActiveModal(null)
-  const closeAnalisisModal = () => setAnalisisModal(null)
+  const closeModal = () => setActiveModal(null)
 
   return (
     <div className="h-screen w-screen relative overflow-hidden bg-[#020617]">
@@ -728,11 +720,9 @@ export default function FarmMap() {
             ) : (
               <div className="space-y-2">
                 {[
-                  { label: 'Registrar Trabajo',    icon: Shovel,   action: 'work'     as RegisterAction },
-                  { label: 'Registrar Plantación', icon: Sprout,   action: 'planting' as RegisterAction },
-                  { label: 'Registrar Cosecha',    icon: Wheat,    action: 'harvest'  as RegisterAction },
-                  { label: 'Estado de Parcela',    icon: Activity, action: 'estado'   as RegisterAction },
-                  { label: 'Subir Foto',           icon: Camera,   action: 'photo'    as RegisterAction },
+                  { label: 'Registrar Trabajo',     icon: Shovel,   action: 'work'            as RegisterAction },
+                  { label: 'Estado / Análisis',      icon: Activity, action: 'estado_unificado' as RegisterAction },
+                  { label: 'Subir Foto',             icon: Camera,   action: 'photo'           as RegisterAction },
                 ].map(({ label, icon: Icon, action }) => (
                   <button
                     key={action}
@@ -767,14 +757,17 @@ export default function FarmMap() {
               </p>
             ) : (
               <div className="space-y-2">
+                <p className="text-[10px] text-slate-500 px-1 pb-1">
+                  Suelo, agua y sensor están integrados en el formulario unificado.
+                </p>
                 {[
-                  { label: 'Análisis de Suelo',   icon: FlaskConical, action: 'suelo'  as AnalisisAction, desc: 'pH · EC · NPK · textura' },
-                  { label: 'Sensor NDVI / SPAD',  icon: Leaf,         action: 'sensor' as AnalisisAction, desc: 'Salud vegetal · clorofila' },
-                  { label: 'Análisis Agua Riego', icon: Droplets,     action: 'agua'   as AnalisisAction, desc: 'Calidad agua por fuente' },
-                ].map(({ label, icon: Icon, action, desc }) => (
+                  { label: 'Análisis de Suelo',   icon: FlaskConical, desc: 'pH · EC · NPK · textura' },
+                  { label: 'Sensor NDVI / SPAD',  icon: Leaf,         desc: 'Salud vegetal · clorofila' },
+                  { label: 'Análisis Agua Riego', icon: Droplets,     desc: 'Calidad agua por fuente' },
+                ].map(({ label, icon: Icon, desc }) => (
                   <button
-                    key={action}
-                    onClick={() => { setAnalisisModal(action); setActiveMenu(null) }}
+                    key={label}
+                    onClick={() => { setActiveModal('estado_unificado'); setActiveMenu(null) }}
                     className="w-full flex items-start gap-3 px-3 py-3 rounded border border-white/10 bg-slate-800/50 hover:bg-slate-800 hover:border-[#38bdf8]/30 transition-all text-left"
                   >
                     <Icon className="w-4 h-4 text-[#38bdf8] shrink-0 mt-0.5" />
@@ -840,7 +833,7 @@ export default function FarmMap() {
       )}
 
       {/* TOOLTIP */}
-      {tooltipParcel && !activeModal && !analisisModal && (
+      {tooltipParcel && !activeModal && (
         <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-[1001]">
           <SectorTooltip
             parcel={tooltipParcel}
@@ -882,54 +875,19 @@ export default function FarmMap() {
           <RegisterWorkForm parcelId={parcelId} onClose={closeModal} />
         </Modal>
       )}
-      {activeModal === 'planting' && parcelId && (
-        <Modal title="Registrar Plantación" subtitle={parcelNombre} onClose={closeModal}>
-          <RegisterPlantingForm parcelId={parcelId} onClose={closeModal} />
-        </Modal>
-      )}
-      {activeModal === 'harvest' && parcelId && (
-        <Modal title="Registrar Cosecha" subtitle={parcelNombre} onClose={closeModal}>
-          <RegisterHarvestForm parcelId={parcelId} onClose={closeModal} />
-        </Modal>
-      )}
-      {activeModal === 'estado' && parcelId && (
-        <Modal title="Estado de Parcela" subtitle={parcelNombre} onClose={closeModal}>
-          <RegisterParcelEstadoForm parcelId={parcelId} onClose={closeModal} />
+      {activeModal === 'estado_unificado' && parcelId && (
+        <Modal title="Estado / Análisis" subtitle={parcelNombre} onClose={closeModal} wide>
+          <RegisterEstadoUnificadoForm
+            parcelId={parcelId}
+            farmName={decodedFarm}
+            parcelName={parcelNombre}
+            onClose={closeModal}
+          />
         </Modal>
       )}
       {activeModal === 'photo' && parcelId && (
         <Modal title="Subir Foto" subtitle={parcelNombre} onClose={closeModal}>
           <UploadParcelPhoto parcelId={parcelId} onClose={closeModal} />
-        </Modal>
-      )}
-
-      {/* ══ MODALES ANÁLISIS ═══════════════════════════ */}
-      {analisisModal === 'suelo' && parcelId && (
-        <Modal title="Análisis de Suelo" subtitle={parcelNombre} onClose={closeAnalisisModal} wide>
-          <RegisterAnalisisSueloForm
-            parcelId={parcelId}
-            parcelNombre={parcelNombre}
-            onClose={closeAnalisisModal}
-          />
-        </Modal>
-      )}
-
-      {analisisModal === 'sensor' && parcelId && (
-        <Modal title="Lectura Sensor NDVI / SPAD" subtitle={parcelNombre} onClose={closeAnalisisModal} wide>
-          <RegisterLecturaSensorForm
-            parcelId={parcelId}
-            parcelNombre={parcelNombre}
-            onClose={closeAnalisisModal}
-          />
-        </Modal>
-      )}
-
-      {analisisModal === 'agua' && (
-        <Modal title="Análisis Agua de Riego" subtitle={decodedFarm} onClose={closeAnalisisModal} wide>
-          <RegisterAnalisisAguaForm
-            finca={decodedFarm}
-            onClose={closeAnalisisModal}
-          />
         </Modal>
       )}
 

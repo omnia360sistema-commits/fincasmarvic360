@@ -309,3 +309,52 @@ export function useDeleteEntradaParte() {
     },
   })
 }
+
+/*
+================================================
+13. GANADEROS — tabla de ganaderos destino residuos vegetales
+================================================
+*/
+
+export interface Ganadero {
+  id:         string
+  nombre:     string
+  telefono:   string | null
+  direccion:  string | null
+  activo:     boolean
+  notas:      string | null
+  created_at: string
+}
+
+export function useGanaderos() {
+  return useQuery<Ganadero[]>({
+    queryKey: ['ganaderos'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('ganaderos')
+        .select('*')
+        .eq('activo', true)
+        .order('nombre', { ascending: true })
+      if (error) throw error
+      return (data ?? []) as Ganadero[]
+    },
+  })
+}
+
+export function useAddGanadero() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (nombre: string) => {
+      const { data, error } = await supabase
+        .from('ganaderos')
+        .insert({ nombre })
+        .select()
+        .single()
+      if (error) throw error
+      return data as Ganadero
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['ganaderos'] })
+    },
+  })
+}
