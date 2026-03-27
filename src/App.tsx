@@ -14,6 +14,7 @@ import Trabajos from "./pages/Trabajos";
 import Logistica from "./pages/Logistica";
 import Maquinaria from "./pages/Maquinaria";
 import Personal from "./pages/Personal";
+import QRCuadrilla from "./pages/QRCuadrilla";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,9 +27,11 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<FarmSelector />} />
+            <Route path="/" element={<Dashboard />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/farm" element={<FarmSelector />} />
             <Route path="/farm/:farmName" element={<FarmMap />} />
+            <Route path="/qr/:cuadrilla_id" element={<QRCuadrilla />} />
             <Route path="/inventario" element={<Inventario />} />
             <Route path="/inventario/:ubicacionId" element={<InventarioUbicacion />} />
             <Route path="/parte-diario" element={<ParteDiario />} />

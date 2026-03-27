@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '../integrations/supabase/client';
+import jsPDF from 'jspdf';
 import {
   useUbicaciones, useTotalRegistros,
   useConteosUbicaciones, useCategorias,
@@ -117,7 +118,6 @@ export default function Inventario() {
     if (selUbics.size === 0 || selCats.size === 0) return;
     setGenPdf(true);
     try {
-      const { jsPDF } = await import('jspdf');
       const doc    = new jsPDF();
       const margin = 15;
       const maxW   = 180;

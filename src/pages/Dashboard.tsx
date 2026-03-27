@@ -10,12 +10,7 @@ import {
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../integrations/supabase/client';
 import { useTheme } from '../context/ThemeContext';
-
-const FINCAS_NOMBRES = [
-  'LA CONCEPCION', 'LONSORDO', 'FINCA COLLADOS',
-  'FINCA BRAZO DE LA VIRGEN', 'FINCA LA BARDA',
-  'FINCA LA NUEVA', 'FINCA MAYORAZGO',
-];
+import { FINCAS_NOMBRES } from '../constants/farms';
 
 // ── Módulos principales ──────────────────────────────────────
 interface Modulo {

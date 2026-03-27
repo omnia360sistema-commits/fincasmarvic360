@@ -13,6 +13,8 @@ import {
 } from '@/hooks/useInventario'
 import { supabase } from '@/integrations/supabase/client'
 import type { TablesInsert } from '@/integrations/supabase/types'
+import { uploadImage } from '@/utils/uploadImage'
+import { formatFecha } from '@/utils/dateFormat'
 
 // ── Mapa slug → icono Lucide ──────────────────────────────────
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -28,13 +30,6 @@ const MESES_ES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ]
-
-function formatFecha(iso: string) {
-  return new Date(iso).toLocaleString('es-ES', {
-    day: '2-digit', month: '2-digit', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  })
-}
 
 type RegistroConCategoria = {
   id: string
@@ -206,31 +201,19 @@ export default function InventarioUbicacion() {
       // 2. Subir foto 1
       let foto_url: string | null = null
       if (fotoFile) {
-        const ext  = fotoFile.name.split('.').pop()
+        const ext  = fotoFile.name.split('.').pop() ?? 'jpg'
         const path = `${ubicacionId}/${activeCatId}/${Date.now()}.${ext}`
-        const { error: uploadError } = await supabase.storage
-          .from('inventario-images')
-          .upload(path, fotoFile, { upsert: false })
-        if (uploadError) throw uploadError
-        const { data: urlData } = supabase.storage
-          .from('inventario-images')
-          .getPublicUrl(path)
-        foto_url = urlData.publicUrl
+        foto_url = await uploadImage(fotoFile, 'inventario-images', path, false)
+        if (!foto_url) throw new Error('Error subiendo foto 1')
       }
 
       // 3. Subir foto 2 (lote/código de barras, solo fitos)
       let foto_url_2: string | null = null
       if (fotoFile2) {
-        const ext  = fotoFile2.name.split('.').pop()
+        const ext  = fotoFile2.name.split('.').pop() ?? 'jpg'
         const path = `${ubicacionId}/${activeCatId}/lote_${Date.now()}.${ext}`
-        const { error: err2 } = await supabase.storage
-          .from('inventario-images')
-          .upload(path, fotoFile2, { upsert: false })
-        if (err2) throw err2
-        const { data: u2 } = supabase.storage
-          .from('inventario-images')
-          .getPublicUrl(path)
-        foto_url_2 = u2.publicUrl
+        foto_url_2 = await uploadImage(fotoFile2, 'inventario-images', path, false)
+        if (!foto_url_2) throw new Error('Error subiendo foto 2')
       }
 
       // 4. Insertar registro

@@ -15,28 +15,19 @@ import {
 } from '../hooks/useTrabajos';
 import { useParcelas } from '../hooks/useParcelData';
 import { usePersonal } from '../hooks/usePersonal';
-import { supabase } from '@/integrations/supabase/client';
 import jsPDF from 'jspdf';
+import { FINCAS_NOMBRES as FINCAS } from '../constants/farms';
+import { TIPOS_TRABAJO } from '../constants/tiposTrabajo';
+import { uploadImage, buildStoragePath } from '../utils/uploadImage';
+import { formatHora, formatFechaCorta, formatFechaCompleta } from '../utils/dateFormat';
 
 // ── Constantes ───────────────────────────────────────────────
-const FINCAS = [
-  'LA CONCEPCION', 'LONSORDO', 'FINCA COLLADOS',
-  'FINCA BRAZO DE LA VIRGEN', 'FINCA LA BARDA',
-  'FINCA LA NUEVA', 'FINCA MAYORAZGO',
-];
 
 const BLOQUES: { id: TipoBloque; label: string; icon: React.ElementType; color: string; desc: string }[] = [
   { id: 'logistica',          label: 'Logística',            icon: Truck,      color: '#a78bfa', desc: 'Transporte, rutas y entregas' },
   { id: 'maquinaria_agricola',label: 'Maquinaria Agrícola',  icon: Tractor,    color: '#fb923c', desc: 'Tractores, aperos y labores mecánicas' },
   { id: 'mano_obra_interna',  label: 'Mano de Obra Interna', icon: Users,      color: '#34d399', desc: 'Personal propio de Marvic' },
   { id: 'mano_obra_externa',  label: 'Mano de Obra Externa', icon: UserCheck,  color: '#60a5fa', desc: 'Subcontratas y cuadrillas externas' },
-];
-
-const TIPOS_TRABAJO = [
-  'Plantación', 'Cosecha', 'Poda', 'Deshierbe', 'Riego', 'Abonado',
-  'Tratamiento fitosanitario', 'Preparación suelo', 'Labores tractor',
-  'Acolchado', 'Desbrozado', 'Siembra', 'Colocación plástico',
-  'Retirada plástico', 'Transporte', 'Mantenimiento', 'Inspección', 'Otro',
 ];
 
 // ── Modal registro de trabajo ────────────────────────────────
@@ -82,14 +73,7 @@ function ModalRegistro({ tipoBloque, onClose }: ModalRegistroProps) {
     try {
       let foto_url: string | null = null;
       if (foto) {
-        const ext  = foto.name.split('.').pop() ?? 'jpg';
-        const path = `trabajos/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from('parcel-images')
-          .upload(path, foto, { upsert: true });
-        if (!upErr) {
-          foto_url = supabase.storage.from('parcel-images').getPublicUrl(path).data.publicUrl;
-        }
+        foto_url = await uploadImage(foto, 'parcel-images', buildStoragePath('trabajos', foto));
       }
       const nombresStr = nombresSelec.join(', ') || null;
       await addMut.mutateAsync({
@@ -100,7 +84,7 @@ function ModalRegistro({ tipoBloque, onClose }: ModalRegistroProps) {
         finca:             finca      || null,
         parcel_id:         parcelId   || null,
         tipo_trabajo:      tipoTrabajo,
-        num_operarios:     nombresSelec.length || null,
+        num_operarios:     nombresSelec.length > 0 ? nombresSelec.length : null,
         nombres_operarios: nombresStr,
         foto_url,
         notas:             notas || null,
@@ -419,7 +403,7 @@ function TarjetaRegistro({ r }: { r: TrabajoRegistro }) {
       <div className="flex items-start justify-between gap-2">
         <p className="text-[11px] font-bold text-white leading-tight">{r.tipo_trabajo}</p>
         <span className="text-[8px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap">
-          {new Date(r.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}
+          {formatFechaCorta(r.fecha)}
         </span>
       </div>
       <div className="flex items-center gap-3 flex-wrap">
@@ -431,9 +415,9 @@ function TarjetaRegistro({ r }: { r: TrabajoRegistro }) {
         {(r.hora_inicio || r.hora_fin) && (
           <span className="flex items-center gap-1 text-[9px] text-slate-400">
             <Clock className="w-2.5 h-2.5" />
-            {r.hora_inicio ? new Date(r.hora_inicio).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '—'}
+            {formatHora(r.hora_inicio)}
             {' → '}
-            {r.hora_fin ? new Date(r.hora_fin).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) : '—'}
+            {formatHora(r.hora_fin)}
           </span>
         )}
         {r.num_operarios != null && r.num_operarios > 0 && (
@@ -547,7 +531,7 @@ async function generarPDF(registros: TrabajoRegistro[], incidencias: TrabajoInci
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(100, 116, 139);
   doc.text('Informe de Trabajos', 16, 23);
-  doc.text(new Date().toLocaleDateString('es-ES'), W - 40, 23);
+  doc.text(formatFechaCompleta(new Date().toISOString()), W - 40, 23);
   y = 36;
 
   // Resumen incidencias
@@ -588,14 +572,14 @@ async function generarPDF(registros: TrabajoRegistro[], incidencias: TrabajoInci
       doc.text(r.tipo_trabajo, 14, y);
       doc.setFontSize(8); doc.setFont('helvetica', 'normal');
       doc.setTextColor(100, 116, 139);
-      doc.text(new Date(r.fecha).toLocaleDateString('es-ES'), W - 40, y);
+      doc.text(formatFechaCompleta(r.fecha), W - 40, y);
       y += 5;
       const detalles = [
         r.finca && `Finca: ${r.finca}`,
         r.num_operarios && `${r.num_operarios} operarios`,
         r.nombres_operarios && r.nombres_operarios,
-        r.hora_inicio && `Inicio: ${new Date(r.hora_inicio).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`,
-        r.hora_fin && `Fin: ${new Date(r.hora_fin).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`,
+        r.hora_inicio && `Inicio: ${formatHora(r.hora_inicio)}`,
+        r.hora_fin && `Fin: ${formatHora(r.hora_fin)}`,
       ].filter(Boolean).join('  ·  ');
       if (detalles) {
         doc.setFontSize(7.5); doc.setTextColor(148, 163, 184);

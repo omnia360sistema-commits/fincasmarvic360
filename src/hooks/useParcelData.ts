@@ -208,7 +208,8 @@ export function useParcelRecords(parcelId: string | null) {
       if (error) throw error
       return data ?? []
     },
-    enabled: !!parcelId
+    enabled: !!parcelId,
+    staleTime: 30000,
   })
 
   const plantings = useQuery({
@@ -223,7 +224,8 @@ export function useParcelRecords(parcelId: string | null) {
       if (error) throw error
       return data ?? []
     },
-    enabled: !!parcelId
+    enabled: !!parcelId,
+    staleTime: 30000,
   })
 
   const harvests = useQuery({
@@ -238,7 +240,8 @@ export function useParcelRecords(parcelId: string | null) {
       if (error) throw error
       return data ?? []
     },
-    enabled: !!parcelId
+    enabled: !!parcelId,
+    staleTime: 30000,
   })
 
   return { workRecords, plantings, harvests }
@@ -401,6 +404,30 @@ export function useInsertWorkRecord() {
     },
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['work_records', vars.parcel_id] })
+      qc.invalidateQueries({ queryKey: ['farm_parcel_statuses'] })
+    }
+  })
+}
+
+/*
+================================================
+INSERTAR TRABAJO VÍA QR CUADRILLA
+================================================
+*/
+
+export function useInsertWorkRecordQR() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (record: { cuadrilla_id: string; hora_entrada: string }) => {
+      const { data, error } = await supabase
+        .from('work_records')
+        .insert(record)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['farm_parcel_statuses'] })
     }
   })
@@ -695,5 +722,6 @@ export function useParcelas(finca?: string) {
       if (error) throw error
       return (data ?? []) as ParcelaOption[]
     },
+    staleTime: 60000,
   })
 }

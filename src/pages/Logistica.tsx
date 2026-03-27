@@ -17,6 +17,7 @@ import {
 import { usePersonal, Personal } from '../hooks/usePersonal';
 import { supabase } from '../integrations/supabase/client';
 import jsPDF from 'jspdf';
+import { FINCAS_NOMBRES as FINCAS } from '../constants/farms';
 
 // ── Destinos predefinidos ──────────────────────────────────────
 const DESTINOS_PRESET = [
@@ -38,13 +39,6 @@ const TRABAJO_MAP: Record<string, string[]> = {
   'Mantenimiento finca':  ['Riego', 'Infraestructura', 'Preparación terreno'],
   'Otro': [],
 };
-
-// ── Constantes ────────────────────────────────────────────────
-const FINCAS = [
-  'LA CONCEPCION', 'LONSORDO', 'FINCA COLLADOS',
-  'FINCA BRAZO DE LA VIRGEN', 'FINCA LA BARDA',
-  'FINCA LA NUEVA', 'FINCA MAYORAZGO',
-];
 
 type TabType = 'camiones' | 'conductores';
 
@@ -168,54 +162,6 @@ function ModalCamion({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ── Modal Nuevo Conductor ─────────────────────────────────────
-function ModalConductor({ onClose }: { onClose: () => void }) {
-  const addMut = useAddConductor();
-  const [form, setForm] = useState({ nombre: '', telefono: '', notas: '' });
-  const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
-
-  const handleSubmit = async () => {
-    if (!form.nombre.trim()) return;
-    await addMut.mutateAsync({ nombre: form.nombre, telefono: form.telefono || null, activo: true, notas: form.notas || null, created_by: 'JuanPe' });
-    onClose();
-  };
-
-  return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-md mx-4 shadow-2xl overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-white/10">
-          <Users className="w-5 h-5 text-purple-400" />
-          <p className="flex-1 text-[11px] font-black text-white uppercase tracking-wider">Nuevo conductor</p>
-          <button onClick={onClose} className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
-        </div>
-        <div className="p-5 space-y-3">
-          <div>
-            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Nombre *</label>
-            <input type="text" value={form.nombre} onChange={e => set('nombre', e.target.value)}
-              placeholder="Nombre completo" className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-purple-400/50 focus:outline-none" />
-          </div>
-          <div>
-            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Teléfono</label>
-            <input type="tel" value={form.telefono} onChange={e => set('telefono', e.target.value)}
-              placeholder="6XX XXX XXX" className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-purple-400/50 focus:outline-none" />
-          </div>
-          <div>
-            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Notas</label>
-            <textarea value={form.notas} onChange={e => set('notas', e.target.value)} rows={2}
-              className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white resize-none focus:border-purple-400/50 focus:outline-none" />
-          </div>
-        </div>
-        <div className="px-5 py-3 border-t border-white/10 flex gap-2">
-          <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-white/10 text-[10px] font-black text-slate-400 hover:text-white uppercase tracking-widest">Cancelar</button>
-          <button onClick={handleSubmit} disabled={!form.nombre || addMut.isPending}
-            className="flex-1 py-2 rounded-lg bg-purple-500 hover:bg-purple-400 text-[10px] font-black text-white uppercase tracking-widest disabled:opacity-40 transition-colors">
-            {addMut.isPending ? 'Guardando…' : 'Guardar'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ── Modal Nuevo Viaje ─────────────────────────────────────────
 function ModalViaje({ personal, camiones, onClose }: {
@@ -246,9 +192,9 @@ function ModalViaje({ personal, camiones, onClose }: {
 
   const handleSubmit = async () => {
     await addMut.mutateAsync({
-      personal_id:           form.personal_id || null,
+      personal_id:           form.personal_id ?? null,
       conductor_id:          null,
-      camion_id:             form.camion_id || null,
+      camion_id:             form.camion_id ?? null,
       finca:                 form.finca || null,
       destino:               destinoFinal || null,
       trabajo_realizado:     trabajoFinal || null,

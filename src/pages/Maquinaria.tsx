@@ -18,13 +18,10 @@ import {
 import { usePersonal, Personal } from '../hooks/usePersonal';
 import { supabase } from '../integrations/supabase/client';
 import jsPDF from 'jspdf';
+import { FINCAS_NOMBRES as FINCAS } from '../constants/farms';
+import { TIPOS_TRABAJO as TIPOS_TRABAJO_GLOBAL } from '../constants/tiposTrabajo';
 
 // ── Constantes ────────────────────────────────────────────────
-const FINCAS = [
-  'LA CONCEPCION', 'LONSORDO', 'FINCA COLLADOS',
-  'FINCA BRAZO DE LA VIRGEN', 'FINCA LA BARDA',
-  'FINCA LA NUEVA', 'FINCA MAYORAZGO',
-];
 
 type TabType = 'tractores' | 'aperos' | 'uso';
 
@@ -165,7 +162,7 @@ function ModalApero({ tractores, onClose }: { tractores: TractorType[]; onClose:
     await addMut.mutateAsync({
       tipo:        tipoFinal,
       descripcion: form.descripcion || null,
-      tractor_id:  form.tractor_id || null,
+      tractor_id:  form.tractor_id ?? null,
       activo:      true,
       foto_url:    null,
       notas:       form.notas || null,
@@ -244,11 +241,7 @@ function ModalUso({ tractores, aperos, personal, onClose }: {
   });
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
-  const TIPOS_TRABAJO = [
-    'Laboreo', 'Siembra', 'Plantación', 'Tratamiento fitosanitario', 'Riego',
-    'Cosecha', 'Transporte', 'Preparación terreno', 'Deshierbe', 'Poda',
-    'Encamado plástico', 'Retirada plástico', 'Otro',
-  ];
+  const TIPOS_TRABAJO = TIPOS_TRABAJO_GLOBAL;
 
   // Calcular horas automáticamente
   const horasCalculadas: number | null = (() => {
@@ -263,10 +256,10 @@ function ModalUso({ tractores, aperos, personal, onClose }: {
   const handleSubmit = async () => {
     if (!form.personal_id) return;
     await addMut.mutateAsync({
-      tractor_id:       form.tractor_id || null,
-      apero_id:         form.apero_id || null,
+      tractor_id:       form.tractor_id ?? null,
+      apero_id:         form.apero_id ?? null,
       tractorista:      nombreTractorista,
-      personal_id:      form.personal_id || null,
+      personal_id:      form.personal_id ?? null,
       finca:            form.finca || null,
       parcel_id:        null,
       tipo_trabajo:     form.tipo_trabajo || null,

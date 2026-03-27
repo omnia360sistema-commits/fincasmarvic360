@@ -11,23 +11,8 @@ import {
 } from '@/hooks/useParcelData'
 import { toast } from '@/hooks/use-toast'
 import { Camera, ChevronDown, ChevronUp } from 'lucide-react'
-
-// ── Constantes ────────────────────────────────────────────────
-
-const FINCAS = [
-  'LA CONCEPCION', 'LONSORDO', 'FINCA COLLADOS',
-  'FINCA BRAZO DE LA VIRGEN', 'FINCA LA BARDA',
-  'FINCA LA NUEVA', 'FINCA MAYORAZGO',
-]
-
-const ESTADOS = [
-  { value: 'vacia',        label: 'Vacía' },
-  { value: 'preparacion',  label: 'Preparación' },
-  { value: 'plantada',     label: 'Plantada' },
-  { value: 'cosechada',    label: 'Cosechada' },
-  { value: 'en_produccion',label: 'En producción' },
-  { value: 'acolchado',    label: 'Acolchado' },
-]
+import { FINCAS_NOMBRES as FINCAS } from '@/constants/farms'
+import { ESTADOS_PARCELA as ESTADOS } from '@/constants/estadosParcela'
 
 const TEXTURAS = [
   'Arcilloso', 'Franco arcilloso', 'Franco', 'Franco arenoso', 'Arenoso', 'Limoso',
@@ -218,7 +203,7 @@ export default function RegisterEstadoUnificadoForm({
             nitrogeno_ppm:    num(suelo.nitrogeno_ppm),
             fosforo_ppm:      num(suelo.fosforo_ppm),
             potasio_ppm:      num(suelo.potasio_ppm),
-            textura:          suelo.textura || undefined,
+            textura:          suelo.textura ?? undefined,
             herramienta:      'Hanna HI9814 + LaMotte',
           })
         } catch { warnings.push('análisis suelo') }

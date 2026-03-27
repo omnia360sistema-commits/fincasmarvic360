@@ -22,35 +22,16 @@ import {
   useAddGanadero,
 } from '@/hooks/useParteDiario'
 import { usePersonal } from '@/hooks/usePersonal'
+import { FINCAS_NOMBRES as FINCAS } from '@/constants/farms'
+import { TIPOS_TRABAJO } from '@/constants/tiposTrabajo'
+import { ESTADOS_PARCELA } from '@/constants/estadosParcela'
+import { uploadImage } from '@/utils/uploadImage'
+import { formatHora, formatFechaLarga, formatFechaNav } from '@/utils/dateFormat'
+import jsPDF from 'jspdf'
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
 
 const HOY = new Date().toISOString().split('T')[0]
-
-const FINCAS = [
-  'LA CONCEPCION',
-  'LONSORDO',
-  'FINCA COLLADOS',
-  'FINCA BRAZO DE LA VIRGEN',
-  'FINCA LA BARDA',
-  'FINCA LA NUEVA',
-  'FINCA MAYORAZGO',
-]
-
-const TIPOS_TRABAJO = [
-  'Riego', 'Poda', 'Recolección', 'Siembra', 'Transplante',
-  'Tratamiento fitosanitario', 'Abonado', 'Preparación terreno',
-  'Acolchado', 'Limpieza nave', 'Mantenimiento maquinaria',
-  'Inspección', 'Otro',
-]
-
-const ESTADOS_PARCELA = [
-  { value: 'produccion', label: 'En producción' },
-  { value: 'plantada',   label: 'Plantada' },
-  { value: 'cosechada',  label: 'Cosechada' },
-  { value: 'preparacion', label: 'En preparación' },
-  { value: 'vacia',      label: 'Vacía' },
-]
 
 // ─── Tipos de formulario ──────────────────────────────────────────────────────
 
@@ -96,41 +77,15 @@ const initD = (): FormD => ({
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-function formatHora(ts: string | null | undefined): string {
-  if (!ts) return '—'
-  try { return new Date(ts).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) }
-  catch { return '—' }
-}
-
-function formatFechaLarga(fecha: string): string {
-  try {
-    return new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', {
-      weekday: 'long', day: '2-digit', month: 'long', year: 'numeric',
-    }).toUpperCase()
-  } catch { return fecha }
-}
-
-function formatFechaNav(fecha: string): string {
-  try {
-    return new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', {
-      weekday: 'short', day: '2-digit', month: 'short',
-    }).toUpperCase()
-  } catch { return fecha }
-}
-
 function timeToISO(fecha: string, time: string): string | null {
   if (!time) return null
   return `${fecha}T${time}:00`
 }
 
 async function uploadFoto(file: File, parteId: string): Promise<string | null> {
-  try {
-    const ext = file.name.split('.').pop() ?? 'jpg'
-    const path = `${parteId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { error } = await supabase.storage.from('partes-images').upload(path, file, { upsert: true })
-    if (error) return null
-    return supabase.storage.from('partes-images').getPublicUrl(path).data.publicUrl
-  } catch { return null }
+  const ext = file.name.split('.').pop() ?? 'jpg'
+  const path = `${parteId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+  return uploadImage(file, 'partes-images', path)
 }
 
 async function loadImageData(url: string): Promise<{ b64: string; natW: number; natH: number } | null> {
@@ -279,7 +234,7 @@ export default function ParteDiario() {
     setSaving(true)
     try {
       // Si nuevo ganadero, crear primero
-      let ganaderoId = formD.ganadero_id || null
+      let ganaderoId = formD.ganadero_id ?? null
       if (!ganaderoId && formD.nuevo_ganadero.trim()) {
         const nuevo = await addGanadero.mutateAsync(formD.nuevo_ganadero.trim())
         ganaderoId = nuevo.id
@@ -293,12 +248,12 @@ export default function ParteDiario() {
 
       // Nombre conductor desde selector
       const nombreConductor = formD.personal_id
-        ? (conductoresCamion.find(c => c.id === formD.personal_id)?.nombre ?? formD.nombre_conductor || null)
+        ? ((conductoresCamion.find(c => c.id === formD.personal_id)?.nombre ?? formD.nombre_conductor) || null)
         : (formD.nombre_conductor || null)
 
       // Nombre ganadero para PDF/texto
       const nombreGanadero = ganaderoId
-        ? (ganaderos.find(g => g.id === ganaderoId)?.nombre ?? formD.nuevo_ganadero || null)
+        ? ((ganaderos.find(g => g.id === ganaderoId)?.nombre ?? formD.nuevo_ganadero) || null)
         : (formD.nombre_ganadero || null)
 
       await addResiduos.mutateAsync({
@@ -310,7 +265,7 @@ export default function ParteDiario() {
         hora_regreso_nave:      timeToISO(fecha, formD.hora_regreso_nave),
         notas_descarga:         formD.notas_descarga || null,
         foto_url,
-        personal_id:            formD.personal_id || null,
+        personal_id:            formD.personal_id ?? null,
         ganadero_id:            ganaderoId,
       })
       setModal(null); setFormD(initD())
@@ -329,7 +284,6 @@ export default function ParteDiario() {
   async function generarPDF() {
     setGenPdf(true)
     try {
-      const { jsPDF } = await import('jspdf')
       const doc = new jsPDF({ unit: 'mm', format: 'a4' })
       const PAGE_W = 210
       const M = 14        // margen

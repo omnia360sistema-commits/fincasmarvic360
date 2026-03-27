@@ -72,6 +72,7 @@ export function usePersonal(categoria?: CategoriaPersonal) {
       if (error) throw error;
       return (data ?? []) as Personal[];
     },
+    staleTime: 60000,
   });
 }
 
@@ -118,6 +119,7 @@ export function usePersonalExterno() {
       if (error) throw error;
       return (data ?? []) as PersonalExterno[];
     },
+    staleTime: 60000,
   });
 }
 
@@ -172,5 +174,6 @@ export function useKPIsPersonal() {
 
       return { total, activos, externos, porCategoria };
     },
+    staleTime: 60000,
   });
 }

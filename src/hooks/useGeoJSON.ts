@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react';
 import type { ParcelCollection, ParcelFeature, FarmSummary } from '@/types/farm';
 
+// Flag de módulo: el upsert solo se ejecuta una vez por sesión de navegador,
+// aunque FarmMap se monte/desmonte varias veces.
+let upsertDone = false;
+
 export function useGeoJSON() {
   const [data, setData]       = useState<ParcelCollection | null>(null);
   const [loading, setLoading] = useState(true);
@@ -16,22 +20,25 @@ export function useGeoJSON() {
         setData(geojson);
         setLoading(false);
 
-        // Upsert parcelas reales en Supabase
-        try {
-          const { supabase } = await import('@/integrations/supabase/client');
-          const parcelas = geojson.features.map(f => ({
-            parcel_id:       f.properties.parcel_id,
-            farm:            f.properties.finca,
-            parcel_number:   f.properties.parcela,
-            code:            f.properties.codigo,
-            area_hectares:   f.properties.superficie,
-            irrigation_type: f.properties.riego,
-          }));
-          await supabase
-            .from('parcels')
-            .upsert(parcelas, { onConflict: 'parcel_id' });
-        } catch (e) {
-          console.warn('Upsert parcelas fallido:', e);
+        // Upsert parcelas reales en Supabase (solo una vez por sesión)
+        if (!upsertDone) {
+          upsertDone = true;
+          try {
+            const { supabase } = await import('@/integrations/supabase/client');
+            const parcelas = geojson.features.map(f => ({
+              parcel_id:       f.properties.parcel_id,
+              farm:            f.properties.finca,
+              parcel_number:   f.properties.parcela,
+              code:            f.properties.codigo,
+              area_hectares:   f.properties.superficie,
+              irrigation_type: f.properties.riego,
+            }));
+            await supabase
+              .from('parcels')
+              .upsert(parcelas, { onConflict: 'parcel_id' });
+          } catch (e) {
+            console.warn('Upsert parcelas fallido:', e);
+          }
         }
       })
       .catch(err => {

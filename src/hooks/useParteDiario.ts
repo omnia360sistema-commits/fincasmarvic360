@@ -338,6 +338,7 @@ export function useGanaderos() {
       if (error) throw error
       return (data ?? []) as Ganadero[]
     },
+    staleTime: 60000,
   })
 }
 

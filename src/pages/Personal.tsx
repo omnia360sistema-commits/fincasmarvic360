@@ -15,7 +15,7 @@ import {
   TIPO_EXTERNO_LABELS,
   CategoriaPersonal, TipoExterno,
 } from '../hooks/usePersonal';
-import { supabase } from '../integrations/supabase/client';
+import { uploadImage } from '../utils/uploadImage';
 
 // ── Tipos de tab ──────────────────────────────────────────────────────────────
 
@@ -57,14 +57,11 @@ function ModalPersonal({
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    const ext  = file.name.split('.').pop();
+    const ext  = file.name.split('.').pop() ?? 'jpg';
     const path = `personal/${Date.now()}.${ext}`;
-    const { error: upErr } = await supabase.storage
-      .from('parcel-images')
-      .upload(path, file, { upsert: true });
-    if (upErr) { setError('Error subiendo foto'); setUploading(false); return; }
-    const { data } = supabase.storage.from('parcel-images').getPublicUrl(path);
-    setFotoUrl(data.publicUrl);
+    const url  = await uploadImage(file, 'parcel-images', path);
+    if (!url) { setError('Error subiendo foto'); setUploading(false); return; }
+    setFotoUrl(url);
     setUploading(false);
   }
 
