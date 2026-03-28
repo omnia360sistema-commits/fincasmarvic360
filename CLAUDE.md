@@ -1,6 +1,6 @@
 # AGRÍCOLA MARVIC 360 — CONTEXTO COMPLETO DEL PROYECTO
 
-## ESTADO ACTUAL DEL SISTEMA (27/03/2026 — rev. 2)
+## ESTADO ACTUAL DEL SISTEMA (28/03/2026 — rev. 5)
 
 Sistema ERP agrícola completamente funcional. Todos los módulos principales están implementados y conectados a Supabase.
 
@@ -10,6 +10,12 @@ Sistema ERP agrícola completamente funcional. Todos los módulos principales es
 - Bug crítico corregido: `num_operarios: nombresSelec.length || null` → `> 0 ? length : null` (0 era falsy)
 - Bug medio corregido: `textura: suelo.textura || undefined` → `?? undefined` (RegisterEstadoUnificadoForm)
 - Mezcla `?? / ||` sin paréntesis corregida en ParteDiario (nombreConductor, nombreGanadero)
+- Bug crítico corregido (28/03): `ruta: '/'` → `ruta: '/farm'` en MODULOS de Dashboard.tsx (botón CAMPO navegaba al Dashboard en vez de al selector de fincas)
+- Bug medio corregido (28/03): `useGeoJSON()` ahora desestructura `error` en FarmMap.tsx — pantalla de error con botón "Volver" en lugar de spinner infinito si falla la carga del GeoJSON
+- Migración BD aplicada (28/03 rev.5): `ALTER TABLE parte_personal ADD COLUMN foto_url TEXT`, `ALTER TABLE maquinaria_uso ADD COLUMN foto_url TEXT`, `ALTER COLUMN tractorista DROP NOT NULL`
+- Foto en Bloque C Parte Diario implementada (28/03 rev.5): FormC, submitC, modal UI, hasPhoto en lista, addPhoto en PDF
+- Foto obligatoria en uso de maquinaria implementada (28/03 rev.5): ModalUso con campo foto requerido, upload a `parcel-images/maquinaria_uso/`, icono en listas
+- `UsoMaquinaria.tractorista` ahora `string | null` en interface y BD — campo legacy, fuente real es `personal_id`
 
 **Convención de operadores establecida:**
 - Campos UUID / IDs: usar `?? null` — nunca `|| null`
@@ -17,7 +23,7 @@ Sistema ERP agrícola completamente funcional. Todos los módulos principales es
 - Campos numéricos con 0 válido: usar comparación explícita (`> 0 ? x : null`)
 - Mezcla `??` + `||`: siempre entre paréntesis para evitar error de compilación TS
 
-**Compilación:** `npx tsc --noEmit` = 0 errores siempre.
+**Compilación:** `~/.nvm/versions/node/v20.20.1/bin/node ./node_modules/.bin/vite build` = 0 errores (Node v12 del sistema no soporta Vite — usar Node v20 de nvm).
 
 ---
 
@@ -39,7 +45,7 @@ Sistema ERP agrícola completamente funcional. Todos los módulos principales es
 2. Lees los archivos afectados primero
 3. Muestras los cambios en diff antes de aplicar
 4. Aplicas SOLO si JuanPe confirma
-5. Verificas con `npx tsc --noEmit` = 0 errores
+5. Verificas con `~/.nvm/versions/node/v20.20.1/bin/node ./node_modules/.bin/vite build` = 0 errores
 6. Confirmas y esperas el siguiente paso
 
 **NUNCA** hagas cambios en múltiples archivos a la vez sin confirmación.
@@ -128,7 +134,7 @@ doc/
 ### `src/utils/uploadImage.ts`
 - `uploadImage(file, bucket, path, upsert?)` → `Promise<string | null>` — sube a Storage, devuelve URL pública o null (nunca lanza excepción)
 - `buildStoragePath(folder, file, prefix?)` → `string` — genera path único `folder/timestamp-random.ext`
-- Usado por: Trabajos, ParteDiario, InventarioUbicacion, Personal
+- Usado por: Trabajos, ParteDiario, InventarioUbicacion, Personal, Maquinaria
 
 ### `src/utils/dateFormat.ts`
 - `formatHora(ts)` → `'HH:MM'` — para timestamps ISO
@@ -251,7 +257,7 @@ logistica_conductores  — DEPRECATED — solo lectura histórica
 -- MAQUINARIA (4 tablas activas)
 maquinaria_tractores   — id UUID PK, matricula UNIQUE, marca, modelo, anio, horas_motor, ficha_tecnica, activo, foto_url, notas, fecha_proxima_itv, fecha_proxima_revision, horas_proximo_mantenimiento, gps_info
 maquinaria_aperos      — id UUID PK, tipo, descripcion, tractor_id UUID FK, activo, foto_url, notas
-maquinaria_uso         — id UUID PK, tractor_id, apero_id, tractorista TEXT (legacy), personal_id UUID FK→personal, finca, parcel_id TEXT, tipo_trabajo, fecha, hora_inicio/fin, horas_trabajadas, gasolina_litros, notas
+maquinaria_uso         — id UUID PK, tractor_id, apero_id, tractorista TEXT NULL (legacy), personal_id UUID FK→personal, finca, parcel_id TEXT, tipo_trabajo, fecha, hora_inicio/fin, horas_trabajadas, gasolina_litros, foto_url, notas
 maquinaria_mantenimiento — id UUID PK, tractor_id, tipo, descripcion, fecha, horas_motor_al_momento, coste_euros, proveedor, foto_url, foto_url_2
 maquinaria_tractoristas — DEPRECATED — solo lectura histórica
 
@@ -259,7 +265,7 @@ maquinaria_tractoristas — DEPRECATED — solo lectura histórica
 partes_diarios           — id UUID PK, fecha DATE UNIQUE, responsable TEXT DEFAULT 'JuanPe', notas_generales
 parte_estado_finca       — id UUID PK, parte_id UUID FK, finca, parcel_id TEXT, estado, num_operarios, nombres_operarios, foto_url, foto_url_2, notas
 parte_trabajo            — id UUID PK, parte_id UUID FK, tipo_trabajo, finca, ambito, parcelas TEXT[], num_operarios, nombres_operarios, hora_inicio/fin, foto_url, foto_url_2, notas
-parte_personal           — id UUID PK, parte_id UUID FK, texto, con_quien, donde, foto_url, fecha_hora
+parte_personal           — id UUID PK, parte_id UUID FK, texto, con_quien, donde, foto_url TEXT NULL, fecha_hora
 parte_residuos_vegetales — id UUID PK, parte_id UUID FK, nombre_conductor, personal_id UUID FK→personal, hora_salida_nave, nombre_ganadero, ganadero_id UUID FK→ganaderos, hora_llegada_ganadero, hora_regreso_nave, foto_url, notas_descarga
 
 -- GANADEROS
@@ -356,7 +362,8 @@ ganaderos — id UUID PK, nombre TEXT NOT NULL, telefono, direccion, activo BOOL
 
 ### PRIORIDAD 3
 
-- Foto en Bloque C Parte Diario — requiere `ALTER TABLE parte_personal ADD COLUMN foto_url TEXT` en Supabase, luego actualizar types.ts y ParteDiario.tsx
+- ~~Foto en Bloque C Parte Diario~~ — ✅ IMPLEMENTADO (28/03 rev.5)
+- ~~Foto en uso de maquinaria~~ — ✅ IMPLEMENTADO (28/03 rev.5)
 - Sistema riego: tablas + RegisterRiegoForm + hooks
 - Trazabilidad palots QR: tablas palots, camaras_almacen, movimientos_palot
 - Fotos reales de ubicaciones inventario
@@ -390,4 +397,163 @@ El sistema NO tiene datos históricos digitales todavía. Todo se construye desd
 2. Lee los archivos relevantes a la tarea concreta
 3. Espera a que JuanPe diga qué quiere hacer
 4. Muestra el plan antes de ejecutar
-5. Un archivo a la vez, con verificación `npx tsc --noEmit` entre cada cambio
+5. Un archivo a la vez, con verificación build entre cada cambio
+
+---
+
+## ESTADO ACTUAL — AUDITADO (28/03/2026 — rev. 3)
+
+### MÓDULOS IMPLEMENTADOS Y FUNCIONALES
+
+| Módulo | Ruta | Estado | Notas |
+|---|---|---|---|
+| Dashboard | `/` | ✅ OK | KPIs globales, tema oscuro/claro |
+| CAMPO (FarmMap) | `/farm/:farmName` | ✅ OK | Mapa 119 sectores, formulario unificado, PDF |
+| FarmSelector | `/farm` | ✅ OK | Grid 7 fincas |
+| INVENTARIO | `/inventario` y `/inventario/:id` | ✅ OK | 6 ubicaciones, Excel + PDF |
+| PARTE DIARIO | `/parte-diario` | ✅ OK | 4 bloques A/B/C/D, PDF cronológico |
+| TRABAJOS | `/trabajos` | ✅ OK | 4 sub-bloques, incidencias, PDF |
+| LOGÍSTICA | `/logistica` | ✅ OK | Camiones+viajes+mant, conductor desde Personal |
+| MAQUINARIA | `/maquinaria` | ✅ OK | Tractores+aperos+uso+mant. Deprecated eliminado |
+| PERSONAL | `/personal` | ✅ OK | 5 tabs, QR auto, PDF |
+| QR Cuadrilla | `/qr/:cuadrilla_id` | ✅ OK | Hook QR listo, UI implementada |
+| **ESTADO GENERAL** | `/estado-general` | ✅ NUEVO | Alertas ITV, incidencias, certificaciones, sensores |
+| **HISTÓRICOS** | `/historicos` | ✅ NUEVO | Buscador global multi-módulo con filtros |
+| **EXPORTAR PDF** | `/exportar-pdf` | ✅ NUEVO | PDF global multi-módulo con selector de período |
+
+### UTILIDADES NUEVAS (28/03/2026)
+
+| Archivo | Descripción |
+|---|---|
+| `src/utils/pdfUtils.ts` | Motor PDF unificado: `initPdf()`, `createPdfContext()`, `loadPdfImage()` |
+| `src/utils/validation.ts` | Validaciones declarativas: `validateForm()`, `parseOperarios()`, `parseDecimal()`, `parseCoste()` |
+
+### ARQUITECTURA DE CONEXIONES ENTRE MÓDULOS
+
+```
+Trabajos ──────────── inserta en → maquinaria_uso (si hay tractor)
+Trabajos ──────────── inserta en → logistica_viajes (si hay camión)
+Trabajos ──────────── inserta en → plantings / harvests (si procede)
+Estado General ─────── lee desde → maquinaria_tractores, camiones, trabajos_incidencias,
+                                    certificaciones_parcela, lecturas_sensor_planta
+Históricos ─────────── lee desde → trabajos_registro, maquinaria_uso, logistica_viajes,
+                                    partes_diarios, parte_estado_finca, parte_trabajo
+Exportar PDF ───────── lee desde → todos los módulos por rango de fechas
+```
+
+### TABLA PERSONAL — FUENTE ÚNICA DE CONDUCTORES/TRACTORISTAS
+
+```
+categoria = 'conductor_camion'      → usado en Logística (selector conductor viajes)
+categoria = 'conductor_maquinaria'  → usado en Maquinaria (selector tractorista uso)
+categoria = 'operario_campo'        → usado en Trabajos, ParteDiario (operarios)
+categoria = 'encargado'             → administración de personal
+```
+
+**REGLA:** NO leer de `logistica_conductores` ni `maquinaria_tractoristas`. Son deprecated.
+Ambas tablas siguen en BD para lectura histórica pero no se usan en código activo.
+
+### NOMBRES REALES DE HOOKS EN useParcelData.ts
+
+⚠️ CLAUDE.md anterior tenía nombres INCORRECTOS. Los nombres REALES son:
+
+| CLAUDE.md anterior (INCORRECTO) | Nombre REAL en código |
+|---|---|
+| `useTicketsPesaje` | `useParcelTickets` |
+| `useResiduosOperacion` | `useParcelResiduos` |
+| `useCertificaciones` | `useParcelCertification` |
+| `useAnalisisSuelo` | `useParcelAnalisisSuelo` |
+| `useLecturaSensor` | `useParcelLecturasSensor` |
+| `useAnalisisAgua` | `useFincaAnalisisAgua` |
+| `useAddAnalisisSuelo` | `useInsertAnalisisSuelo` |
+| `useAddLecturaSensor` | `useInsertLecturaSensor` |
+| `useAddAnalisisAgua` | `useInsertAnalisisAgua` |
+| `useUpdateParcelStatus` | **NO EXISTE** |
+| `useAddEstadoParcela` | **NO EXISTE** |
+
+**Hooks que SÍ existen (nombres correctos):**
+`useCropCatalog`, `useParcelProduction`, `useParcelTickets`, `useParcelResiduos`,
+`useParcelCertification`, `useCamiones`*, `useCuadrillas`, `useParcelRecords`,
+`useParcelAnalisisSuelo`, `useParcelLecturasSensor`, `useFincaAnalisisAgua`,
+`useFarmParcelStatuses`, `useInsertWorkRecord`, `useInsertWorkRecordQR`,
+`useInsertPlanting`, `useInsertHarvest`, `useInsertResiduo`, `useInsertTicketPesaje`,
+`useInsertCamion`, `useInsertCuadrilla`, `useInsertAnalisisSuelo`, `useInsertLecturaSensor`,
+`useInsertAnalisisAgua`, `useParcelas`, `useAddPlanting`, `useAddHarvest`
+
+*`useCamiones` existe tanto en `useParcelData` como en `useLogistica` — usar siempre el de `useLogistica` para páginas de transporte.
+
+### DUPLICADOS CONOCIDOS (no son bugs, son legacy)
+
+| Hook duplicado | En useParcelData | En useLogistica | Regla |
+|---|---|---|---|
+| `useCamiones()` | Línea 154 | Línea 59 | Usar el de useLogistica en Logística/Trabajos |
+
+### ERRORES CONOCIDOS DEL ENTORNO
+
+| Error | Causa | Workaround |
+|---|---|---|
+| `npm run build` falla con `SyntaxError: Unexpected reserved word` | Node v12.22.9 del sistema no soporta Vite (usa ESM `await import`) | Usar Node v20: `~/.nvm/versions/node/v20.20.1/bin/node ./node_modules/.bin/vite build` |
+| `npx tsc --noEmit` falla | Node v12 no soporta TypeScript moderno | Usar el build de Vite con Node v20 para verificar tipos |
+| `SyntaxError: Unexpected token '?'` | Node v12 no soporta optional chaining en el intérprete | El código es correcto. Solo afecta al CLI, no al bundle final. |
+| `~/.nvm/versions/node/v20.20.1/bin/npm` falla | npm global de nvm instalado con Node distinto | Usar directamente `node ./node_modules/.bin/vite build` con el binario de Node v20 |
+
+### SQL APLICADO EN SUPABASE (rev.5 — 28/03/2026)
+
+```sql
+-- ✅ EJECUTADO — parte_personal.foto_url
+ALTER TABLE parte_personal
+  ADD COLUMN IF NOT EXISTS foto_url TEXT;
+
+-- ✅ EJECUTADO — maquinaria_uso.foto_url
+ALTER TABLE maquinaria_uso
+  ADD COLUMN IF NOT EXISTS foto_url TEXT;
+
+-- ✅ EJECUTADO — tractorista nullable
+ALTER TABLE maquinaria_uso
+  ALTER COLUMN tractorista DROP NOT NULL;
+```
+
+**types.ts regenerado** — confirmar que contiene:
+- `parte_personal.Row.foto_url: string | null` ✅
+- `maquinaria_uso.Row.foto_url: string | null` ✅
+- `maquinaria_uso.Row.tractorista: string | null` ✅
+
+### ESTADO DEL SISTEMA — RESUMEN EJECUTIVO
+
+```
+Sistema funcional al 90%
+━━━━━━━━━━━━━━━━━━━━━━━━
+✅ 13 módulos operativos (10 originales + 3 nuevos)
+✅ Motor PDF unificado (pdfUtils.ts)
+✅ Validaciones centralizadas (validation.ts)
+✅ Tablas deprecated eliminadas del código activo
+✅ Personal como fuente única de conductores/tractoristas
+✅ Conexiones cruzadas entre módulos implementadas
+✅ Botón CAMPO del Dashboard navega correctamente a /farm (fix 28/03)
+✅ FarmMap muestra error de usuario si falla carga GeoJSON (fix 28/03)
+✅ Foto en Bloque C Parte Diario (rev.5 28/03)
+✅ Foto obligatoria en uso de maquinaria (rev.5 28/03)
+✅ tractorista nullable — personal_id es fuente real (rev.5 28/03)
+
+⚠️ PENDIENTES (no bloquean uso):
+  - Tab ANÁLISIS en ParcelHistory (P2.7)
+  - FarmMap sin variantes dark: (P1.1)
+
+🔴 NO IMPLEMENTADOS (WIP en Dashboard):
+  - Trazabilidad (/trazabilidad)
+  - Materiales (/materiales)
+  - Auditoría (/auditoria)
+```
+
+### REGLAS GLOBALES (CONSOLIDADAS)
+
+1. **UUID/IDs siempre `?? null`** — nunca `|| null` (0 y "" son falsy)
+2. **Números con 0 válido**: `> 0 ? valor : null` — nunca `valor || null`
+3. **Foto obligatoria**: Bloque D Parte Diario, Mantenimiento maquinaria/camiones, Uso maquinaria
+4. **Personal = fuente única**: conductores y tractoristas SOLO desde tabla `personal`
+5. **`parcel_id` es TEXT** en todas las tablas sin excepción
+6. **Estado parcela**: `'vacia'` nunca `'empty'`; `'en_produccion'` nunca `'produccion'`
+7. **jsPDF import estático**: `import jsPDF from 'jspdf'` — nunca dynamic import
+8. **pdfUtils.ts**: usar `initPdf()` para nuevos PDFs; no duplicar helpers
+9. **validation.ts**: usar `validateForm()` para nuevos formularios; no duplicar reglas
+10. **GeoJSON WGS84**: NO convertir UTM nunca

@@ -26,7 +26,7 @@ interface Modulo {
 const MODULOS: Modulo[] = [
   {
     id: 'campo', label: 'CAMPO', sublabel: 'Fincas · Sectores · GeoMap',
-    icon: MapIcon, ruta: '/', accentColor: '#22c55e',
+    icon: MapIcon, ruta: '/farm', accentColor: '#22c55e',
   },
   {
     id: 'inventario', label: 'INVENTARIO', sublabel: 'Activos · Stock · Materiales',
@@ -240,21 +240,21 @@ export default function Dashboard() {
         {/* 3 BOTONES SECUNDARIOS */}
         <div className="mt-6 w-full max-w-3xl flex items-center gap-3 flex-wrap">
           <button
-            onClick={() => setWipModal('Estado General')}
+            onClick={() => navigate('/estado-general')}
             className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-white/20 transition-all text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 shadow-sm dark:shadow-none"
           >
             <LayoutDashboard className="w-3.5 h-3.5" />
             Estado General
           </button>
           <button
-            onClick={() => setWipModal('Históricos')}
+            onClick={() => navigate('/historicos')}
             className="flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900/50 hover:border-slate-300 dark:hover:border-white/20 transition-all text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 shadow-sm dark:shadow-none"
           >
             <History className="w-3.5 h-3.5" />
             Históricos
           </button>
           <button
-            onClick={() => setWipModal('Exportar PDF')}
+            onClick={() => navigate('/exportar-pdf')}
             className="flex items-center gap-2 px-4 py-2 rounded-lg border border-[#38bdf8]/20 bg-[#38bdf8]/5 hover:bg-[#38bdf8]/10 hover:border-[#38bdf8]/40 transition-all text-[10px] font-black uppercase tracking-widest text-[#38bdf8] ml-auto"
           >
             <FileText className="w-3.5 h-3.5" />

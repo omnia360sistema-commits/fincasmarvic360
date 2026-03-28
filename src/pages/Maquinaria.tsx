@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Tractor, Wrench, Plus, X, FileText,
   MapPin, Clock, Fuel, ChevronRight,
-  Calendar, Activity, Navigation, UserCheck,
+  Calendar, Activity, Navigation, UserCheck, Camera,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import {
@@ -11,12 +11,12 @@ import {
   useAperos, useAddApero,
   useUsosMaquinaria, useAddUsoMaquinaria,
   useMantenimientoTractor, useAddMantenimientoTractor,
-  useTractoristas,
   useKPIsMaquinaria,
   Tractor as TractorType, Apero, UsoMaquinaria, MantenimientoTractor,
 } from '../hooks/useMaquinaria';
 import { usePersonal, Personal } from '../hooks/usePersonal';
 import { supabase } from '../integrations/supabase/client';
+import { uploadImage } from '../utils/uploadImage';
 import jsPDF from 'jspdf';
 import { FINCAS_NOMBRES as FINCAS } from '../constants/farms';
 import { TIPOS_TRABAJO as TIPOS_TRABAJO_GLOBAL } from '../constants/tiposTrabajo';
@@ -239,6 +239,8 @@ function ModalUso({ tractores, aperos, personal, onClose }: {
     hora_inicio: new Date().toISOString().slice(0, 16),
     hora_fin: '', gasolina_litros: '', notas: '',
   });
+  const [foto, setFoto] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
   const TIPOS_TRABAJO = TIPOS_TRABAJO_GLOBAL;
@@ -254,24 +256,33 @@ function ModalUso({ tractores, aperos, personal, onClose }: {
   const nombreTractorista    = personalSeleccionado?.nombre ?? '';
 
   const handleSubmit = async () => {
-    if (!form.personal_id) return;
-    await addMut.mutateAsync({
-      tractor_id:       form.tractor_id ?? null,
-      apero_id:         form.apero_id ?? null,
-      tractorista:      nombreTractorista,
-      personal_id:      form.personal_id ?? null,
-      finca:            form.finca || null,
-      parcel_id:        null,
-      tipo_trabajo:     form.tipo_trabajo || null,
-      fecha:            new Date().toISOString().slice(0, 10),
-      hora_inicio:      form.hora_inicio || null,
-      hora_fin:         form.hora_fin || null,
-      horas_trabajadas: horasCalculadas,
-      gasolina_litros:  form.gasolina_litros ? Number(form.gasolina_litros) : null,
-      notas:            form.notas || null,
-      created_by:       'JuanPe',
-    });
-    onClose();
+    if (!form.personal_id || !foto) return;
+    setUploading(true);
+    try {
+      const ts = Date.now();
+      const ext = foto.name.split('.').pop() ?? 'jpg';
+      const foto_url = await uploadImage(foto, 'parcel-images', `maquinaria_uso/${ts}.${ext}`);
+      await addMut.mutateAsync({
+        tractor_id:       form.tractor_id || null,
+        apero_id:         form.apero_id || null,
+        tractorista:      personalSeleccionado?.nombre ?? null,
+        personal_id:      form.personal_id || null,
+        finca:            form.finca || null,
+        parcel_id:        null,
+        tipo_trabajo:     form.tipo_trabajo || null,
+        fecha:            new Date().toISOString().slice(0, 10),
+        hora_inicio:      form.hora_inicio || null,
+        hora_fin:         form.hora_fin || null,
+        horas_trabajadas: horasCalculadas,
+        gasolina_litros:  form.gasolina_litros ? Number(form.gasolina_litros) : null,
+        foto_url,
+        notas:            form.notas || null,
+        created_by:       'JuanPe',
+      });
+      onClose();
+    } finally {
+      setUploading(false);
+    }
   };
 
   const aperosDelTractor = form.tractor_id
@@ -363,12 +374,25 @@ function ModalUso({ tractores, aperos, personal, onClose }: {
             <textarea value={form.notas} onChange={e => set('notas', e.target.value)} rows={2}
               className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white resize-none focus:border-orange-400/50 focus:outline-none" />
           </div>
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Foto *</label>
+            <label className={`flex items-center gap-2 px-3 py-2.5 bg-slate-800 rounded-lg cursor-pointer transition-colors ${foto ? 'border border-orange-400/50' : 'border border-white/10 hover:border-orange-400/30'}`}>
+              <Camera className={`w-4 h-4 shrink-0 ${foto ? 'text-orange-400' : 'text-slate-500'}`} />
+              <span className="text-[11px] text-slate-400 truncate">
+                {foto?.name ?? 'Capturar / Subir (obligatorio)'}
+              </span>
+              <input
+                type="file" accept="image/*" capture="environment" className="sr-only"
+                onChange={e => setFoto(e.target.files?.[0] ?? null)}
+              />
+            </label>
+          </div>
         </div>
         <div className="px-5 py-3 border-t border-white/10 flex gap-2">
           <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-white/10 text-[10px] font-black text-slate-400 hover:text-white uppercase tracking-widest">Cancelar</button>
-          <button onClick={handleSubmit} disabled={!form.personal_id || addMut.isPending}
+          <button onClick={handleSubmit} disabled={!form.personal_id || !foto || uploading || addMut.isPending}
             className="flex-1 py-2 rounded-lg bg-orange-500 hover:bg-orange-400 text-[10px] font-black text-black uppercase tracking-widest disabled:opacity-40 transition-colors">
-            {addMut.isPending ? 'Guardando…' : 'Guardar'}
+            {(uploading || addMut.isPending) ? 'Guardando…' : 'Guardar'}
           </button>
         </div>
       </div>
@@ -394,17 +418,11 @@ function ModalMantenimientoTractor({ tractorId, horasActuales, onClose }: {
   const [uploading, setUploading] = useState(false);
   const set = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }));
 
-  const uploadFoto = async (file: File, path: string): Promise<string | null> => {
-    const { data, error } = await supabase.storage.from('parcel-images').upload(path, file, { upsert: true });
-    if (error) return null;
-    return supabase.storage.from('parcel-images').getPublicUrl(data.path).data.publicUrl;
-  };
-
   const handleSubmit = async () => {
     setUploading(true);
     const ts = Date.now();
-    const fotoUrl1 = foto1 ? await uploadFoto(foto1, `mantenimiento-tractor/${tractorId}_${ts}_1`) : null;
-    const fotoUrl2 = foto2 ? await uploadFoto(foto2, `mantenimiento-tractor/${tractorId}_${ts}_2`) : null;
+    const fotoUrl1 = foto1 ? await uploadImage(foto1, 'parcel-images', `mantenimiento-tractor/${tractorId}_${ts}_1`) : null;
+    const fotoUrl2 = foto2 ? await uploadImage(foto2, 'parcel-images', `mantenimiento-tractor/${tractorId}_${ts}_2`) : null;
     await addMut.mutateAsync({
       tractor_id:             tractorId,
       tipo:                   form.tipo,
@@ -627,7 +645,10 @@ function TarjetaTractor({ tractor, aperos, usos, mantenimientos }: {
                 {misUsos.slice(0, 5).map(u => (
                   <div key={u.id} className="p-2 rounded-lg bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-white/5">
                     <div className="flex items-center justify-between">
-                      <p className="text-[10px] font-bold text-slate-700 dark:text-white">{u.tipo_trabajo ?? 'Uso'} · {u.tractorista}</p>
+                      <p className="text-[10px] font-bold text-slate-700 dark:text-white flex items-center gap-1">
+                        {u.foto_url && <Camera className="w-2.5 h-2.5 text-slate-500 shrink-0" />}
+                        {u.tipo_trabajo ?? 'Uso'}{u.tractorista ? ` · ${u.tractorista}` : ''}
+                      </p>
                       <span className="text-[8px] text-slate-400">{new Date(u.fecha).toLocaleDateString('es-ES')}</span>
                     </div>
                     <div className="flex items-center gap-3 mt-0.5 flex-wrap">
@@ -777,8 +798,6 @@ export default function Maquinaria() {
   const { data: usos = [] }                 = useUsosMaquinaria();
   const { data: mants = [] }               = useMantenimientoTractor();
   const { data: personalTractoristas = [] } = usePersonal('conductor_maquinaria');
-  // useTractoristas mantenido para compatibilidad con datos legacy
-  const { data: tractoristas = [] }         = useTractoristas();
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-white flex flex-col">
@@ -935,8 +954,9 @@ export default function Maquinaria() {
                   return (
                     <div key={u.id} className="p-3 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-slate-800/40">
                       <div className="flex items-start justify-between gap-2">
-                        <p className="text-[11px] font-bold text-slate-800 dark:text-white">
-                          {u.tipo_trabajo ?? 'Uso'} · {u.tractorista}
+                        <p className="text-[11px] font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                          {u.foto_url && <Camera className="w-3 h-3 text-slate-500 shrink-0" />}
+                          {u.tipo_trabajo ?? 'Uso'}{u.tractorista ? ` · ${u.tractorista}` : ''}
                         </p>
                         <span className="text-[8px] text-slate-400 shrink-0">
                           {new Date(u.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}

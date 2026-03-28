@@ -1,7 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../integrations/supabase/client';
 
-// ── Tipos locales ────────────────────────────────────────────
+// ── Tipos ─────────────────────────────────────────────────────
+
 export interface Camion {
   id:                       string;
   matricula:                string;
@@ -20,19 +21,9 @@ export interface Camion {
   gps_info:                 string | null;
 }
 
-export interface Conductor {
-  id:         string;
-  nombre:     string;
-  telefono:   string | null;
-  activo:     boolean;
-  notas:      string | null;
-  created_at: string;
-  created_by: string | null;
-}
-
 export interface Viaje {
   id:                    string;
-  conductor_id:          string | null;
+  conductor_id:          string | null; // legacy — solo lectura histórica
   personal_id:           string | null;
   camion_id:             string | null;
   finca:                 string | null;
@@ -64,6 +55,7 @@ export interface MantenimientoCamion {
 }
 
 // ── useCamiones ───────────────────────────────────────────────
+
 export function useCamiones() {
   return useQuery<Camion[]>({
     queryKey: ['camiones'],
@@ -80,6 +72,7 @@ export function useCamiones() {
 }
 
 // ── useAddCamion ──────────────────────────────────────────────
+
 export function useAddCamion() {
   const qc = useQueryClient();
   return useMutation({
@@ -97,6 +90,7 @@ export function useAddCamion() {
 }
 
 // ── useUpdateCamion ───────────────────────────────────────────
+
 export function useUpdateCamion() {
   const qc = useQueryClient();
   return useMutation({
@@ -111,49 +105,18 @@ export function useUpdateCamion() {
   });
 }
 
-// ── useConductores ────────────────────────────────────────────
-export function useConductores() {
-  return useQuery<Conductor[]>({
-    queryKey: ['logistica_conductores'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('logistica_conductores')
-        .select('*')
-        .order('nombre');
-      if (error) throw error;
-      return (data ?? []) as Conductor[];
-    },
-    staleTime: 60000,
-  });
-}
-
-// ── useAddConductor ───────────────────────────────────────────
-export function useAddConductor() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (payload: Omit<Conductor, 'id' | 'created_at'>) => {
-      const { data, error } = await supabase
-        .from('logistica_conductores')
-        .insert([payload])
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['logistica_conductores'] }),
-  });
-}
-
 // ── useViajes ─────────────────────────────────────────────────
-export function useViajes(conductorId?: string) {
+// Filtra por personal_id (nuevo). conductor_id es legacy y solo para lectura histórica.
+
+export function useViajes(personalId?: string) {
   return useQuery<Viaje[]>({
-    queryKey: ['logistica_viajes', conductorId ?? 'all'],
+    queryKey: ['logistica_viajes', personalId ?? 'all'],
     queryFn: async () => {
       let q = supabase
         .from('logistica_viajes')
         .select('*')
         .order('hora_salida', { ascending: false });
-      if (conductorId) q = q.eq('conductor_id', conductorId);
+      if (personalId) q = q.eq('personal_id', personalId);
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as Viaje[];
@@ -163,6 +126,7 @@ export function useViajes(conductorId?: string) {
 }
 
 // ── useAddViaje ───────────────────────────────────────────────
+
 export function useAddViaje() {
   const qc = useQueryClient();
   return useMutation({
@@ -180,6 +144,7 @@ export function useAddViaje() {
 }
 
 // ── useMantenimientoCamion ────────────────────────────────────
+
 export function useMantenimientoCamion(camionId?: string) {
   return useQuery<MantenimientoCamion[]>({
     queryKey: ['logistica_mantenimiento', camionId ?? 'all'],
@@ -198,6 +163,7 @@ export function useMantenimientoCamion(camionId?: string) {
 }
 
 // ── useAddMantenimientoCamion ─────────────────────────────────
+
 export function useAddMantenimientoCamion() {
   const qc = useQueryClient();
   return useMutation({
@@ -215,18 +181,20 @@ export function useAddMantenimientoCamion() {
 }
 
 // ── useKPIsLogistica ──────────────────────────────────────────
+// Conductores: cuenta desde personal con categoria = conductor_camion (NO legacy)
+
 export function useKPIsLogistica() {
   return useQuery({
     queryKey: ['logistica_kpis'],
     queryFn: async () => {
       const [camiones, conductores, viajes] = await Promise.all([
-        supabase.from('camiones').select('activo', { count: 'exact' }),
-        supabase.from('logistica_conductores').select('activo', { count: 'exact' }),
+        supabase.from('camiones').select('activo'),
+        supabase.from('personal').select('id').eq('categoria', 'conductor_camion').eq('activo', true),
         supabase.from('logistica_viajes').select('id', { count: 'exact' }),
       ]);
-      const totalCamiones    = camiones.count ?? 0;
+      const totalCamiones    = (camiones.data ?? []).length;
       const camionesActivos  = (camiones.data ?? []).filter(c => c.activo).length;
-      const totalConductores = conductores.count ?? 0;
+      const totalConductores = (conductores.data ?? []).length;
       const totalViajes      = viajes.count ?? 0;
       return { totalCamiones, camionesActivos, totalConductores, totalViajes };
     },

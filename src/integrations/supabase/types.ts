@@ -248,58 +248,67 @@ export type Database = {
       }
       camiones: {
         Row: {
-          id:                       string
-          matricula:                string
-          activo:                   boolean | null
-          marca:                    string | null
-          modelo:                   string | null
-          anio:                     number | null
-          fecha_itv:                string | null
-          notas_mantenimiento:      string | null
-          foto_url:                 string | null
-          created_at:               string | null
-          created_by:               string | null
-          kilometros_actuales:      number | null
-          fecha_proxima_itv:        string | null
-          fecha_proxima_revision:   string | null
+          activo: boolean | null
+          anio: number | null
+          capacidad_kg: number | null
+          created_at: string | null
+          created_by: string | null
+          empresa_transporte: string | null
+          fecha_itv: string | null
+          fecha_proxima_itv: string | null
+          fecha_proxima_revision: string | null
+          foto_url: string | null
+          gps_info: string | null
+          id: string
+          kilometros_actuales: number | null
           km_proximo_mantenimiento: number | null
-          gps_info:                 string | null
+          marca: string | null
+          matricula: string
+          modelo: string | null
+          notas_mantenimiento: string | null
+          tipo: string | null
         }
         Insert: {
-          id?:                       string
-          matricula:                 string
-          activo?:                   boolean | null
-          marca?:                    string | null
-          modelo?:                   string | null
-          anio?:                     number | null
-          fecha_itv?:                string | null
-          notas_mantenimiento?:      string | null
-          foto_url?:                 string | null
-          created_at?:               string | null
-          created_by?:               string | null
-          kilometros_actuales?:      number | null
-          fecha_proxima_itv?:        string | null
-          fecha_proxima_revision?:   string | null
+          activo?: boolean | null
+          anio?: number | null
+          capacidad_kg?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          empresa_transporte?: string | null
+          fecha_itv?: string | null
+          fecha_proxima_itv?: string | null
+          fecha_proxima_revision?: string | null
+          foto_url?: string | null
+          gps_info?: string | null
+          id?: string
+          kilometros_actuales?: number | null
           km_proximo_mantenimiento?: number | null
-          gps_info?:                 string | null
+          marca?: string | null
+          matricula: string
+          modelo?: string | null
+          notas_mantenimiento?: string | null
+          tipo?: string | null
         }
         Update: {
-          id?:                       string
-          matricula?:                string
-          activo?:                   boolean | null
-          marca?:                    string | null
-          modelo?:                   string | null
-          anio?:                     number | null
-          fecha_itv?:                string | null
-          notas_mantenimiento?:      string | null
-          foto_url?:                 string | null
-          created_at?:               string | null
-          created_by?:               string | null
-          kilometros_actuales?:      number | null
-          fecha_proxima_itv?:        string | null
-          fecha_proxima_revision?:   string | null
+          activo?: boolean | null
+          anio?: number | null
+          capacidad_kg?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          empresa_transporte?: string | null
+          fecha_itv?: string | null
+          fecha_proxima_itv?: string | null
+          fecha_proxima_revision?: string | null
+          foto_url?: string | null
+          gps_info?: string | null
+          id?: string
+          kilometros_actuales?: number | null
           km_proximo_mantenimiento?: number | null
-          gps_info?:                 string | null
+          marca?: string | null
+          matricula?: string
+          modelo?: string | null
+          notas_mantenimiento?: string | null
+          tipo?: string | null
         }
         Relationships: []
       }
@@ -386,37 +395,6 @@ export type Database = {
         }
         Relationships: []
       }
-      // MANUAL ADDITION — tabla ganaderos (creada 27/03/2026)
-      ganaderos: {
-        Row: {
-          id:         string
-          nombre:     string
-          telefono:   string | null
-          direccion:  string | null
-          activo:     boolean
-          notas:      string | null
-          created_at: string
-        }
-        Insert: {
-          id?:         string
-          nombre:      string
-          telefono?:   string | null
-          direccion?:  string | null
-          activo?:     boolean
-          notas?:      string | null
-          created_at?: string
-        }
-        Update: {
-          id?:         string
-          nombre?:     string
-          telefono?:   string | null
-          direccion?:  string | null
-          activo?:     boolean
-          notas?:      string | null
-          created_at?: string
-        }
-        Relationships: []
-      }
       cultivos_catalogo: {
         Row: {
           ciclo_dias: number
@@ -491,6 +469,36 @@ export type Database = {
           },
         ]
       }
+      ganaderos: {
+        Row: {
+          activo: boolean
+          created_at: string | null
+          direccion: string | null
+          id: string
+          nombre: string
+          notas: string | null
+          telefono: string | null
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string | null
+          direccion?: string | null
+          id?: string
+          nombre: string
+          notas?: string | null
+          telefono?: string | null
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string | null
+          direccion?: string | null
+          id?: string
+          nombre?: string
+          notas?: string | null
+          telefono?: string | null
+        }
+        Relationships: []
+      }
       harvests: {
         Row: {
           created_at: string | null
@@ -534,6 +542,290 @@ export type Database = {
             referencedColumns: ["parcel_id"]
           },
         ]
+      }
+      inventario_categorias: {
+        Row: {
+          icono: string
+          id: string
+          nombre: string
+          orden: number
+          slug: string
+        }
+        Insert: {
+          icono: string
+          id?: string
+          nombre: string
+          orden: number
+          slug: string
+        }
+        Update: {
+          icono?: string
+          id?: string
+          nombre?: string
+          orden?: number
+          slug?: string
+        }
+        Relationships: []
+      }
+      inventario_informes: {
+        Row: {
+          categoria_id: string | null
+          contenido: Json
+          fecha_fin: string
+          fecha_inicio: string
+          generado_at: string | null
+          id: string
+          tipo: string
+          ubicacion_id: string | null
+        }
+        Insert: {
+          categoria_id?: string | null
+          contenido: Json
+          fecha_fin: string
+          fecha_inicio: string
+          generado_at?: string | null
+          id?: string
+          tipo: string
+          ubicacion_id?: string | null
+        }
+        Update: {
+          categoria_id?: string | null
+          contenido?: Json
+          fecha_fin?: string
+          fecha_inicio?: string
+          generado_at?: string | null
+          id?: string
+          tipo?: string
+          ubicacion_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventario_informes_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventario_informes_ubicacion_id_fkey"
+            columns: ["ubicacion_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_ubicaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventario_movimientos: {
+        Row: {
+          cantidad: number
+          categoria_id: string
+          created_at: string
+          created_by: string | null
+          fecha: string
+          id: string
+          notas: string | null
+          producto_id: string | null
+          responsable: string | null
+          ubicacion_destino_id: string
+          ubicacion_origen_id: string
+          unidad: string
+        }
+        Insert: {
+          cantidad: number
+          categoria_id: string
+          created_at?: string
+          created_by?: string | null
+          fecha?: string
+          id?: string
+          notas?: string | null
+          producto_id?: string | null
+          responsable?: string | null
+          ubicacion_destino_id: string
+          ubicacion_origen_id: string
+          unidad: string
+        }
+        Update: {
+          cantidad?: number
+          categoria_id?: string
+          created_at?: string
+          created_by?: string | null
+          fecha?: string
+          id?: string
+          notas?: string | null
+          producto_id?: string | null
+          responsable?: string | null
+          ubicacion_destino_id?: string
+          ubicacion_origen_id?: string
+          unidad?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventario_movimientos_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventario_movimientos_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_productos_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventario_movimientos_ubicacion_destino_id_fkey"
+            columns: ["ubicacion_destino_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_ubicaciones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventario_movimientos_ubicacion_origen_id_fkey"
+            columns: ["ubicacion_origen_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_ubicaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventario_productos_catalogo: {
+        Row: {
+          activo: boolean
+          categoria_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          nombre: string
+          precio_unitario: number | null
+          unidad_defecto: string | null
+        }
+        Insert: {
+          activo?: boolean
+          categoria_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nombre: string
+          precio_unitario?: number | null
+          unidad_defecto?: string | null
+        }
+        Update: {
+          activo?: boolean
+          categoria_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nombre?: string
+          precio_unitario?: number | null
+          unidad_defecto?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventario_productos_catalogo_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_categorias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventario_registros: {
+        Row: {
+          cantidad: number
+          categoria_id: string
+          created_at: string | null
+          created_by: string | null
+          descripcion: string | null
+          foto_url: string | null
+          foto_url_2: string | null
+          id: string
+          notas: string | null
+          precio_unitario: number | null
+          producto_id: string | null
+          ubicacion_id: string
+          unidad: string
+        }
+        Insert: {
+          cantidad: number
+          categoria_id: string
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          foto_url?: string | null
+          foto_url_2?: string | null
+          id?: string
+          notas?: string | null
+          precio_unitario?: number | null
+          producto_id?: string | null
+          ubicacion_id: string
+          unidad: string
+        }
+        Update: {
+          cantidad?: number
+          categoria_id?: string
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          foto_url?: string | null
+          foto_url_2?: string | null
+          id?: string
+          notas?: string | null
+          precio_unitario?: number | null
+          producto_id?: string | null
+          ubicacion_id?: string
+          unidad?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventario_registros_categoria_id_fkey"
+            columns: ["categoria_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_categorias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventario_registros_producto_id_fkey"
+            columns: ["producto_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_productos_catalogo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventario_registros_ubicacion_id_fkey"
+            columns: ["ubicacion_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_ubicaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventario_ubicaciones: {
+        Row: {
+          activa: boolean | null
+          descripcion: string | null
+          foto_url: string | null
+          id: string
+          nombre: string
+          orden: number
+        }
+        Insert: {
+          activa?: boolean | null
+          descripcion?: string | null
+          foto_url?: string | null
+          id?: string
+          nombre: string
+          orden: number
+        }
+        Update: {
+          activa?: boolean | null
+          descripcion?: string | null
+          foto_url?: string | null
+          id?: string
+          nombre?: string
+          orden?: number
+        }
+        Relationships: []
       }
       lecturas_sensor_planta: {
         Row: {
@@ -585,6 +877,431 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "parcels"
             referencedColumns: ["parcel_id"]
+          },
+        ]
+      }
+      logistica_conductores: {
+        Row: {
+          activo: boolean
+          created_at: string | null
+          created_by: string | null
+          id: string
+          nombre: string
+          notas: string | null
+          telefono: string | null
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          nombre: string
+          notas?: string | null
+          telefono?: string | null
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string | null
+          created_by?: string | null
+          id?: string
+          nombre?: string
+          notas?: string | null
+          telefono?: string | null
+        }
+        Relationships: []
+      }
+      logistica_mantenimiento: {
+        Row: {
+          camion_id: string | null
+          coste_euros: number | null
+          created_at: string | null
+          created_by: string | null
+          descripcion: string | null
+          fecha: string
+          foto_url: string | null
+          foto_url_2: string | null
+          id: string
+          proveedor: string | null
+          tipo: string
+        }
+        Insert: {
+          camion_id?: string | null
+          coste_euros?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          fecha?: string
+          foto_url?: string | null
+          foto_url_2?: string | null
+          id?: string
+          proveedor?: string | null
+          tipo: string
+        }
+        Update: {
+          camion_id?: string | null
+          coste_euros?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          fecha?: string
+          foto_url?: string | null
+          foto_url_2?: string | null
+          id?: string
+          proveedor?: string | null
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistica_mantenimiento_camion_id_fkey"
+            columns: ["camion_id"]
+            isOneToOne: false
+            referencedRelation: "camiones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      logistica_viajes: {
+        Row: {
+          camion_id: string | null
+          conductor_id: string | null
+          created_at: string | null
+          created_by: string | null
+          destino: string | null
+          finca: string | null
+          gasto_gasolina_euros: number | null
+          gasto_gasolina_litros: number | null
+          hora_llegada: string | null
+          hora_salida: string | null
+          id: string
+          km_recorridos: number | null
+          notas: string | null
+          personal_id: string | null
+          ruta: string | null
+          trabajo_realizado: string | null
+        }
+        Insert: {
+          camion_id?: string | null
+          conductor_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          destino?: string | null
+          finca?: string | null
+          gasto_gasolina_euros?: number | null
+          gasto_gasolina_litros?: number | null
+          hora_llegada?: string | null
+          hora_salida?: string | null
+          id?: string
+          km_recorridos?: number | null
+          notas?: string | null
+          personal_id?: string | null
+          ruta?: string | null
+          trabajo_realizado?: string | null
+        }
+        Update: {
+          camion_id?: string | null
+          conductor_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          destino?: string | null
+          finca?: string | null
+          gasto_gasolina_euros?: number | null
+          gasto_gasolina_litros?: number | null
+          hora_llegada?: string | null
+          hora_salida?: string | null
+          id?: string
+          km_recorridos?: number | null
+          notas?: string | null
+          personal_id?: string | null
+          ruta?: string | null
+          trabajo_realizado?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistica_viajes_camion_id_fkey"
+            columns: ["camion_id"]
+            isOneToOne: false
+            referencedRelation: "camiones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistica_viajes_conductor_id_fkey"
+            columns: ["conductor_id"]
+            isOneToOne: false
+            referencedRelation: "logistica_conductores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "logistica_viajes_personal_id_fkey"
+            columns: ["personal_id"]
+            isOneToOne: false
+            referencedRelation: "personal"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maquinaria_aperos: {
+        Row: {
+          activo: boolean
+          created_at: string | null
+          created_by: string | null
+          descripcion: string | null
+          foto_url: string | null
+          id: string
+          notas: string | null
+          tipo: string
+          tractor_id: string | null
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          foto_url?: string | null
+          id?: string
+          notas?: string | null
+          tipo: string
+          tractor_id?: string | null
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          foto_url?: string | null
+          id?: string
+          notas?: string | null
+          tipo?: string
+          tractor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maquinaria_aperos_tractor_id_fkey"
+            columns: ["tractor_id"]
+            isOneToOne: false
+            referencedRelation: "maquinaria_tractores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maquinaria_mantenimiento: {
+        Row: {
+          coste_euros: number | null
+          created_at: string | null
+          created_by: string | null
+          descripcion: string | null
+          fecha: string
+          foto_url: string | null
+          foto_url_2: string | null
+          horas_motor_al_momento: number | null
+          id: string
+          proveedor: string | null
+          tipo: string
+          tractor_id: string | null
+        }
+        Insert: {
+          coste_euros?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          fecha?: string
+          foto_url?: string | null
+          foto_url_2?: string | null
+          horas_motor_al_momento?: number | null
+          id?: string
+          proveedor?: string | null
+          tipo: string
+          tractor_id?: string | null
+        }
+        Update: {
+          coste_euros?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          fecha?: string
+          foto_url?: string | null
+          foto_url_2?: string | null
+          horas_motor_al_momento?: number | null
+          id?: string
+          proveedor?: string | null
+          tipo?: string
+          tractor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maquinaria_mantenimiento_tractor_id_fkey"
+            columns: ["tractor_id"]
+            isOneToOne: false
+            referencedRelation: "maquinaria_tractores"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maquinaria_tractores: {
+        Row: {
+          activo: boolean
+          anio: number | null
+          created_at: string | null
+          created_by: string | null
+          fecha_proxima_itv: string | null
+          fecha_proxima_revision: string | null
+          ficha_tecnica: string | null
+          foto_url: string | null
+          gps_info: string | null
+          horas_motor: number | null
+          horas_proximo_mantenimiento: number | null
+          id: string
+          marca: string | null
+          matricula: string
+          modelo: string | null
+          notas: string | null
+        }
+        Insert: {
+          activo?: boolean
+          anio?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          fecha_proxima_itv?: string | null
+          fecha_proxima_revision?: string | null
+          ficha_tecnica?: string | null
+          foto_url?: string | null
+          gps_info?: string | null
+          horas_motor?: number | null
+          horas_proximo_mantenimiento?: number | null
+          id?: string
+          marca?: string | null
+          matricula: string
+          modelo?: string | null
+          notas?: string | null
+        }
+        Update: {
+          activo?: boolean
+          anio?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          fecha_proxima_itv?: string | null
+          fecha_proxima_revision?: string | null
+          ficha_tecnica?: string | null
+          foto_url?: string | null
+          gps_info?: string | null
+          horas_motor?: number | null
+          horas_proximo_mantenimiento?: number | null
+          id?: string
+          marca?: string | null
+          matricula?: string
+          modelo?: string | null
+          notas?: string | null
+        }
+        Relationships: []
+      }
+      maquinaria_tractoristas: {
+        Row: {
+          activo: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          nombre: string
+          notas: string | null
+          telefono: string | null
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nombre: string
+          notas?: string | null
+          telefono?: string | null
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nombre?: string
+          notas?: string | null
+          telefono?: string | null
+        }
+        Relationships: []
+      }
+      maquinaria_uso: {
+        Row: {
+          apero_id: string | null
+          created_at: string | null
+          created_by: string | null
+          fecha: string
+          finca: string | null
+          foto_url: string | null
+          gasolina_litros: number | null
+          hora_fin: string | null
+          hora_inicio: string | null
+          horas_trabajadas: number | null
+          id: string
+          notas: string | null
+          parcel_id: string | null
+          personal_id: string | null
+          tipo_trabajo: string | null
+          tractor_id: string | null
+          tractorista: string | null
+        }
+        Insert: {
+          apero_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          fecha?: string
+          finca?: string | null
+          foto_url?: string | null
+          gasolina_litros?: number | null
+          hora_fin?: string | null
+          hora_inicio?: string | null
+          horas_trabajadas?: number | null
+          id?: string
+          notas?: string | null
+          parcel_id?: string | null
+          personal_id?: string | null
+          tipo_trabajo?: string | null
+          tractor_id?: string | null
+          tractorista?: string | null
+        }
+        Update: {
+          apero_id?: string | null
+          created_at?: string | null
+          created_by?: string | null
+          fecha?: string
+          finca?: string | null
+          foto_url?: string | null
+          gasolina_litros?: number | null
+          hora_fin?: string | null
+          hora_inicio?: string | null
+          horas_trabajadas?: number | null
+          id?: string
+          notas?: string | null
+          parcel_id?: string | null
+          personal_id?: string | null
+          tipo_trabajo?: string | null
+          tractor_id?: string | null
+          tractorista?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maquinaria_uso_apero_id_fkey"
+            columns: ["apero_id"]
+            isOneToOne: false
+            referencedRelation: "maquinaria_aperos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maquinaria_uso_personal_id_fkey"
+            columns: ["personal_id"]
+            isOneToOne: false
+            referencedRelation: "personal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "maquinaria_uso_tractor_id_fkey"
+            columns: ["tractor_id"]
+            isOneToOne: false
+            referencedRelation: "maquinaria_tractores"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -698,6 +1415,328 @@ export type Database = {
         }
         Relationships: []
       }
+      parte_estado_finca: {
+        Row: {
+          created_at: string | null
+          estado: string | null
+          finca: string
+          foto_url: string | null
+          foto_url_2: string | null
+          id: string
+          nombres_operarios: string | null
+          notas: string | null
+          num_operarios: number | null
+          parcel_id: string | null
+          parte_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          estado?: string | null
+          finca: string
+          foto_url?: string | null
+          foto_url_2?: string | null
+          id?: string
+          nombres_operarios?: string | null
+          notas?: string | null
+          num_operarios?: number | null
+          parcel_id?: string | null
+          parte_id: string
+        }
+        Update: {
+          created_at?: string | null
+          estado?: string | null
+          finca?: string
+          foto_url?: string | null
+          foto_url_2?: string | null
+          id?: string
+          nombres_operarios?: string | null
+          notas?: string | null
+          num_operarios?: number | null
+          parcel_id?: string | null
+          parte_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parte_estado_finca_parte_id_fkey"
+            columns: ["parte_id"]
+            isOneToOne: false
+            referencedRelation: "partes_diarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parte_personal: {
+        Row: {
+          con_quien: string | null
+          created_at: string | null
+          donde: string | null
+          fecha_hora: string | null
+          foto_url: string | null
+          id: string
+          parte_id: string
+          texto: string
+        }
+        Insert: {
+          con_quien?: string | null
+          created_at?: string | null
+          donde?: string | null
+          fecha_hora?: string | null
+          foto_url?: string | null
+          id?: string
+          parte_id: string
+          texto: string
+        }
+        Update: {
+          con_quien?: string | null
+          created_at?: string | null
+          donde?: string | null
+          fecha_hora?: string | null
+          foto_url?: string | null
+          id?: string
+          parte_id?: string
+          texto?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parte_personal_parte_id_fkey"
+            columns: ["parte_id"]
+            isOneToOne: false
+            referencedRelation: "partes_diarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parte_residuos_vegetales: {
+        Row: {
+          created_at: string | null
+          foto_url: string | null
+          ganadero_id: string | null
+          hora_llegada_ganadero: string | null
+          hora_regreso_nave: string | null
+          hora_salida_nave: string | null
+          id: string
+          nombre_conductor: string | null
+          nombre_ganadero: string | null
+          notas_descarga: string | null
+          parte_id: string
+          personal_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          foto_url?: string | null
+          ganadero_id?: string | null
+          hora_llegada_ganadero?: string | null
+          hora_regreso_nave?: string | null
+          hora_salida_nave?: string | null
+          id?: string
+          nombre_conductor?: string | null
+          nombre_ganadero?: string | null
+          notas_descarga?: string | null
+          parte_id: string
+          personal_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          foto_url?: string | null
+          ganadero_id?: string | null
+          hora_llegada_ganadero?: string | null
+          hora_regreso_nave?: string | null
+          hora_salida_nave?: string | null
+          id?: string
+          nombre_conductor?: string | null
+          nombre_ganadero?: string | null
+          notas_descarga?: string | null
+          parte_id?: string
+          personal_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parte_residuos_vegetales_ganadero_id_fkey"
+            columns: ["ganadero_id"]
+            isOneToOne: false
+            referencedRelation: "ganaderos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parte_residuos_vegetales_parte_id_fkey"
+            columns: ["parte_id"]
+            isOneToOne: false
+            referencedRelation: "partes_diarios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "parte_residuos_vegetales_personal_id_fkey"
+            columns: ["personal_id"]
+            isOneToOne: false
+            referencedRelation: "personal"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      parte_trabajo: {
+        Row: {
+          ambito: string | null
+          created_at: string | null
+          finca: string | null
+          foto_url: string | null
+          foto_url_2: string | null
+          hora_fin: string | null
+          hora_inicio: string | null
+          id: string
+          nombres_operarios: string | null
+          notas: string | null
+          num_operarios: number | null
+          parcelas: string[] | null
+          parte_id: string
+          tipo_trabajo: string
+        }
+        Insert: {
+          ambito?: string | null
+          created_at?: string | null
+          finca?: string | null
+          foto_url?: string | null
+          foto_url_2?: string | null
+          hora_fin?: string | null
+          hora_inicio?: string | null
+          id?: string
+          nombres_operarios?: string | null
+          notas?: string | null
+          num_operarios?: number | null
+          parcelas?: string[] | null
+          parte_id: string
+          tipo_trabajo: string
+        }
+        Update: {
+          ambito?: string | null
+          created_at?: string | null
+          finca?: string | null
+          foto_url?: string | null
+          foto_url_2?: string | null
+          hora_fin?: string | null
+          hora_inicio?: string | null
+          id?: string
+          nombres_operarios?: string | null
+          notas?: string | null
+          num_operarios?: number | null
+          parcelas?: string[] | null
+          parte_id?: string
+          tipo_trabajo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "parte_trabajo_parte_id_fkey"
+            columns: ["parte_id"]
+            isOneToOne: false
+            referencedRelation: "partes_diarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partes_diarios: {
+        Row: {
+          created_at: string | null
+          fecha: string
+          id: string
+          notas_generales: string | null
+          responsable: string
+        }
+        Insert: {
+          created_at?: string | null
+          fecha?: string
+          id?: string
+          notas_generales?: string | null
+          responsable?: string
+        }
+        Update: {
+          created_at?: string | null
+          fecha?: string
+          id?: string
+          notas_generales?: string | null
+          responsable?: string
+        }
+        Relationships: []
+      }
+      personal: {
+        Row: {
+          activo: boolean
+          categoria: string
+          created_at: string
+          created_by: string | null
+          dni: string | null
+          foto_url: string | null
+          id: string
+          nombre: string
+          notas: string | null
+          qr_code: string
+          telefono: string | null
+        }
+        Insert: {
+          activo?: boolean
+          categoria: string
+          created_at?: string
+          created_by?: string | null
+          dni?: string | null
+          foto_url?: string | null
+          id?: string
+          nombre: string
+          notas?: string | null
+          qr_code?: string
+          telefono?: string | null
+        }
+        Update: {
+          activo?: boolean
+          categoria?: string
+          created_at?: string
+          created_by?: string | null
+          dni?: string | null
+          foto_url?: string | null
+          id?: string
+          nombre?: string
+          notas?: string | null
+          qr_code?: string
+          telefono?: string | null
+        }
+        Relationships: []
+      }
+      personal_externo: {
+        Row: {
+          activo: boolean
+          created_at: string
+          created_by: string | null
+          id: string
+          nif: string | null
+          nombre_empresa: string
+          notas: string | null
+          qr_code: string
+          telefono_contacto: string | null
+          tipo: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nif?: string | null
+          nombre_empresa: string
+          notas?: string | null
+          qr_code?: string
+          telefono_contacto?: string | null
+          tipo: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          nif?: string | null
+          nombre_empresa?: string
+          notas?: string | null
+          qr_code?: string
+          telefono_contacto?: string | null
+          tipo?: string
+        }
+        Relationships: []
+      }
       plantings: {
         Row: {
           created_at: string | null
@@ -759,31 +1798,31 @@ export type Database = {
       }
       registros_estado_parcela: {
         Row: {
-          cultivo:       string | null
-          estado:        string | null
-          fecha:         string | null
-          id:            string
+          cultivo: string | null
+          estado: string | null
+          fecha: string | null
+          foto_url: string | null
+          id: string
           observaciones: string | null
-          parcel_id:     string
-          foto_url:      string | null
+          parcel_id: string
         }
         Insert: {
-          cultivo?:       string | null
-          estado?:        string | null
-          fecha?:         string | null
-          id?:            string
+          cultivo?: string | null
+          estado?: string | null
+          fecha?: string | null
+          foto_url?: string | null
+          id?: string
           observaciones?: string | null
-          parcel_id:      string
-          foto_url?:      string | null
+          parcel_id: string
         }
         Update: {
-          cultivo?:       string | null
-          estado?:        string | null
-          fecha?:         string | null
-          id?:            string
+          cultivo?: string | null
+          estado?: string | null
+          fecha?: string | null
+          foto_url?: string | null
+          id?: string
           observaciones?: string | null
-          parcel_id?:     string
-          foto_url?:      string | null
+          parcel_id?: string
         }
         Relationships: [
           {
@@ -918,6 +1957,105 @@ export type Database = {
           },
         ]
       }
+      trabajos_incidencias: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          descripcion: string | null
+          estado: string
+          fecha: string
+          fecha_resolucion: string | null
+          finca: string | null
+          foto_url: string | null
+          id: string
+          notas_resolucion: string | null
+          parcel_id: string | null
+          titulo: string
+          urgente: boolean
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          estado?: string
+          fecha?: string
+          fecha_resolucion?: string | null
+          finca?: string | null
+          foto_url?: string | null
+          id?: string
+          notas_resolucion?: string | null
+          parcel_id?: string | null
+          titulo: string
+          urgente?: boolean
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          descripcion?: string | null
+          estado?: string
+          fecha?: string
+          fecha_resolucion?: string | null
+          finca?: string | null
+          foto_url?: string | null
+          id?: string
+          notas_resolucion?: string | null
+          parcel_id?: string | null
+          titulo?: string
+          urgente?: boolean
+        }
+        Relationships: []
+      }
+      trabajos_registro: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          fecha: string
+          finca: string | null
+          foto_url: string | null
+          hora_fin: string | null
+          hora_inicio: string | null
+          id: string
+          nombres_operarios: string | null
+          notas: string | null
+          num_operarios: number | null
+          parcel_id: string | null
+          tipo_bloque: string
+          tipo_trabajo: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          fecha?: string
+          finca?: string | null
+          foto_url?: string | null
+          hora_fin?: string | null
+          hora_inicio?: string | null
+          id?: string
+          nombres_operarios?: string | null
+          notas?: string | null
+          num_operarios?: number | null
+          parcel_id?: string | null
+          tipo_bloque: string
+          tipo_trabajo: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          fecha?: string
+          finca?: string | null
+          foto_url?: string | null
+          hora_fin?: string | null
+          hora_inicio?: string | null
+          id?: string
+          nombres_operarios?: string | null
+          notas?: string | null
+          num_operarios?: number | null
+          parcel_id?: string | null
+          tipo_bloque?: string
+          tipo_trabajo?: string
+        }
+        Relationships: []
+      }
       vuelos_dron: {
         Row: {
           fecha_vuelo: string | null
@@ -1046,1106 +2184,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
-      }
-      inventario_categorias: {
-        Row: {
-          id:     string
-          nombre: string
-          slug:   string
-          icono:  string
-          orden:  number
-        }
-        Insert: {
-          id?:    string
-          nombre: string
-          slug:   string
-          icono:  string
-          orden:  number
-        }
-        Update: {
-          id?:     string
-          nombre?: string
-          slug?:   string
-          icono?:  string
-          orden?:  number
-        }
-        Relationships: []
-      }
-      inventario_productos_catalogo: {
-        Row: {
-          id:              string
-          nombre:          string
-          categoria_id:    string
-          precio_unitario: number | null
-          unidad_defecto:  string | null
-          activo:          boolean
-          created_by:      string | null
-          created_at:      string
-        }
-        Insert: {
-          id?:              string
-          nombre:           string
-          categoria_id:     string
-          precio_unitario?: number | null
-          unidad_defecto?:  string | null
-          activo?:          boolean
-          created_by?:      string | null
-          created_at?:      string
-        }
-        Update: {
-          id?:              string
-          nombre?:          string
-          categoria_id?:    string
-          precio_unitario?: number | null
-          unidad_defecto?:  string | null
-          activo?:          boolean
-          created_by?:      string | null
-          created_at?:      string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventario_productos_catalogo_categoria_id_fkey"
-            columns: ["categoria_id"]
-            isOneToOne: false
-            referencedRelation: "inventario_categorias"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventario_ubicaciones: {
-        Row: {
-          id:          string
-          nombre:      string
-          descripcion: string | null
-          foto_url:    string | null
-          activa:      boolean
-          orden:       number
-        }
-        Insert: {
-          id?:          string
-          nombre:       string
-          descripcion?: string | null
-          foto_url?:    string | null
-          activa?:      boolean
-          orden:        number
-        }
-        Update: {
-          id?:          string
-          nombre?:      string
-          descripcion?: string | null
-          foto_url?:    string | null
-          activa?:      boolean
-          orden?:       number
-        }
-        Relationships: []
-      }
-      inventario_registros: {
-        Row: {
-          id:              string
-          ubicacion_id:    string
-          categoria_id:    string
-          cantidad:        number
-          unidad:          string
-          descripcion:     string | null
-          foto_url:        string | null
-          notas:           string | null
-          created_at:      string
-          precio_unitario: number | null
-          producto_id:     string | null
-          foto_url_2:      string | null
-          created_by:      string | null
-        }
-        Insert: {
-          id?:              string
-          ubicacion_id:     string
-          categoria_id:     string
-          cantidad:         number
-          unidad:           string
-          descripcion?:     string | null
-          foto_url?:        string | null
-          notas?:           string | null
-          created_at?:      string
-          precio_unitario?: number | null
-          producto_id?:     string | null
-          foto_url_2?:      string | null
-          created_by?:      string | null
-        }
-        Update: {
-          id?:              string
-          ubicacion_id?:    string
-          categoria_id?:    string
-          cantidad?:        number
-          unidad?:          string
-          descripcion?:     string | null
-          foto_url?:        string | null
-          notas?:           string | null
-          created_at?:      string
-          precio_unitario?: number | null
-          producto_id?:     string | null
-          foto_url_2?:      string | null
-          created_by?:      string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventario_registros_ubicacion_id_fkey"
-            columns: ["ubicacion_id"]
-            isOneToOne: false
-            referencedRelation: "inventario_ubicaciones"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventario_registros_categoria_id_fkey"
-            columns: ["categoria_id"]
-            isOneToOne: false
-            referencedRelation: "inventario_categorias"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventario_registros_producto_id_fkey"
-            columns: ["producto_id"]
-            isOneToOne: false
-            referencedRelation: "inventario_productos_catalogo"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventario_informes: {
-        Row: {
-          id:           string
-          tipo:         "mensual_auto" | "manual" | "comparativa"
-          fecha_inicio: string
-          fecha_fin:    string
-          ubicacion_id: string | null
-          categoria_id: string | null
-          contenido:    Json
-          generado_at:  string
-        }
-        Insert: {
-          id?:           string
-          tipo:          "mensual_auto" | "manual" | "comparativa"
-          fecha_inicio:  string
-          fecha_fin:     string
-          ubicacion_id?: string | null
-          categoria_id?: string | null
-          contenido:     Json
-          generado_at?:  string
-        }
-        Update: {
-          id?:           string
-          tipo?:         "mensual_auto" | "manual" | "comparativa"
-          fecha_inicio?: string
-          fecha_fin?:    string
-          ubicacion_id?: string | null
-          categoria_id?: string | null
-          contenido?:    Json
-          generado_at?:  string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventario_informes_ubicacion_id_fkey"
-            columns: ["ubicacion_id"]
-            isOneToOne: false
-            referencedRelation: "inventario_ubicaciones"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventario_informes_categoria_id_fkey"
-            columns: ["categoria_id"]
-            isOneToOne: false
-            referencedRelation: "inventario_categorias"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      inventario_movimientos: {
-        Row: {
-          id:                   string
-          producto_id:          string | null
-          categoria_id:         string
-          ubicacion_origen_id:  string
-          ubicacion_destino_id: string
-          cantidad:             number
-          unidad:               string
-          fecha:                string
-          responsable:          string | null
-          notas:                string | null
-          created_by:           string | null
-          created_at:           string
-        }
-        Insert: {
-          id?:                   string
-          producto_id?:          string | null
-          categoria_id:          string
-          ubicacion_origen_id:   string
-          ubicacion_destino_id:  string
-          cantidad:              number
-          unidad:                string
-          fecha?:                string
-          responsable?:          string | null
-          notas?:                string | null
-          created_by?:           string | null
-          created_at?:           string
-        }
-        Update: {
-          id?:                   string
-          producto_id?:          string | null
-          categoria_id?:         string
-          ubicacion_origen_id?:  string
-          ubicacion_destino_id?: string
-          cantidad?:             number
-          unidad?:               string
-          fecha?:                string
-          responsable?:          string | null
-          notas?:                string | null
-          created_by?:           string | null
-          created_at?:           string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "inventario_movimientos_producto_id_fkey"
-            columns: ["producto_id"]
-            isOneToOne: false
-            referencedRelation: "inventario_productos_catalogo"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventario_movimientos_categoria_id_fkey"
-            columns: ["categoria_id"]
-            isOneToOne: false
-            referencedRelation: "inventario_categorias"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventario_movimientos_ubicacion_origen_id_fkey"
-            columns: ["ubicacion_origen_id"]
-            isOneToOne: false
-            referencedRelation: "inventario_ubicaciones"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "inventario_movimientos_ubicacion_destino_id_fkey"
-            columns: ["ubicacion_destino_id"]
-            isOneToOne: false
-            referencedRelation: "inventario_ubicaciones"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      partes_diarios: {
-        Row: {
-          id:              string
-          fecha:           string
-          responsable:     string
-          notas_generales: string | null
-          created_at:      string
-        }
-        Insert: {
-          id?:              string
-          fecha?:           string
-          responsable?:     string
-          notas_generales?: string | null
-          created_at?:      string
-        }
-        Update: {
-          id?:              string
-          fecha?:           string
-          responsable?:     string
-          notas_generales?: string | null
-          created_at?:      string
-        }
-        Relationships: []
-      }
-      parte_estado_finca: {
-        Row: {
-          id:                string
-          parte_id:          string
-          finca:             string
-          parcel_id:         string | null
-          estado:            string | null
-          num_operarios:     number | null
-          nombres_operarios: string | null
-          foto_url:          string | null
-          foto_url_2:        string | null
-          notas:             string | null
-          created_at:        string
-        }
-        Insert: {
-          id?:                string
-          parte_id:           string
-          finca:              string
-          parcel_id?:         string | null
-          estado?:            string | null
-          num_operarios?:     number | null
-          nombres_operarios?: string | null
-          foto_url?:          string | null
-          foto_url_2?:        string | null
-          notas?:             string | null
-          created_at?:        string
-        }
-        Update: {
-          id?:                string
-          parte_id?:          string
-          finca?:             string
-          parcel_id?:         string | null
-          estado?:            string | null
-          num_operarios?:     number | null
-          nombres_operarios?: string | null
-          foto_url?:          string | null
-          foto_url_2?:        string | null
-          notas?:             string | null
-          created_at?:        string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "parte_estado_finca_parte_id_fkey"
-            columns: ["parte_id"]
-            isOneToOne: false
-            referencedRelation: "partes_diarios"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      parte_trabajo: {
-        Row: {
-          id:                string
-          parte_id:          string
-          tipo_trabajo:      string
-          finca:             string | null
-          ambito:            string | null
-          parcelas:          string[] | null
-          num_operarios:     number | null
-          nombres_operarios: string | null
-          hora_inicio:       string | null
-          hora_fin:          string | null
-          foto_url:          string | null
-          foto_url_2:        string | null
-          notas:             string | null
-          created_at:        string
-        }
-        Insert: {
-          id?:                string
-          parte_id:           string
-          tipo_trabajo:       string
-          finca?:             string | null
-          ambito?:            string | null
-          parcelas?:          string[] | null
-          num_operarios?:     number | null
-          nombres_operarios?: string | null
-          hora_inicio?:       string | null
-          hora_fin?:          string | null
-          foto_url?:          string | null
-          foto_url_2?:        string | null
-          notas?:             string | null
-          created_at?:        string
-        }
-        Update: {
-          id?:                string
-          parte_id?:          string
-          tipo_trabajo?:      string
-          finca?:             string | null
-          ambito?:            string | null
-          parcelas?:          string[] | null
-          num_operarios?:     number | null
-          nombres_operarios?: string | null
-          hora_inicio?:       string | null
-          hora_fin?:          string | null
-          foto_url?:          string | null
-          foto_url_2?:        string | null
-          notas?:             string | null
-          created_at?:        string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "parte_trabajo_parte_id_fkey"
-            columns: ["parte_id"]
-            isOneToOne: false
-            referencedRelation: "partes_diarios"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      parte_personal: {
-        Row: {
-          id:         string
-          parte_id:   string
-          texto:      string
-          con_quien:  string | null
-          donde:      string | null
-          fecha_hora: string
-          created_at: string
-        }
-        Insert: {
-          id?:         string
-          parte_id:    string
-          texto:       string
-          con_quien?:  string | null
-          donde?:      string | null
-          fecha_hora?: string
-          created_at?: string
-        }
-        Update: {
-          id?:         string
-          parte_id?:   string
-          texto?:      string
-          con_quien?:  string | null
-          donde?:      string | null
-          fecha_hora?: string
-          created_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "parte_personal_parte_id_fkey"
-            columns: ["parte_id"]
-            isOneToOne: false
-            referencedRelation: "partes_diarios"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      parte_residuos_vegetales: {
-        Row: {
-          id:                    string
-          parte_id:              string
-          nombre_conductor:      string | null
-          hora_salida_nave:      string | null
-          nombre_ganadero:       string | null
-          hora_llegada_ganadero: string | null
-          hora_regreso_nave:     string | null
-          notas_descarga:        string | null
-          foto_url:              string | null
-          personal_id:           string | null
-          ganadero_id:           string | null
-          created_at:            string
-        }
-        Insert: {
-          id?:                    string
-          parte_id:               string
-          nombre_conductor?:      string | null
-          hora_salida_nave?:      string | null
-          nombre_ganadero?:       string | null
-          hora_llegada_ganadero?: string | null
-          hora_regreso_nave?:     string | null
-          notas_descarga?:        string | null
-          foto_url?:              string | null
-          personal_id?:           string | null
-          ganadero_id?:           string | null
-          created_at?:            string
-        }
-        Update: {
-          id?:                    string
-          parte_id?:              string
-          nombre_conductor?:      string | null
-          hora_salida_nave?:      string | null
-          nombre_ganadero?:       string | null
-          hora_llegada_ganadero?: string | null
-          hora_regreso_nave?:     string | null
-          notas_descarga?:        string | null
-          foto_url?:              string | null
-          personal_id?:           string | null
-          ganadero_id?:           string | null
-          created_at?:            string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "parte_residuos_vegetales_parte_id_fkey"
-            columns: ["parte_id"]
-            isOneToOne: false
-            referencedRelation: "partes_diarios"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      // ── MÓDULO TRABAJOS ──────────────────────────────────────
-      trabajos_registro: {
-        Row: {
-          id:                string
-          tipo_bloque:       'logistica' | 'maquinaria_agricola' | 'mano_obra_interna' | 'mano_obra_externa'
-          fecha:             string
-          hora_inicio:       string | null
-          hora_fin:          string | null
-          finca:             string | null
-          parcel_id:         string | null
-          tipo_trabajo:      string
-          num_operarios:     number | null
-          nombres_operarios: string | null
-          foto_url:          string | null
-          notas:             string | null
-          created_at:        string
-          created_by:        string | null
-        }
-        Insert: {
-          id?:                string
-          tipo_bloque:        'logistica' | 'maquinaria_agricola' | 'mano_obra_interna' | 'mano_obra_externa'
-          fecha?:             string
-          hora_inicio?:       string | null
-          hora_fin?:          string | null
-          finca?:             string | null
-          parcel_id?:         string | null
-          tipo_trabajo:       string
-          num_operarios?:     number | null
-          nombres_operarios?: string | null
-          foto_url?:          string | null
-          notas?:             string | null
-          created_at?:        string
-          created_by?:        string | null
-        }
-        Update: {
-          id?:                string
-          tipo_bloque?:       'logistica' | 'maquinaria_agricola' | 'mano_obra_interna' | 'mano_obra_externa'
-          fecha?:             string
-          hora_inicio?:       string | null
-          hora_fin?:          string | null
-          finca?:             string | null
-          parcel_id?:         string | null
-          tipo_trabajo?:      string
-          num_operarios?:     number | null
-          nombres_operarios?: string | null
-          foto_url?:          string | null
-          notas?:             string | null
-          created_at?:        string
-          created_by?:        string | null
-        }
-        Relationships: []
-      }
-      trabajos_incidencias: {
-        Row: {
-          id:               string
-          urgente:          boolean
-          titulo:           string
-          descripcion:      string | null
-          finca:            string | null
-          parcel_id:        string | null
-          estado:           'abierta' | 'en_proceso' | 'resuelta'
-          foto_url:         string | null
-          fecha:            string
-          fecha_resolucion: string | null
-          notas_resolucion: string | null
-          created_at:       string
-          created_by:       string | null
-        }
-        Insert: {
-          id?:               string
-          urgente?:          boolean
-          titulo:            string
-          descripcion?:      string | null
-          finca?:            string | null
-          parcel_id?:        string | null
-          estado?:           'abierta' | 'en_proceso' | 'resuelta'
-          foto_url?:         string | null
-          fecha?:            string
-          fecha_resolucion?: string | null
-          notas_resolucion?: string | null
-          created_at?:       string
-          created_by?:       string | null
-        }
-        Update: {
-          id?:               string
-          urgente?:          boolean
-          titulo?:           string
-          descripcion?:      string | null
-          finca?:            string | null
-          parcel_id?:        string | null
-          estado?:           'abierta' | 'en_proceso' | 'resuelta'
-          foto_url?:         string | null
-          fecha?:            string
-          fecha_resolucion?: string | null
-          notas_resolucion?: string | null
-          created_at?:       string
-          created_by?:       string | null
-        }
-        Relationships: []
-      }
-      // ── MÓDULO PERSONAL ──────────────────────────────────────
-      personal: {
-        Row: {
-          id:         string
-          nombre:     string
-          dni:        string | null
-          telefono:   string | null
-          categoria:  string
-          activo:     boolean
-          foto_url:   string | null
-          qr_code:    string
-          notas:      string | null
-          created_at: string
-          created_by: string | null
-        }
-        Insert: {
-          id?:         string
-          nombre:      string
-          dni?:        string | null
-          telefono?:   string | null
-          categoria:   string
-          activo?:     boolean
-          foto_url?:   string | null
-          qr_code?:    string
-          notas?:      string | null
-          created_at?: string
-          created_by?: string | null
-        }
-        Update: {
-          id?:         string
-          nombre?:     string
-          dni?:        string | null
-          telefono?:   string | null
-          categoria?:  string
-          activo?:     boolean
-          foto_url?:   string | null
-          qr_code?:    string
-          notas?:      string | null
-          created_at?: string
-          created_by?: string | null
-        }
-        Relationships: []
-      }
-      personal_externo: {
-        Row: {
-          id:                string
-          nombre_empresa:    string
-          nif:               string | null
-          telefono_contacto: string | null
-          tipo:              string
-          activo:            boolean
-          qr_code:           string
-          notas:             string | null
-          created_at:        string
-          created_by:        string | null
-        }
-        Insert: {
-          id?:                string
-          nombre_empresa:     string
-          nif?:               string | null
-          telefono_contacto?: string | null
-          tipo:               string
-          activo?:            boolean
-          qr_code?:           string
-          notas?:             string | null
-          created_at?:        string
-          created_by?:        string | null
-        }
-        Update: {
-          id?:                string
-          nombre_empresa?:    string
-          nif?:               string | null
-          telefono_contacto?: string | null
-          tipo?:              string
-          activo?:            boolean
-          qr_code?:           string
-          notas?:             string | null
-          created_at?:        string
-          created_by?:        string | null
-        }
-        Relationships: []
-      }
-      // ── MÓDULO LOGÍSTICA ─────────────────────────────────────
-      logistica_conductores: {
-        Row: {
-          id:         string
-          nombre:     string
-          telefono:   string | null
-          activo:     boolean
-          notas:      string | null
-          created_at: string
-          created_by: string | null
-        }
-        Insert: {
-          id?:         string
-          nombre:      string
-          telefono?:   string | null
-          activo?:     boolean
-          notas?:      string | null
-          created_at?: string
-          created_by?: string | null
-        }
-        Update: {
-          id?:         string
-          nombre?:     string
-          telefono?:   string | null
-          activo?:     boolean
-          notas?:      string | null
-          created_at?: string
-          created_by?: string | null
-        }
-        Relationships: []
-      }
-      logistica_viajes: {
-        Row: {
-          id:                     string
-          conductor_id:           string | null
-          camion_id:              string | null
-          finca:                  string | null
-          destino:                string | null
-          trabajo_realizado:      string | null
-          ruta:                   string | null
-          hora_salida:            string | null
-          hora_llegada:           string | null
-          gasto_gasolina_litros:  number | null
-          gasto_gasolina_euros:   number | null
-          km_recorridos:          number | null
-          notas:                  string | null
-          created_at:             string
-          created_by:             string | null
-          personal_id:            string | null
-        }
-        Insert: {
-          id?:                     string
-          conductor_id?:           string | null
-          camion_id?:              string | null
-          finca?:                  string | null
-          destino?:                string | null
-          trabajo_realizado?:      string | null
-          ruta?:                   string | null
-          hora_salida?:            string | null
-          hora_llegada?:           string | null
-          gasto_gasolina_litros?:  number | null
-          gasto_gasolina_euros?:   number | null
-          km_recorridos?:          number | null
-          notas?:                  string | null
-          created_at?:             string
-          created_by?:             string | null
-          personal_id?:            string | null
-        }
-        Update: {
-          id?:                     string
-          conductor_id?:           string | null
-          camion_id?:              string | null
-          finca?:                  string | null
-          destino?:                string | null
-          trabajo_realizado?:      string | null
-          ruta?:                   string | null
-          hora_salida?:            string | null
-          hora_llegada?:           string | null
-          gasto_gasolina_litros?:  number | null
-          gasto_gasolina_euros?:   number | null
-          km_recorridos?:          number | null
-          notas?:                  string | null
-          created_at?:             string
-          created_by?:             string | null
-          personal_id?:            string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "logistica_viajes_conductor_id_fkey"
-            columns: ["conductor_id"]
-            isOneToOne: false
-            referencedRelation: "logistica_conductores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "logistica_viajes_camion_id_fkey"
-            columns: ["camion_id"]
-            isOneToOne: false
-            referencedRelation: "camiones"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      logistica_mantenimiento: {
-        Row: {
-          id:          string
-          camion_id:   string | null
-          tipo:        string
-          descripcion: string | null
-          fecha:       string
-          coste_euros: number | null
-          proveedor:   string | null
-          foto_url:    string | null
-          foto_url_2:  string | null
-          created_at:  string
-          created_by:  string | null
-        }
-        Insert: {
-          id?:          string
-          camion_id?:   string | null
-          tipo:         string
-          descripcion?: string | null
-          fecha?:       string
-          coste_euros?: number | null
-          proveedor?:   string | null
-          foto_url?:    string | null
-          foto_url_2?:  string | null
-          created_at?:  string
-          created_by?:  string | null
-        }
-        Update: {
-          id?:          string
-          camion_id?:   string | null
-          tipo?:        string
-          descripcion?: string | null
-          fecha?:       string
-          coste_euros?: number | null
-          proveedor?:   string | null
-          foto_url?:    string | null
-          foto_url_2?:  string | null
-          created_at?:  string
-          created_by?:  string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "logistica_mantenimiento_camion_id_fkey"
-            columns: ["camion_id"]
-            isOneToOne: false
-            referencedRelation: "camiones"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      // ── MÓDULO MAQUINARIA ────────────────────────────────────
-      maquinaria_tractores: {
-        Row: {
-          id:                          string
-          matricula:                   string
-          marca:                       string | null
-          modelo:                      string | null
-          anio:                        number | null
-          horas_motor:                 number | null
-          ficha_tecnica:               string | null
-          activo:                      boolean
-          foto_url:                    string | null
-          notas:                       string | null
-          created_at:                  string
-          created_by:                  string | null
-          fecha_proxima_itv:           string | null
-          fecha_proxima_revision:      string | null
-          horas_proximo_mantenimiento: number | null
-          gps_info:                    string | null
-        }
-        Insert: {
-          id?:                          string
-          matricula:                    string
-          marca?:                       string | null
-          modelo?:                      string | null
-          anio?:                        number | null
-          horas_motor?:                 number | null
-          ficha_tecnica?:               string | null
-          activo?:                      boolean
-          foto_url?:                    string | null
-          notas?:                       string | null
-          created_at?:                  string
-          created_by?:                  string | null
-          fecha_proxima_itv?:           string | null
-          fecha_proxima_revision?:      string | null
-          horas_proximo_mantenimiento?: number | null
-          gps_info?:                    string | null
-        }
-        Update: {
-          id?:                          string
-          matricula?:                   string
-          marca?:                       string | null
-          modelo?:                      string | null
-          anio?:                        number | null
-          horas_motor?:                 number | null
-          ficha_tecnica?:               string | null
-          activo?:                      boolean
-          foto_url?:                    string | null
-          notas?:                       string | null
-          created_at?:                  string
-          created_by?:                  string | null
-          fecha_proxima_itv?:           string | null
-          fecha_proxima_revision?:      string | null
-          horas_proximo_mantenimiento?: number | null
-          gps_info?:                    string | null
-        }
-        Relationships: []
-      }
-      maquinaria_aperos: {
-        Row: {
-          id:          string
-          tipo:        string
-          descripcion: string | null
-          tractor_id:  string | null
-          activo:      boolean
-          foto_url:    string | null
-          notas:       string | null
-          created_at:  string
-          created_by:  string | null
-        }
-        Insert: {
-          id?:          string
-          tipo:         string
-          descripcion?: string | null
-          tractor_id?:  string | null
-          activo?:      boolean
-          foto_url?:    string | null
-          notas?:       string | null
-          created_at?:  string
-          created_by?:  string | null
-        }
-        Update: {
-          id?:          string
-          tipo?:        string
-          descripcion?: string | null
-          tractor_id?:  string | null
-          activo?:      boolean
-          foto_url?:    string | null
-          notas?:       string | null
-          created_at?:  string
-          created_by?:  string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "maquinaria_aperos_tractor_id_fkey"
-            columns: ["tractor_id"]
-            isOneToOne: false
-            referencedRelation: "maquinaria_tractores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      maquinaria_uso: {
-        Row: {
-          id:               string
-          tractor_id:       string | null
-          apero_id:         string | null
-          tractorista:      string
-          finca:            string | null
-          parcel_id:        string | null
-          tipo_trabajo:     string | null
-          fecha:            string
-          hora_inicio:      string | null
-          hora_fin:         string | null
-          horas_trabajadas: number | null
-          gasolina_litros:  number | null
-          notas:            string | null
-          created_at:       string
-          created_by:       string | null
-          personal_id:      string | null
-        }
-        Insert: {
-          id?:               string
-          tractor_id?:       string | null
-          apero_id?:         string | null
-          tractorista:       string
-          finca?:            string | null
-          parcel_id?:        string | null
-          tipo_trabajo?:     string | null
-          fecha?:            string
-          hora_inicio?:      string | null
-          hora_fin?:         string | null
-          horas_trabajadas?: number | null
-          gasolina_litros?:  number | null
-          notas?:            string | null
-          created_at?:       string
-          created_by?:       string | null
-          personal_id?:      string | null
-        }
-        Update: {
-          id?:               string
-          tractor_id?:       string | null
-          apero_id?:         string | null
-          tractorista?:      string
-          finca?:            string | null
-          parcel_id?:        string | null
-          tipo_trabajo?:     string | null
-          fecha?:            string
-          hora_inicio?:      string | null
-          hora_fin?:         string | null
-          horas_trabajadas?: number | null
-          gasolina_litros?:  number | null
-          notas?:            string | null
-          created_at?:       string
-          created_by?:       string | null
-          personal_id?:      string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "maquinaria_uso_tractor_id_fkey"
-            columns: ["tractor_id"]
-            isOneToOne: false
-            referencedRelation: "maquinaria_tractores"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "maquinaria_uso_apero_id_fkey"
-            columns: ["apero_id"]
-            isOneToOne: false
-            referencedRelation: "maquinaria_aperos"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      maquinaria_mantenimiento: {
-        Row: {
-          id:                     string
-          tractor_id:             string | null
-          tipo:                   string
-          descripcion:            string | null
-          fecha:                  string
-          horas_motor_al_momento: number | null
-          coste_euros:            number | null
-          proveedor:              string | null
-          foto_url:               string | null
-          foto_url_2:             string | null
-          created_at:             string
-          created_by:             string | null
-        }
-        Insert: {
-          id?:                     string
-          tractor_id?:             string | null
-          tipo:                    string
-          descripcion?:            string | null
-          fecha?:                  string
-          horas_motor_al_momento?: number | null
-          coste_euros?:            number | null
-          proveedor?:              string | null
-          foto_url?:               string | null
-          foto_url_2?:             string | null
-          created_at?:             string
-          created_by?:             string | null
-        }
-        Update: {
-          id?:                     string
-          tractor_id?:             string | null
-          tipo?:                   string
-          descripcion?:            string | null
-          fecha?:                  string
-          horas_motor_al_momento?: number | null
-          coste_euros?:            number | null
-          proveedor?:              string | null
-          foto_url?:               string | null
-          foto_url_2?:             string | null
-          created_at?:             string
-          created_by?:             string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "maquinaria_mantenimiento_tractor_id_fkey"
-            columns: ["tractor_id"]
-            isOneToOne: false
-            referencedRelation: "maquinaria_tractores"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      maquinaria_tractoristas: {
-        Row: {
-          id:         string
-          nombre:     string
-          telefono:   string | null
-          activo:     boolean
-          notas:      string | null
-          created_at: string
-          created_by: string | null
-        }
-        Insert: {
-          id?:         string
-          nombre:      string
-          telefono?:   string | null
-          activo?:     boolean
-          notas?:      string | null
-          created_at?: string
-          created_by?: string | null
-        }
-        Update: {
-          id?:         string
-          nombre?:     string
-          telefono?:   string | null
-          activo?:     boolean
-          notas?:      string | null
-          created_at?: string
-          created_by?: string | null
-        }
-        Relationships: []
       }
     }
     Views: {

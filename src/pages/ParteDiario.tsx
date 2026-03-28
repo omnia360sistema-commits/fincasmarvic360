@@ -46,7 +46,7 @@ type FormB = {
   hora_inicio: string; hora_fin: string
   foto1: File | null; foto2: File | null; notas: string
 }
-type FormC = { texto: string; con_quien: string; donde: string }
+type FormC = { texto: string; con_quien: string; donde: string; foto: File | null }
 type FormD = {
   personal_id: string; nombre_conductor: string
   hora_salida_nave: string
@@ -65,7 +65,7 @@ const initB = (): FormB => ({
   num_operarios: '', nombres_operarios: '',
   hora_inicio: '', hora_fin: '', foto1: null, foto2: null, notas: '',
 })
-const initC = (): FormC => ({ texto: '', con_quien: '', donde: '' })
+const initC = (): FormC => ({ texto: '', con_quien: '', donde: '', foto: null })
 const initD = (): FormD => ({
   personal_id: '', nombre_conductor: '',
   hora_salida_nave: '',
@@ -218,11 +218,13 @@ export default function ParteDiario() {
     if (!parteId || !formC.texto.trim()) return
     setSaving(true)
     try {
+      const foto_url = formC.foto ? await uploadFoto(formC.foto, parteId) : null
       await addPersonal.mutateAsync({
         parte_id:  parteId,
         texto:     formC.texto,
         con_quien: formC.con_quien || null,
         donde:     formC.donde     || null,
+        foto_url,
       })
       setModal(null); setFormC(initC())
     } finally { setSaving(false) }
@@ -461,6 +463,7 @@ export default function ParteDiario() {
           writeLine('Texto', e.texto)
           writeLine('Con quién', e.con_quien)
           writeLine('Dónde', e.donde)
+          await addPhoto(e.foto_url)
           separator()
         }
 
@@ -696,6 +699,7 @@ export default function ParteDiario() {
                     e.con_quien ? `Con: ${e.con_quien}` : null,
                     e.donde     ? `En: ${e.donde}`      : null,
                   ].filter(Boolean).join(' · ')}
+                  hasPhoto={!!e.foto_url}
                   tabla="parte_personal"
                   id={e.id}
                 />
@@ -1080,6 +1084,23 @@ export default function ParteDiario() {
                   placeholder="Murcia, nave, oficina..."
                   className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:border-[#38bdf8]/50 outline-none"
                 />
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Foto (opcional)</label>
+                <label className="flex items-center gap-2 px-3 py-2.5 bg-slate-800 border border-white/10 rounded-lg cursor-pointer hover:border-[#38bdf8]/30 transition-colors">
+                  <Camera className="w-4 h-4 text-slate-500 shrink-0" />
+                  <span className="text-[11px] text-slate-400 truncate">
+                    {formC.foto?.name ?? 'Capturar / Subir'}
+                  </span>
+                  <input
+                    type="file" accept="image/*" capture="environment" className="sr-only"
+                    onChange={e => {
+                      const f = e.target.files?.[0] ?? null
+                      setFormC(p => ({ ...p, foto: f }))
+                    }}
+                  />
+                </label>
               </div>
 
               <p className="text-[10px] text-slate-600">La fecha y hora se registran automáticamente.</p>

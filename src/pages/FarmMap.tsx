@@ -125,7 +125,7 @@ function SectorTooltip({ parcel, onClose }: { parcel: ParcelFeature; onClose: ()
 export default function FarmMap() {
   const { farmName } = useParams<{ farmName: string }>()
   const navigate     = useNavigate()
-  const { getFarmParcels, loading } = useGeoJSON()
+  const { getFarmParcels, loading, error: geoError } = useGeoJSON()
 
   const [selectedParcel, setSelectedParcel] = useState<ParcelFeature | null>(null)
   const [tooltipParcel, setTooltipParcel]   = useState<ParcelFeature | null>(null)
@@ -592,6 +592,14 @@ export default function FarmMap() {
   if (loading) return (
     <div className="min-h-screen bg-[#020617] flex items-center justify-center text-[#38bdf8] text-sm font-black tracking-widest uppercase">
       Cargando sistema...
+    </div>
+  )
+
+  if (geoError) return (
+    <div className="min-h-screen bg-[#020617] flex items-center justify-center flex-col gap-4 text-center px-8">
+      <span className="text-red-400 text-sm font-black tracking-widest uppercase">Error cargando mapa</span>
+      <span className="text-slate-400 text-xs">{geoError.message}</span>
+      <button onClick={() => navigate('/farm')} className="text-[#38bdf8] text-xs underline">Volver al selector</button>
     </div>
   )
 

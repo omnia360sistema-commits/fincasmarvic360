@@ -725,3 +725,63 @@ export function useParcelas(finca?: string) {
     staleTime: 60000,
   })
 }
+
+/*
+================================================
+PLANTACIONES — insertar en Campo
+================================================
+*/
+
+export function useAddPlanting() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: {
+      parcel_id: string
+      crop: string
+      date: string
+      variedad?: string | null
+      lote_semilla?: string | null
+    }) => {
+      const { data, error } = await supabase
+        .from('plantings')
+        .insert([payload])
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['plantings', vars.parcel_id] })
+    },
+  })
+}
+
+/*
+================================================
+COSECHAS — insertar en Campo
+================================================
+*/
+
+export function useAddHarvest() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (payload: {
+      parcel_id: string
+      crop: string
+      date: string
+      production_kg?: number | null
+      price_kg?: number | null
+    }) => {
+      const { data, error } = await supabase
+        .from('harvests')
+        .insert([payload])
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['harvests', vars.parcel_id] })
+    },
+  })
+}

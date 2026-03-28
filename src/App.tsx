@@ -15,6 +15,9 @@ import Logistica from "./pages/Logistica";
 import Maquinaria from "./pages/Maquinaria";
 import Personal from "./pages/Personal";
 import QRCuadrilla from "./pages/QRCuadrilla";
+import EstadoGeneral from "./pages/EstadoGeneral";
+import Historicos from "./pages/Historicos";
+import ExportarPDF from "./pages/ExportarPDF";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +42,9 @@ const App = () => (
             <Route path="/logistica" element={<Logistica />} />
             <Route path="/maquinaria" element={<Maquinaria />} />
             <Route path="/personal" element={<Personal />} />
+            <Route path="/estado-general" element={<EstadoGeneral />} />
+            <Route path="/historicos" element={<Historicos />} />
+            <Route path="/exportar-pdf" element={<ExportarPDF />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

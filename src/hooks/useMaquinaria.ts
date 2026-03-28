@@ -21,16 +21,6 @@ export interface Tractor {
   gps_info:                    string | null;
 }
 
-export interface Tractorista {
-  id:         string;
-  nombre:     string;
-  telefono:   string | null;
-  activo:     boolean;
-  notas:      string | null;
-  created_at: string;
-  created_by: string | null;
-}
-
 export interface Apero {
   id:          string;
   tipo:        string;
@@ -47,7 +37,7 @@ export interface UsoMaquinaria {
   id:               string;
   tractor_id:       string | null;
   apero_id:         string | null;
-  tractorista:      string;
+  tractorista:      string | null;
   personal_id:      string | null;
   finca:            string | null;
   parcel_id:        string | null;
@@ -57,6 +47,7 @@ export interface UsoMaquinaria {
   hora_fin:         string | null;
   horas_trabajadas: number | null;
   gasolina_litros:  number | null;
+  foto_url:         string | null;
   notas:            string | null;
   created_at:       string;
   created_by:       string | null;
@@ -227,39 +218,6 @@ export function useAddMantenimientoTractor() {
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['maquinaria_mantenimiento'] }),
-  });
-}
-
-// ── useTractoristas ───────────────────────────────────────────
-export function useTractoristas() {
-  return useQuery<Tractorista[]>({
-    queryKey: ['maquinaria_tractoristas'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('maquinaria_tractoristas')
-        .select('*')
-        .order('nombre');
-      if (error) throw error;
-      return (data ?? []) as Tractorista[];
-    },
-    staleTime: 60000,
-  });
-}
-
-// ── useAddTractorista ─────────────────────────────────────────
-export function useAddTractorista() {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (payload: Omit<Tractorista, 'id' | 'created_at'>) => {
-      const { data, error } = await supabase
-        .from('maquinaria_tractoristas')
-        .insert([payload])
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['maquinaria_tractoristas'] }),
   });
 }
 
