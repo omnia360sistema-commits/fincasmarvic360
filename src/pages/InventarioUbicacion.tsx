@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, X, Clock, History, Plus, Package, AlertCircle,
   FlaskConical, Droplets, Layers, Wind, Wrench, Tractor, FileText, MoveRight,
+  Trash2, Cog,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import jsPDF from 'jspdf'
@@ -10,7 +11,13 @@ import {
   useUbicaciones, useCategorias, useUltimoRegistro,
   useRegistros, useAddRegistro,
   useProductosCatalogo, useAddProductoCatalogo, useAddMovimiento,
+  useActivosEnUbicacionVista, useInventarioUbicacionActivosAll,
+  useAperosTablaInventario, useAssignActivoUbicacion, useRemoveActivoUbicacion,
+  useMaquinariaAperosAsignadosUbicacion,
 } from '@/hooks/useInventario'
+import { useTractores, useAperos } from '@/hooks/useMaquinaria'
+
+type ActivoAssignTab = 'tractor' | 'apero' | 'maquinaria_apero'
 import { supabase } from '@/integrations/supabase/client'
 import type { TablesInsert } from '@/integrations/supabase/types'
 import { uploadImage } from '@/utils/uploadImage'
@@ -104,6 +111,14 @@ export default function InventarioUbicacion() {
   const [generandoPDF,       setGenerandoPDF]       = useState(false)
   const [generandoExcel,     setGenerandoExcel]     = useState(false)
   const [pdfError,           setPdfError]           = useState<string | null>(null)
+  // ── Maquinaria / aperos (puente inventario) ─────────────────
+  const [showActivoModal,    setShowActivoModal]    = useState(false)
+  const [activoTab,          setActivoTab]          = useState<ActivoAssignTab>('tractor')
+  const [selTractorId,       setSelTractorId]       = useState('')
+  const [selAperoId,         setSelAperoId]         = useState('')
+  const [selMaquinariaAperoId, setSelMaquinariaAperoId] = useState('')
+  const [activoSubmitting,   setActivoSubmitting]   = useState(false)
+  const [activoError,        setActivoError]        = useState<string | null>(null)
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000)
@@ -119,6 +134,14 @@ export default function InventarioUbicacion() {
   const addRegistro                 = useAddRegistro()
   const addProductoCatalogo         = useAddProductoCatalogo()
   const addMovimiento               = useAddMovimiento()
+  const { data: activosVista = [] } = useActivosEnUbicacionVista(ubicacionId ?? null)
+  const { data: todasAsign = [] }  = useInventarioUbicacionActivosAll()
+  const { data: aperosInv = [] }    = useAperosTablaInventario()
+  const { data: tractores = [] }   = useTractores()
+  const { data: maqAperosCat = [] } = useAperos()
+  const { data: maperosUbic = [] } = useMaquinariaAperosAsignadosUbicacion(ubicacionId ?? null)
+  const assignActivo                = useAssignActivoUbicacion()
+  const removeActivo                = useRemoveActivoUbicacion()
 
   const ubicacion  = ubicaciones.find(u => u.id === ubicacionId)
   const activeCat  = categorias.find(c => c.id === activeCatId)
@@ -169,6 +192,75 @@ export default function InventarioUbicacion() {
     setMoverNotas('')
     setMoverError(null)
     setShowMoverModal(true)
+  }
+
+  function openActivoModalFn() {
+    setActivoTab('tractor')
+    setSelTractorId('')
+    setSelAperoId('')
+    setSelMaquinariaAperoId('')
+    setActivoError(null)
+    setShowActivoModal(true)
+  }
+
+  const tractoresLibres = tractores.filter(t => {
+    const a = todasAsign.find(x => x.maquinaria_tractor_id === t.id)
+    return !a
+  })
+  const aperosLibres = aperosInv.filter(ap => {
+    const x = todasAsign.find(y => y.apero_id === ap.id)
+    return !x
+  })
+  const maquinariaAperosLibres = maqAperosCat.filter(a => {
+    const x = todasAsign.find(y => y.maquinaria_apero_id === a.id)
+    return !x
+  })
+
+  async function handleSubmitActivo(e: React.FormEvent) {
+    e.preventDefault()
+    if (!ubicacionId) return
+    setActivoError(null)
+    if (activoTab === 'tractor' && !selTractorId) {
+      setActivoError('Selecciona un tractor')
+      return
+    }
+    if (activoTab === 'apero' && !selAperoId) {
+      setActivoError('Selecciona un apero')
+      return
+    }
+    if (activoTab === 'maquinaria_apero' && !selMaquinariaAperoId) {
+      setActivoError('Selecciona un apero del módulo Maquinaria')
+      return
+    }
+    setActivoSubmitting(true)
+    try {
+      await assignActivo.mutateAsync({
+        ubicacion_id: ubicacionId,
+        maquinaria_tractor_id: activoTab === 'tractor' ? selTractorId : null,
+        apero_id: activoTab === 'apero' ? selAperoId : null,
+        maquinaria_apero_id: activoTab === 'maquinaria_apero' ? selMaquinariaAperoId : null,
+      })
+      setShowActivoModal(false)
+    } catch (err: unknown) {
+      const raw = err instanceof Error ? err.message : String(err)
+      setActivoError(
+        raw.includes('23505') || raw.toLowerCase().includes('unique')
+          ? 'Ese activo ya está asignado (solo una ubicación de inventario).'
+          : raw
+      )
+    } finally {
+      setActivoSubmitting(false)
+    }
+  }
+
+  async function handleRemoveActivo(asignacionId: string | null) {
+    if (!ubicacionId || !asignacionId) return
+    setActivoError(null)
+    try {
+      await removeActivo.mutateAsync({ id: asignacionId, ubicacion_id: ubicacionId })
+    } catch (err: unknown) {
+      setActivoError(err instanceof Error ? err.message : 'No se pudo quitar la asignación')
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -828,6 +920,112 @@ export default function InventarioUbicacion() {
         </div>
       )}
 
+      {/* ── MAQUINARIA / APEROS (mismos IDs que Maquinaria + tabla aperos) ── */}
+      {ubicacionId && (
+        <div className="absolute bottom-14 left-4 z-[998] w-[min(100%-2rem,22rem)] max-h-[38vh] flex flex-col bg-slate-900/95 border border-[#fb923c]/30 rounded-lg overflow-hidden shadow-xl">
+          <div className="flex items-center justify-between px-3 py-2 border-b border-white/10 bg-[#fb923c]/10 shrink-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <Cog className="w-4 h-4 text-[#fb923c] shrink-0" />
+              <span className="text-[10px] font-black text-[#fb923c] uppercase tracking-widest truncate">
+                Maquinaria aquí
+              </span>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <button
+                type="button"
+                onClick={() => navigate('/maquinaria')}
+                className="text-[9px] font-bold uppercase tracking-wider text-slate-400 hover:text-[#fb923c] px-2 py-1"
+              >
+                Módulo
+              </button>
+              <button
+                type="button"
+                onClick={openActivoModalFn}
+                className="text-[9px] font-black uppercase tracking-wider bg-[#fb923c]/20 border border-[#fb923c]/40 text-[#fb923c] px-2 py-1 rounded"
+              >
+                + Asignar
+              </button>
+            </div>
+          </div>
+          <div className="overflow-y-auto p-2 space-y-1.5 flex-1 min-h-0">
+            {activosVista.length === 0 && maperosUbic.length === 0 ? (
+              <p className="text-[10px] text-slate-500 text-center py-3 uppercase tracking-widest">
+                Ningún activo asignado a esta ubicación
+              </p>
+            ) : (
+              <>
+                {activosVista.map(row => {
+                  const aid = row.asignacion_id
+                  const isTr = row.tipo_activo === 'tractor'
+                  return (
+                    <div
+                      key={aid ?? `${row.tipo_activo}-${row.etiqueta}`}
+                      className="flex items-start gap-2 bg-slate-800/50 border border-white/5 rounded-lg px-2 py-1.5"
+                    >
+                      {isTr ? (
+                        <Tractor className="w-3.5 h-3.5 text-[#fb923c] shrink-0 mt-0.5" />
+                      ) : (
+                        <Wrench className="w-3.5 h-3.5 text-amber-400 shrink-0 mt-0.5" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[11px] font-bold text-white truncate">{row.etiqueta}</p>
+                        {row.detalle ? (
+                          <p className="text-[9px] text-slate-500 truncate">{row.detalle}</p>
+                        ) : null}
+                        {row.ubicacion_texto_legacy ? (
+                          <p className="text-[8px] text-slate-600 truncate" title="Texto legacy en ficha">
+                            Legacy: {row.ubicacion_texto_legacy}
+                          </p>
+                        ) : null}
+                      </div>
+                      {aid ? (
+                        <button
+                          type="button"
+                          title="Quitar de esta ubicación"
+                          onClick={() => { void handleRemoveActivo(aid) }}
+                          className="p-1 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 shrink-0"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      ) : null}
+                    </div>
+                  )
+                })}
+                {maperosUbic.map(row => {
+                  const det = row.maquinaria_aperos
+                  return (
+                    <div
+                      key={row.id}
+                      className="flex items-start gap-2 bg-slate-800/50 border border-orange-500/20 rounded-lg px-2 py-1.5"
+                    >
+                      <Wrench className="w-3.5 h-3.5 text-orange-400 shrink-0 mt-0.5" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-bold text-orange-200/90 uppercase tracking-wider">Apero maquinaria</p>
+                        <p className="text-[11px] font-bold text-white truncate">{det?.tipo ?? '—'}</p>
+                        {det?.descripcion ? (
+                          <p className="text-[9px] text-slate-500 truncate">{det.descripcion}</p>
+                        ) : null}
+                      </div>
+                      <button
+                        type="button"
+                        title="Quitar de esta ubicación"
+                        onClick={() => { void handleRemoveActivo(row.id) }}
+                        className="p-1 rounded text-slate-500 hover:text-red-400 hover:bg-red-500/10 shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  )
+                })}
+              </>
+            )}
+          </div>
+          {activoError && !showActivoModal ? (
+            <p className="text-[9px] text-red-400 px-2 py-1 border-t border-white/5">{activoError}</p>
+          ) : null}
+        </div>
+      )}
+
       {/* ── BARRA INFERIOR ─────────────────────────────────── */}
       <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-slate-900/90 border-t border-white/10 px-4 py-1.5 flex items-center gap-6">
         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate max-w-[300px]">
@@ -1470,6 +1668,159 @@ export default function InventarioUbicacion() {
                 )}
               </button>
 
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL — ASIGNAR TRACTOR / APERO (tabla aperos) ───────── */}
+      {showActivoModal && ubicacionId && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center p-4">
+          <div
+            role="presentation"
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowActivoModal(false)}
+          />
+          <div className="relative z-10 bg-slate-900 border border-[#fb923c]/40 rounded-xl shadow-2xl w-full max-w-md flex flex-col max-h-[85vh]">
+            <div className="flex items-start justify-between px-5 py-4 border-b border-white/10 shrink-0">
+              <div>
+                <p className="text-[11px] font-black text-[#fb923c] uppercase tracking-[0.3em]">
+                  Asignar a esta ubicación
+                </p>
+                <p className="text-[10px] text-slate-500 mt-0.5">
+                  Tractor, <span className="font-mono">aperos</span> legacy o <span className="font-mono">maquinaria_aperos</span> (uno por fila, según BD).
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowActivoModal(false)}
+                className="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-slate-700 transition-colors shrink-0"
+              >
+                <X className="w-4 h-4 text-slate-400" />
+              </button>
+            </div>
+            <form onSubmit={handleSubmitActivo} className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
+              <div className="grid grid-cols-3 rounded-lg border border-white/10 overflow-hidden">
+                <button
+                  type="button"
+                  onClick={() => { setActivoTab('tractor'); setActivoError(null) }}
+                  className={`py-2 text-[9px] font-black uppercase tracking-wider ${
+                    activoTab === 'tractor' ? 'bg-[#fb923c]/20 text-[#fb923c]' : 'text-slate-500'
+                  }`}
+                >
+                  Tractor
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setActivoTab('apero'); setActivoError(null) }}
+                  className={`py-2 text-[9px] font-black uppercase tracking-wider border-x border-white/10 ${
+                    activoTab === 'apero' ? 'bg-amber-500/20 text-amber-400' : 'text-slate-500'
+                  }`}
+                >
+                  Apero legacy
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setActivoTab('maquinaria_apero'); setActivoError(null) }}
+                  className={`py-2 text-[9px] font-black uppercase tracking-wider ${
+                    activoTab === 'maquinaria_apero' ? 'bg-orange-500/20 text-orange-300' : 'text-slate-500'
+                  }`}
+                >
+                  Apero maq.
+                </button>
+              </div>
+              {activoTab === 'tractor' ? (
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    Tractor (maquinaria_tractores)
+                  </label>
+                  <select
+                    value={selTractorId}
+                    onChange={e => setSelTractorId(e.target.value)}
+                    className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#fb923c]/50"
+                  >
+                    <option value="">Seleccionar…</option>
+                    {tractoresLibres.map(t => (
+                      <option key={t.id} value={t.id}>
+                        {t.matricula}
+                        {t.marca ? ` · ${t.marca}` : ''}
+                        {t.modelo ? ` ${t.modelo}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {tractoresLibres.length === 0 ? (
+                    <p className="text-[9px] text-slate-500 mt-2">
+                      No hay tractores libres. Quita uno de otra ubicación o da de alta en Maquinaria.
+                    </p>
+                  ) : null}
+                </div>
+              ) : activoTab === 'apero' ? (
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    Apero (tabla aperos)
+                  </label>
+                  <select
+                    value={selAperoId}
+                    onChange={e => setSelAperoId(e.target.value)}
+                    className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-500/50"
+                  >
+                    <option value="">Seleccionar…</option>
+                    {aperosLibres.map(ap => (
+                      <option key={ap.id} value={ap.id}>
+                        {ap.denominacion}
+                        {ap.codigo ? ` (${ap.codigo})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {aperosLibres.length === 0 ? (
+                    <p className="text-[9px] text-slate-500 mt-2">
+                      No hay aperos libres en tabla <span className="font-mono">aperos</span>.
+                    </p>
+                  ) : null}
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
+                    Apero (maquinaria_aperos)
+                  </label>
+                  <select
+                    value={selMaquinariaAperoId}
+                    onChange={e => setSelMaquinariaAperoId(e.target.value)}
+                    className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-orange-400/50"
+                  >
+                    <option value="">Seleccionar…</option>
+                    {maquinariaAperosLibres.filter(a => a.activo).map(a => (
+                      <option key={a.id} value={a.id}>
+                        {a.tipo}
+                        {a.descripcion ? ` · ${a.descripcion}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  {maquinariaAperosLibres.length === 0 ? (
+                    <p className="text-[9px] text-slate-500 mt-2">
+                      Crea el apero en Maquinaria o quítalo de otra ubicación.
+                    </p>
+                  ) : null}
+                </div>
+              )}
+              {activoError ? (
+                <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <p className="text-[11px] text-red-400">{activoError}</p>
+                </div>
+              ) : null}
+              <button
+                type="submit"
+                disabled={
+                  activoSubmitting
+                  || (activoTab === 'tractor' && !selTractorId)
+                  || (activoTab === 'apero' && !selAperoId)
+                  || (activoTab === 'maquinaria_apero' && !selMaquinariaAperoId)
+                }
+                className="w-full py-2.5 rounded-lg bg-[#fb923c]/20 border border-[#fb923c]/50 hover:bg-[#fb923c]/30 disabled:opacity-40 text-[11px] font-black uppercase tracking-widest text-[#fb923c]"
+              >
+                {activoSubmitting ? 'Guardando…' : 'Asignar a esta ubicación'}
+              </button>
             </form>
           </div>
         </div>

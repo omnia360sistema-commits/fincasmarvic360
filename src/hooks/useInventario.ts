@@ -364,3 +364,130 @@ export function useInformes(ubicacionId?: string | null, desde?: string, hasta?:
     staleTime: 60000
   })
 }
+
+/*
+================================================
+MAQUINARIA EN UBICACIÓN — puente inventario_ubicacion_activo + vista
+================================================
+*/
+
+export function useActivosEnUbicacionVista(ubicacionId: string | null) {
+  return useQuery({
+    queryKey: ['v_inventario_activos_en_ubicacion', ubicacionId],
+    queryFn: async () => {
+      if (!ubicacionId) return []
+      const { data, error } = await supabase
+        .from('v_inventario_activos_en_ubicacion')
+        .select('*')
+        .eq('ubicacion_id', ubicacionId)
+        .order('tipo_activo')
+        .order('etiqueta')
+      if (error) throw error
+      return data ?? []
+    },
+    enabled: !!ubicacionId,
+    staleTime: 30000,
+  })
+}
+
+/** Todas las asignaciones (para saber qué tractores/aperos están libres). */
+export function useInventarioUbicacionActivosAll() {
+  return useQuery({
+    queryKey: ['inventario_ubicacion_activo', 'all'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('inventario_ubicacion_activo')
+        .select('id, ubicacion_id, maquinaria_tractor_id, apero_id, maquinaria_apero_id')
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 30000,
+  })
+}
+
+type FilaMapero = {
+  id: string
+  maquinaria_apero_id: string | null
+  maquinaria_aperos: {
+    tipo: string
+    descripcion: string | null
+    tractor_id: string | null
+  } | null
+}
+
+/** Asignaciones en esta ubicación de aperos del módulo Maquinaria (maquinaria_aperos). */
+export function useMaquinariaAperosAsignadosUbicacion(ubicacionId: string | null) {
+  return useQuery({
+    queryKey: ['inventario_uact_maquinaria_apero', ubicacionId],
+    queryFn: async () => {
+      if (!ubicacionId) return [] as FilaMapero[]
+      const { data, error } = await supabase
+        .from('inventario_ubicacion_activo')
+        .select('id, maquinaria_apero_id, maquinaria_aperos(tipo, descripcion, tractor_id)')
+        .eq('ubicacion_id', ubicacionId)
+        .not('maquinaria_apero_id', 'is', null)
+      if (error) throw error
+      return (data ?? []) as FilaMapero[]
+    },
+    enabled: !!ubicacionId,
+    staleTime: 30000,
+  })
+}
+
+/** Tabla legacy `aperos` (vinculada al puente de inventario; distinta de maquinaria_aperos). */
+export function useAperosTablaInventario() {
+  return useQuery({
+    queryKey: ['aperos', 'inventario_list'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('aperos')
+        .select('id, codigo, denominacion, marca, estado')
+        .order('denominacion')
+      if (error) throw error
+      return data ?? []
+    },
+    staleTime: 60000,
+  })
+}
+
+export function useAssignActivoUbicacion() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (record: TablesInsert<'inventario_ubicacion_activo'>) => {
+      const { data, error } = await supabase
+        .from('inventario_ubicacion_activo')
+        .insert(record)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['v_inventario_activos_en_ubicacion', vars.ubicacion_id] })
+      qc.invalidateQueries({ queryKey: ['inventario_ubicacion_activo', 'all'] })
+      qc.invalidateQueries({ queryKey: ['v_tractores_en_inventario'] })
+      qc.invalidateQueries({ queryKey: ['v_maquinaria_aperos_en_inventario'] })
+      qc.invalidateQueries({ queryKey: ['inventario_uact_maquinaria_apero', vars.ubicacion_id] })
+    },
+  })
+}
+
+export function useRemoveActivoUbicacion() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ id, ubicacion_id }: { id: string; ubicacion_id: string }) => {
+      const { error } = await supabase
+        .from('inventario_ubicacion_activo')
+        .delete()
+        .eq('id', id)
+      if (error) throw error
+    },
+    onSuccess: (_, vars) => {
+      qc.invalidateQueries({ queryKey: ['v_inventario_activos_en_ubicacion', vars.ubicacion_id] })
+      qc.invalidateQueries({ queryKey: ['inventario_ubicacion_activo', 'all'] })
+      qc.invalidateQueries({ queryKey: ['v_tractores_en_inventario'] })
+      qc.invalidateQueries({ queryKey: ['v_maquinaria_aperos_en_inventario'] })
+      qc.invalidateQueries({ queryKey: ['inventario_uact_maquinaria_apero', vars.ubicacion_id] })
+    },
+  })
+}

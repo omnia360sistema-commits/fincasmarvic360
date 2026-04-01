@@ -265,7 +265,7 @@ export default function Inventario() {
     <div className="min-h-screen bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-white flex flex-col transition-colors duration-300">
 
       {/* ── BARRA SUPERIOR ───────────────────────────── */}
-      <header className="w-full bg-white/90 dark:bg-slate-900/80 border-b border-slate-200 dark:border-white/10 px-6 py-2 flex items-center justify-between z-50">
+      <header className="w-full bg-white/90 dark:bg-slate-900/80 border-b border-slate-200 dark:border-white/10 pl-14 pr-6 py-2 flex items-center justify-between z-50">
         <div className="flex items-center gap-3">
           <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
           <span className="text-[10px] font-black text-green-500 dark:text-green-400 uppercase tracking-widest">

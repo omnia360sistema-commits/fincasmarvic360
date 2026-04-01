@@ -20,6 +20,13 @@ export const PDF_PAGE_H       = 297
 export const PDF_TEXT_W       = PDF_PAGE_W - 2 * PDF_MARGIN
 export const PDF_BOTTOM_LIMIT = 280
 
+/** Límite vertical del contenido cuando el pie corporativo está activo (evita solaparse). */
+const CORPORATE_CONTENT_BOTTOM = 268
+
+const CORP_SECTION_BG: [number, number, number] = [30, 41, 59]
+const CORP_ROW_A: [number, number, number] = [255, 255, 255]
+const CORP_ROW_B: [number, number, number] = [248, 250, 252]
+
 // Colores corporativos por módulo
 export const PDF_COLORS = {
   accent:    [14,  94,  131] as [number, number, number],   // azul Marvic
@@ -99,6 +106,12 @@ export interface PdfContext {
 
   /** Pie de página final */
   footer(totalEntradas?: number): void
+
+  /** Activa cabecera/pie corporativos en saltos de página (45 mm logo, título/subtítulo/fecha). */
+  setCorporateMode(cfg: { titulo: string; subtitulo: string; fecha: Date } | null): void
+
+  /** Pinta cabecera corporativa en la página actual (fondo blanco). */
+  addCorporatePageHeader(): void
 }
 
 export function createPdfContext(
@@ -109,6 +122,46 @@ export function createPdfContext(
   const M  = PDF_MARGIN
   const TW = PDF_TEXT_W
   let y    = M
+  let corporateCfg: { titulo: string; subtitulo: string; fecha: Date } | null = null
+
+  function contentBottomLimit() {
+    return corporateCfg ? CORPORATE_CONTENT_BOTTOM : PDF_BOTTOM_LIMIT
+  }
+
+  function paintCorporateHeaderInternal() {
+    if (!corporateCfg) return
+    doc.setFillColor(255, 255, 255)
+    doc.rect(0, 0, PDF_PAGE_W, PDF_PAGE_H, 'F')
+    const top = M
+    let bandBottom = top
+    if (logoData) {
+      const logoW = 45
+      const logoH = Math.min(logoW * (logoData.natH / logoData.natW), 22)
+      doc.setFillColor(255, 255, 255)
+      doc.rect(M - 0.5, top - 0.5, logoW + 1, logoH + 1, 'F')
+      doc.addImage(logoData.b64, 'JPEG', M, top, logoW, logoH)
+      bandBottom = Math.max(bandBottom, top + logoH)
+    }
+    const right = PDF_PAGE_W - M
+    const fechaStr = corporateCfg.fecha.toLocaleDateString('es-ES', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    })
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(14)
+    doc.setTextColor(0, 0, 0)
+    doc.text(corporateCfg.titulo.toUpperCase(), right, top + 4, { align: 'right' })
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(10)
+    doc.setTextColor(100, 116, 139)
+    doc.text(corporateCfg.subtitulo, right, top + 9, { align: 'right' })
+    doc.text(fechaStr, right, top + 14, { align: 'right' })
+    bandBottom = Math.max(bandBottom, top + 16)
+    y = bandBottom + 2
+    doc.setDrawColor(200, 200, 200)
+    doc.setLineWidth(0.35)
+    doc.line(M, y, PDF_PAGE_W - M, y)
+    y += 5
+  }
 
   const ctx: PdfContext = {
     doc,
@@ -117,16 +170,26 @@ export function createPdfContext(
     logoData,
     accentColor,
 
+    setCorporateMode(cfg) {
+      corporateCfg = cfg
+    },
+
+    addCorporatePageHeader() {
+      paintCorporateHeaderInternal()
+    },
+
     checkPage(needed = 10) {
-      if (y + needed > PDF_BOTTOM_LIMIT) {
+      const lim = contentBottomLimit()
+      if (y + needed > lim) {
         doc.addPage()
         y = M
-        ctx.addPageHeader('', '')
+        if (corporateCfg) paintCorporateHeaderInternal()
+        else ctx.addPageHeader('', '')
       }
     },
 
     separator() {
-      if (y + 5 > PDF_BOTTOM_LIMIT) { doc.addPage(); y = M }
+      if (y + 5 > contentBottomLimit()) { doc.addPage(); y = M; if (corporateCfg) paintCorporateHeaderInternal() }
       doc.setDrawColor(200, 200, 200)
       doc.setLineWidth(0.2)
       doc.line(M, y, PDF_PAGE_W - M, y)
@@ -255,4 +318,142 @@ export async function initPdf(
   const logoData = await loadPdfImage(window.location.origin + '/MARVIC_logo.png')
   const ctx = createPdfContext(doc, logoData, accentColor)
   return { doc, ctx }
+}
+
+// ── PDF corporativo global (cabecera 45 mm + pie en todas las páginas) ───────
+
+export type CorporatePdfBlock = (ctx: PdfContext, doc: jsPDF) => void | Promise<void>
+
+export interface GenerarPDFCorporativoBaseConfig {
+  titulo: string
+  subtitulo: string
+  fecha: Date
+  filename: string
+  bloques: CorporatePdfBlock[]
+  accentColor?: [number, number, number]
+}
+
+const CORP_FOOTER_LINE_Y = 282
+const CORP_FOOTER_TEXT_Y = 287
+
+export function applyCorporateFootersAllPages(doc: jsPDF, fecha: Date): void {
+  const M = PDF_MARGIN
+  const total = doc.getNumberOfPages()
+  const pieFecha = fecha.toLocaleDateString('es-ES', {
+    day: '2-digit', month: '2-digit', year: 'numeric',
+  })
+  for (let i = 1; i <= total; i++) {
+    doc.setPage(i)
+    doc.setDrawColor(200, 200, 200)
+    doc.setLineWidth(0.25)
+    doc.line(M, CORP_FOOTER_LINE_Y, PDF_PAGE_W - M, CORP_FOOTER_LINE_Y)
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.setTextColor(71, 85, 105)
+    doc.text(
+      `Firmado: JuanPe — Dirección Técnica de Campo  |  Agrícola Marvic 360  |  ${pieFecha}`,
+      M,
+      CORP_FOOTER_TEXT_Y,
+    )
+    doc.text(`Página ${i} de ${total}`, PDF_PAGE_W - M, CORP_FOOTER_TEXT_Y, { align: 'right' })
+  }
+}
+
+/** Barra de sección #1e293b, texto blanco mayúsculas. */
+export function pdfCorporateSection(ctx: PdfContext, titulo: string): void {
+  const doc = ctx.doc
+  const M = PDF_MARGIN
+  const TW = PDF_TEXT_W
+  ctx.checkPage(10)
+  const y0 = ctx.y
+  doc.setFillColor(...CORP_SECTION_BG)
+  doc.rect(M, y0, TW, 7, 'F')
+  doc.setTextColor(255, 255, 255)
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(9)
+  doc.text(titulo.toUpperCase(), M + 2, y0 + 4.8)
+  ctx.y = y0 + 9
+  doc.setTextColor(0, 0, 0)
+}
+
+/**
+ * Tabla corporativa: cabecera oscura, filas alternas blanco / #f8fafc.
+ * `colWidths` en mm; se escala si la suma supera el ancho útil.
+ */
+export function pdfCorporateTable(
+  ctx: PdfContext,
+  headers: string[],
+  colWidths: number[],
+  rows: string[][],
+): void {
+  const doc = ctx.doc
+  const M = PDF_MARGIN
+  const TW = PDF_TEXT_W
+  const sum = colWidths.reduce((a, b) => a + b, 0)
+  const scale = sum > TW ? TW / sum : 1
+  const w = colWidths.map(c => c * scale)
+
+  function colLeft(i: number): number {
+    let x = M
+    for (let j = 0; j < i; j++) x += w[j]
+    return x
+  }
+
+  ctx.checkPage(8)
+  let y = ctx.y
+  doc.setFillColor(...CORP_SECTION_BG)
+  doc.rect(M, y, TW, 6, 'F')
+  doc.setFont('helvetica', 'bold')
+  doc.setFontSize(8)
+  doc.setTextColor(255, 255, 255)
+  headers.forEach((h, i) => {
+    doc.text(h, colLeft(i) + 1, y + 4.2, { maxWidth: w[i] - 2 })
+  })
+  y += 7
+  ctx.y = y
+
+  rows.forEach((row, ri) => {
+    const linesPerCell = row.map((cell, ci) =>
+      doc.splitTextToSize(cell || '—', w[ci] - 2) as string[],
+    )
+    const maxLines = Math.max(1, ...linesPerCell.map(l => l.length))
+    const rowH = 4 + maxLines * 3.6
+    ctx.checkPage(rowH + 1)
+    y = ctx.y
+    const fill = ri % 2 === 0 ? CORP_ROW_A : CORP_ROW_B
+    doc.setFillColor(...fill)
+    doc.rect(M, y - 0.5, TW, rowH, 'F')
+    doc.setFont('helvetica', 'normal')
+    doc.setFontSize(8)
+    doc.setTextColor(0, 0, 0)
+    linesPerCell.forEach((lines, ci) => {
+      let yy = y + 3.5
+      lines.forEach(line => {
+        doc.text(line, colLeft(ci) + 1, yy)
+        yy += 3.6
+      })
+    })
+    y += rowH
+    ctx.y = y
+  })
+  ctx.y += 2
+}
+
+/**
+ * Orquesta `initPdf`, cabecera corporativa, bloques y pie en todas las páginas.
+ * Reutiliza `createPdfContext` vía `initPdf`.
+ */
+export async function generarPDFCorporativoBase(
+  config: GenerarPDFCorporativoBaseConfig,
+): Promise<void> {
+  const { titulo, subtitulo, fecha, filename, bloques, accentColor } = config
+  const { doc, ctx } = await initPdf(accentColor ?? PDF_COLORS.accent)
+  ctx.setCorporateMode({ titulo, subtitulo, fecha })
+  ctx.addCorporatePageHeader()
+  for (const block of bloques) {
+    await block(ctx, doc)
+  }
+  ctx.setCorporateMode(null)
+  applyCorporateFootersAllPages(doc, fecha)
+  doc.save(filename)
 }

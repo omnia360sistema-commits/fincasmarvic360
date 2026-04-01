@@ -1,13 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Tractor, Wrench, Plus, X, FileText,
+  ArrowLeft, Tractor, Wrench, Plus, X,
   MapPin, Clock, Fuel, ChevronRight,
   Calendar, Activity, Navigation, UserCheck, Camera,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import {
-  useTractores, useAddTractor, useUpdateTractor,
+  useTractores, useTractoresEnInventario, useAperosEnInventario,
+  useAddTractor, useUpdateTractor,
   useAperos, useAddApero,
   useUsosMaquinaria, useAddUsoMaquinaria,
   useMantenimientoTractor, useAddMantenimientoTractor,
@@ -17,13 +18,55 @@ import {
 import { usePersonal, Personal } from '../hooks/usePersonal';
 import { supabase } from '../integrations/supabase/client';
 import { uploadImage } from '../utils/uploadImage';
-import jsPDF from 'jspdf';
+import {
+  generarPDFCorporativoBase,
+  pdfCorporateSection,
+  pdfCorporateTable,
+  PDF_COLORS,
+  PDF_MARGIN,
+} from '../utils/pdfUtils';
 import { FINCAS_NOMBRES as FINCAS } from '../constants/farms';
 import { TIPOS_TRABAJO as TIPOS_TRABAJO_GLOBAL } from '../constants/tiposTrabajo';
 
 // ── Constantes ────────────────────────────────────────────────
 
 type TabType = 'tractores' | 'aperos' | 'uso';
+
+function fmtFechaCorta(f: string | null): string {
+  if (!f) return '—';
+  try {
+    return new Date(f).toLocaleDateString('es-ES');
+  } catch {
+    return '—';
+  }
+}
+
+function matriculaTractor(list: TractorType[], id: string | null): string {
+  if (!id) return '—';
+  return list.find(t => t.id === id)?.matricula ?? '—';
+}
+
+function tipoApero(list: Apero[], id: string | null): string {
+  if (!id) return '—';
+  return list.find(a => a.id === id)?.tipo ?? '—';
+}
+
+function estadoTractorTexto(t: TractorType): string {
+  if (!t.activo) return 'Inactivo';
+  const hoy = new Date();
+  const proxItv = t.fecha_proxima_itv ? new Date(t.fecha_proxima_itv) : null;
+  if (proxItv && proxItv < hoy) return 'Activo · ITV vencida';
+  if (proxItv) {
+    const d = Math.ceil((proxItv.getTime() - hoy.getTime()) / 86400000);
+    if (d >= 0 && d < 30) return `Activo · ITV en ${d}d`;
+  }
+  return 'Activo';
+}
+
+function nombreOperarioUso(u: UsoMaquinaria, personal: Personal[]): string {
+  if (u.personal_id) return personal.find(p => p.id === u.personal_id)?.nombre ?? '—';
+  return u.tractorista?.trim() ? u.tractorista : '—';
+}
 
 // ── Modal Nuevo Tractor ───────────────────────────────────────
 function ModalTractor({ onClose }: { onClose: () => void }) {
@@ -143,7 +186,7 @@ function ModalTractor({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ── Modal Nuevo Apero ─────────────────────────────────────────
+// ── Modal Nuevo Apero (tractor asignado = solo si está en inventario) ──
 function ModalApero({ tractores, onClose }: { tractores: TractorType[]; onClose: () => void }) {
   const addMut = useAddApero();
   const [form, setForm] = useState({ tipo: '', tipo_libre: '', descripcion: '', tractor_id: '', notas: '' });
@@ -200,6 +243,9 @@ function ModalApero({ tractores, onClose }: { tractores: TractorType[]; onClose:
               <option value="">— Sin asignar —</option>
               {tractores.filter(t => t.activo).map(t => <option key={t.id} value={t.id}>{t.matricula}{t.marca ? ` · ${t.marca}` : ''}</option>)}
             </select>
+            {tractores.length === 0 && (
+              <p className="text-[8px] text-amber-500/90 mt-1">Da de alta el tractor en una ubicación de Inventario.</p>
+            )}
           </div>
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Descripción</label>
@@ -227,7 +273,9 @@ function ModalApero({ tractores, onClose }: { tractores: TractorType[]; onClose:
 
 // ── Modal Registro Uso ────────────────────────────────────────
 function ModalUso({ tractores, aperos, personal, onClose }: {
+  /** Solo tractores dados de alta en inventario (vista v_tractores_en_inventario). */
   tractores: TractorType[];
+  /** Solo maquinaria_aperos enlazados a inventario (v_maquinaria_aperos_en_inventario). */
   aperos:    Apero[];
   personal:  Personal[];
   onClose:   () => void;
@@ -298,6 +346,9 @@ function ModalUso({ tractores, aperos, personal, onClose }: {
           <button onClick={onClose} className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
         </div>
         <div className="p-5 space-y-3 max-h-[75vh] overflow-y-auto">
+          <p className="text-[8px] text-slate-500 uppercase tracking-widest leading-relaxed">
+            Equipo disponible según inventario (ubicaciones). Si falta algo, asígnalo en Inventario primero.
+          </p>
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tractor</label>
@@ -306,6 +357,9 @@ function ModalUso({ tractores, aperos, personal, onClose }: {
                 <option value="">— Ninguno —</option>
                 {tractores.filter(t => t.activo).map(t => <option key={t.id} value={t.id}>{t.matricula}</option>)}
               </select>
+              {tractores.length === 0 && (
+                <p className="text-[8px] text-amber-500/90 mt-1">Sin tractores en inventario.</p>
+              )}
             </div>
             <div>
               <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Apero</label>
@@ -314,6 +368,9 @@ function ModalUso({ tractores, aperos, personal, onClose }: {
                 <option value="">— Ninguno —</option>
                 {aperosDelTractor.filter(a => a.activo).map(a => <option key={a.id} value={a.id}>{a.tipo}</option>)}
               </select>
+              {aperos.length === 0 && (
+                <p className="text-[8px] text-amber-500/90 mt-1">Sin aperos (módulo) en inventario.</p>
+              )}
             </div>
           </div>
           {/* Tractorista selector (desde módulo Personal) */}
@@ -703,107 +760,318 @@ function TarjetaTractor({ tractor, aperos, usos, mantenimientos }: {
   );
 }
 
-// ── PDF Maquinaria ────────────────────────────────────────────
-async function generarPDF(
-  tractores: TractorType[], aperos: Apero[],
-  usos: UsoMaquinaria[], mantenimientos: MantenimientoTractor[]
-) {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const W   = doc.internal.pageSize.getWidth();
-  let y     = 20;
-
-  const checkPage = (need = 10) => { if (y + need > 280) { doc.addPage(); y = 20; } };
-  const sep = () => {
-    checkPage(6); doc.setDrawColor(251, 146, 60); doc.setLineWidth(0.2);
-    doc.line(14, y, W - 14, y); y += 4;
-  };
-
-  doc.setFillColor(2, 6, 23);
-  doc.rect(0, 0, W, doc.internal.pageSize.getHeight(), 'F');
-  doc.setFillColor(15, 23, 42);
-  doc.roundedRect(10, 8, W - 20, 20, 2, 2, 'F');
-  doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(251, 146, 60);
-  doc.text('AGRÍCOLA MARVIC — MAQUINARIA', 16, 17);
-  doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-  doc.text(new Date().toLocaleDateString('es-ES'), W - 40, 23);
-  y = 36;
-
-  // Resumen
-  const totalH = usos.reduce((s, u) => s + (u.horas_trabajadas ?? 0), 0);
-  const totalL = usos.reduce((s, u) => s + (u.gasolina_litros ?? 0), 0);
-  doc.setFillColor(15, 23, 42);
-  doc.roundedRect(10, y, W - 20, 14, 2, 2, 'F');
-  doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(251, 146, 60);
-  doc.text(`Tractores: ${tractores.length}  ·  Aperos: ${aperos.length}  ·  Horas: ${totalH.toFixed(1)}  ·  Gasoil: ${totalL.toFixed(1)}L`, 16, y + 9);
-  y += 20;
-
-  // Tractores
-  doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(251, 146, 60);
-  doc.text('TRACTORES', 14, y); y += 6; sep();
-
-  for (const t of tractores) {
-    checkPage(16);
-    doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
-    doc.text(t.matricula, 14, y);
-    doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-    doc.text(t.activo ? 'ACTIVO' : 'INACTIVO', W - 40, y);
-    y += 5;
-    const info = [
-      t.marca, t.modelo, t.anio ? String(t.anio) : null,
-      t.horas_motor ? `${t.horas_motor}h motor` : null,
-    ].filter(Boolean).join(' · ');
-    if (info) { doc.setFontSize(7.5); doc.setTextColor(148, 163, 184); doc.text(info, 14, y); y += 4; }
-    const misUsos = usos.filter(u => u.tractor_id === t.id);
-    const hT = misUsos.reduce((s, u) => s + (u.horas_trabajadas ?? 0), 0);
-    const lT = misUsos.reduce((s, u) => s + (u.gasolina_litros ?? 0), 0);
-    if (misUsos.length) {
-      doc.setFontSize(7.5); doc.setTextColor(251, 146, 60);
-      doc.text(`${misUsos.length} usos · ${hT.toFixed(1)}h trabajadas · ${lT.toFixed(1)}L gasoil`, 14, y); y += 4;
-    }
-    y += 2;
-  }
-
-  // Aperos
-  checkPage(14);
-  doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(251, 146, 60);
-  doc.text('APEROS', 14, y); y += 6; sep();
-  for (const a of aperos) {
-    checkPage(10);
-    doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
-    doc.text(a.tipo, 14, y);
-    doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-    const tractor = tractores.find(t => t.id === a.tractor_id);
-    doc.text(tractor ? tractor.matricula : '—', W - 40, y);
-    y += 5;
-    if (a.descripcion) { doc.setTextColor(148, 163, 184); doc.text(a.descripcion, 14, y); y += 4; }
-    y += 2;
-  }
-
-  doc.save(`Maquinaria_${new Date().toISOString().slice(0, 10)}.pdf`);
-}
-
 // ── Componente principal ──────────────────────────────────────
 export default function Maquinaria() {
   const navigate  = useNavigate();
   const { theme } = useTheme();
+  const isDark    = theme === 'dark';
 
   const [tab, setTab]             = useState<TabType>('tractores');
   const [modalTractor, setModalTractor] = useState(false);
   const [modalApero, setModalApero]     = useState(false);
   const [modalUso, setModalUso]         = useState(false);
+  const [generandoPdf, setGenerandoPdf] = useState(false);
+  const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
+  const pdfMenuRef = useRef<HTMLDivElement>(null);
 
   const { data: kpis }                       = useKPIsMaquinaria();
   const { data: tractores = [] }             = useTractores();
+  const { data: tractoresInv = [] }          = useTractoresEnInventario();
   const { data: aperos = [] }               = useAperos();
+  const { data: aperosInv = [] }            = useAperosEnInventario();
   const { data: usos = [] }                 = useUsosMaquinaria();
   const { data: mants = [] }               = useMantenimientoTractor();
   const { data: personalTractoristas = [] } = usePersonal('conductor_maquinaria');
 
+  useEffect(() => {
+    if (!pdfMenuOpen) return;
+    function onDown(ev: MouseEvent) {
+      if (pdfMenuRef.current && !pdfMenuRef.current.contains(ev.target as Node)) {
+        setPdfMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [pdfMenuOpen]);
+
+  async function generarMaquinariaCompleta() {
+    const ref = new Date();
+    const fs = ref.toISOString().slice(0, 10);
+    await generarPDFCorporativoBase({
+      titulo: 'MAQUINARIA',
+      subtitulo: 'Informe completo de flota y operaciones',
+      fecha: ref,
+      filename: `Maquinaria_Completa_${fs}.pdf`,
+      accentColor: PDF_COLORS.orange,
+      bloques: [
+        ctx => {
+          pdfCorporateSection(ctx, 'Tractores');
+          if (tractores.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin tractores registrados.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          pdfCorporateTable(
+            ctx,
+            ['MATRÍCULA', 'MARCA', 'MODELO', 'HORAS MOTOR', 'ITV', 'ESTADO'],
+            [26, 28, 32, 24, 28, 44],
+            tractores.map(t => [
+              t.matricula,
+              t.marca ?? '—',
+              t.modelo ?? '—',
+              t.horas_motor != null ? String(t.horas_motor) : '—',
+              fmtFechaCorta(t.fecha_proxima_itv),
+              estadoTractorTexto(t),
+            ]),
+          );
+        },
+        ctx => {
+          pdfCorporateSection(ctx, 'Aperos');
+          if (aperos.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin aperos registrados.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          pdfCorporateTable(
+            ctx,
+            ['TIPO', 'DESCRIPCIÓN', 'TRACTOR ASIGNADO', 'ESTADO'],
+            [36, 70, 48, 28],
+            aperos.map(a => [
+              a.tipo,
+              a.descripcion ?? '—',
+              matriculaTractor(tractores, a.tractor_id),
+              a.activo ? 'Activo' : 'Inactivo',
+            ]),
+          );
+        },
+        ctx => {
+          pdfCorporateSection(ctx, 'Uso de maquinaria');
+          if (usos.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin registros de uso.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          const ordenados = [...usos].sort((a, b) => a.fecha.localeCompare(b.fecha));
+          pdfCorporateTable(
+            ctx,
+            ['FECHA', 'TRACTOR', 'APERO', 'OPERARIO', 'FINCA', 'HORAS'],
+            [26, 28, 36, 44, 30, 18],
+            ordenados.map(u => [
+              fmtFechaCorta(u.fecha),
+              matriculaTractor(tractores, u.tractor_id),
+              tipoApero(aperos, u.apero_id),
+              nombreOperarioUso(u, personalTractoristas),
+              u.finca ?? '—',
+              u.horas_trabajadas != null ? String(u.horas_trabajadas) : '—',
+            ]),
+          );
+        },
+        ctx => {
+          pdfCorporateSection(ctx, 'Mantenimientos');
+          if (mants.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin mantenimientos registrados.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          pdfCorporateTable(
+            ctx,
+            ['FECHA', 'TRACTOR', 'TIPO', 'COSTE €', 'PROVEEDOR'],
+            [28, 28, 32, 22, 72],
+            mants.map(m => [
+              fmtFechaCorta(m.fecha),
+              matriculaTractor(tractores, m.tractor_id),
+              m.tipo,
+              m.coste_euros != null ? m.coste_euros.toFixed(2) : '—',
+              m.proveedor ?? '—',
+            ]),
+          );
+        },
+      ],
+    });
+  }
+
+  async function generarEstadoTractores() {
+    const ref = new Date();
+    const fs = ref.toISOString().slice(0, 10);
+    await generarPDFCorporativoBase({
+      titulo: 'MAQUINARIA — TRACTORES',
+      subtitulo: 'Estado de tractores',
+      fecha: ref,
+      filename: `Maquinaria_Tractores_${fs}.pdf`,
+      accentColor: PDF_COLORS.orange,
+      bloques: [
+        ctx => {
+          pdfCorporateSection(ctx, 'Estado de tractores');
+          if (tractores.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin tractores registrados.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          pdfCorporateTable(
+            ctx,
+            ['MATRÍCULA', 'MARCA', 'MODELO', 'HORAS MOTOR', 'ITV', 'ESTADO'],
+            [26, 28, 32, 24, 28, 44],
+            tractores.map(t => [
+              t.matricula,
+              t.marca ?? '—',
+              t.modelo ?? '—',
+              t.horas_motor != null ? String(t.horas_motor) : '—',
+              fmtFechaCorta(t.fecha_proxima_itv),
+              estadoTractorTexto(t),
+            ]),
+          );
+        },
+      ],
+    });
+  }
+
+  async function generarAperos() {
+    const ref = new Date();
+    const fs = ref.toISOString().slice(0, 10);
+    const activos = aperos.filter(a => a.activo);
+    await generarPDFCorporativoBase({
+      titulo: 'MAQUINARIA — APEROS',
+      subtitulo: 'Aperos activos',
+      fecha: ref,
+      filename: `Maquinaria_Aperos_${fs}.pdf`,
+      accentColor: PDF_COLORS.orange,
+      bloques: [
+        ctx => {
+          pdfCorporateSection(ctx, 'Aperos activos');
+          if (activos.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin aperos activos.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          pdfCorporateTable(
+            ctx,
+            ['TIPO', 'DESCRIPCIÓN', 'TRACTOR ASIGNADO', 'ESTADO'],
+            [36, 70, 48, 28],
+            activos.map(a => [
+              a.tipo,
+              a.descripcion ?? '—',
+              matriculaTractor(tractores, a.tractor_id),
+              'Activo',
+            ]),
+          );
+        },
+      ],
+    });
+  }
+
+  async function generarUsoMaquinaria() {
+    const ref = new Date();
+    const fs = ref.toISOString().slice(0, 10);
+    const ordenados = [...usos].sort((a, b) => a.fecha.localeCompare(b.fecha));
+    await generarPDFCorporativoBase({
+      titulo: 'MAQUINARIA — USO',
+      subtitulo: 'Registros de uso',
+      fecha: ref,
+      filename: `Maquinaria_Uso_${fs}.pdf`,
+      accentColor: PDF_COLORS.orange,
+      bloques: [
+        ctx => {
+          pdfCorporateSection(ctx, 'Uso de maquinaria');
+          if (ordenados.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin registros de uso.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          pdfCorporateTable(
+            ctx,
+            ['FECHA', 'TRACTOR', 'APERO', 'OPERARIO', 'FINCA', 'HORAS'],
+            [26, 28, 36, 44, 30, 18],
+            ordenados.map(u => [
+              fmtFechaCorta(u.fecha),
+              matriculaTractor(tractores, u.tractor_id),
+              tipoApero(aperos, u.apero_id),
+              nombreOperarioUso(u, personalTractoristas),
+              u.finca ?? '—',
+              u.horas_trabajadas != null ? String(u.horas_trabajadas) : '—',
+            ]),
+          );
+        },
+      ],
+    });
+  }
+
+  async function generarMantenimientosMaquinaria() {
+    const ref = new Date();
+    const fs = ref.toISOString().slice(0, 10);
+    await generarPDFCorporativoBase({
+      titulo: 'MAQUINARIA — MANTENIMIENTO',
+      subtitulo: 'Intervenciones en tractores',
+      fecha: ref,
+      filename: `Maquinaria_Mantenimientos_${fs}.pdf`,
+      accentColor: PDF_COLORS.orange,
+      bloques: [
+        ctx => {
+          pdfCorporateSection(ctx, 'Mantenimientos');
+          if (mants.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin mantenimientos registrados.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          pdfCorporateTable(
+            ctx,
+            ['FECHA', 'TRACTOR', 'TIPO', 'COSTE €', 'PROVEEDOR'],
+            [28, 28, 32, 22, 72],
+            mants.map(m => [
+              fmtFechaCorta(m.fecha),
+              matriculaTractor(tractores, m.tractor_id),
+              m.tipo,
+              m.coste_euros != null ? m.coste_euros.toFixed(2) : '—',
+              m.proveedor ?? '—',
+            ]),
+          );
+        },
+      ],
+    });
+  }
+
+  async function onElegirPdf(op: 1 | 2 | 3 | 4 | 5) {
+    setPdfMenuOpen(false);
+    setGenerandoPdf(true);
+    try {
+      if (op === 1) await generarMaquinariaCompleta();
+      else if (op === 2) await generarEstadoTractores();
+      else if (op === 3) await generarAperos();
+      else if (op === 4) await generarUsoMaquinaria();
+      else await generarMantenimientosMaquinaria();
+    } finally {
+      setGenerandoPdf(false);
+    }
+  }
+
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-white flex flex-col">
+    <div className={`min-h-screen flex flex-col ${isDark ? 'bg-[#020617] text-white' : 'bg-slate-50 text-slate-900'}`}>
 
       {/* HEADER */}
-      <header className="w-full bg-white/90 dark:bg-slate-900/80 border-b border-slate-200 dark:border-white/10 px-4 py-2 flex items-center gap-3 z-50">
+      <header className="w-full bg-white/90 dark:bg-slate-900/80 border-b border-slate-200 dark:border-white/10 pl-14 pr-4 py-2 flex items-center gap-3 z-50">
         <button onClick={() => navigate('/dashboard')} className="flex items-center gap-1.5 text-slate-400 hover:text-[#38bdf8] transition-colors">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-[9px] font-black uppercase tracking-widest">Dashboard</span>
@@ -818,12 +1086,48 @@ export default function Maquinaria() {
           >
             <Plus className="w-3 h-3" />Uso
           </button>
-          <button
-            onClick={() => generarPDF(tractores, aperos, usos, mants)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#38bdf8]/20 bg-[#38bdf8]/5 hover:bg-[#38bdf8]/10 text-[#38bdf8] text-[9px] font-black uppercase tracking-widest transition-colors"
-          >
-            <FileText className="w-3 h-3" />PDF
-          </button>
+          <div className="relative" ref={pdfMenuRef}>
+            <button
+              type="button"
+              onClick={() => setPdfMenuOpen(o => !o)}
+              disabled={generandoPdf}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#38bdf8]/20 bg-[#38bdf8]/5 hover:bg-[#38bdf8]/10 text-[#38bdf8] text-[9px] font-black uppercase tracking-widest transition-colors disabled:opacity-50"
+            >
+              {generandoPdf
+                ? <span className="w-3 h-3 border-2 border-[#38bdf8]/20 border-t-[#38bdf8] rounded-full animate-spin" />
+                : null}
+              PDF {pdfMenuOpen ? '▲' : '▼'}
+            </button>
+            {pdfMenuOpen && (
+              <div
+                className={`absolute right-0 top-full z-[70] mt-1 min-w-[240px] rounded-lg border shadow-lg py-1 ${
+                  isDark
+                    ? 'border-slate-600 bg-slate-900 text-slate-100 shadow-black/40'
+                    : 'border-slate-200 bg-white text-slate-800 shadow-slate-400/20'
+                }`}
+              >
+                {[
+                  { k: 1 as const, label: 'Informe completo maquinaria' },
+                  { k: 2 as const, label: 'Estado de tractores' },
+                  { k: 3 as const, label: 'Aperos activos' },
+                  { k: 4 as const, label: 'Uso de maquinaria' },
+                  { k: 5 as const, label: 'Mantenimientos' },
+                ].map(({ k, label }) => (
+                  <button
+                    key={k}
+                    type="button"
+                    disabled={generandoPdf}
+                    onClick={() => onElegirPdf(k)}
+                    className={`w-full px-3 py-2.5 text-left text-xs font-medium transition-colors disabled:opacity-50 ${
+                      isDark ? 'hover:bg-slate-800 text-slate-200' : 'hover:bg-slate-50 text-slate-800'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </header>
 
@@ -980,8 +1284,8 @@ export default function Maquinaria() {
       </main>
 
       {modalTractor && <ModalTractor onClose={() => setModalTractor(false)} />}
-      {modalApero   && <ModalApero tractores={tractores} onClose={() => setModalApero(false)} />}
-      {modalUso     && <ModalUso tractores={tractores} aperos={aperos} personal={personalTractoristas} onClose={() => setModalUso(false)} />}
+      {modalApero   && <ModalApero tractores={tractoresInv} onClose={() => setModalApero(false)} />}
+      {modalUso     && <ModalUso tractores={tractoresInv} aperos={aperosInv} personal={personalTractoristas} onClose={() => setModalUso(false)} />}
     </div>
   );
 }

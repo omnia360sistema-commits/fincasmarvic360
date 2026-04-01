@@ -539,7 +539,7 @@ export default function Personal() {
   return (
     <div className="min-h-screen bg-[#020617] text-white">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-white/10">
+      <div className="flex items-center justify-between pl-14 pr-4 pt-4 pb-3 border-b border-white/10">
         <div className="flex items-center gap-3">
           <button onClick={() => navigate('/dashboard')}
             className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400">

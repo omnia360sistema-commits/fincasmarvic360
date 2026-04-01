@@ -1,8 +1,8 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Truck, Tractor, Users, UserCheck,
-  AlertTriangle, Plus, X, FileText, Camera,
+  AlertTriangle, Plus, X, Camera,
   CheckCircle2, Clock, MapPin, ClipboardList, Briefcase,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
@@ -14,13 +14,19 @@ import {
 } from '../hooks/useTrabajos';
 import { useParcelas, useAddPlanting, useAddHarvest } from '../hooks/useParcelData';
 import { usePersonal, usePersonalExterno } from '../hooks/usePersonal';
-import { useTractores, useAperos, useAddUsoMaquinaria } from '../hooks/useMaquinaria';
+import { useTractoresEnInventario, useAperosEnInventario, useAddUsoMaquinaria } from '../hooks/useMaquinaria';
 import { useCamiones, useAddViaje } from '../hooks/useLogistica';
-import jsPDF from 'jspdf';
+import {
+  generarPDFCorporativoBase,
+  pdfCorporateSection,
+  pdfCorporateTable,
+  PDF_COLORS,
+  PDF_MARGIN,
+} from '../utils/pdfUtils';
 import { FINCAS_NOMBRES as FINCAS } from '../constants/farms';
 import { TIPOS_TRABAJO } from '../constants/tiposTrabajo';
 import { uploadImage, buildStoragePath } from '../utils/uploadImage';
-import { formatHora, formatFechaCorta, formatFechaCompleta } from '../utils/dateFormat';
+import { formatHora, formatFechaCorta } from '../utils/dateFormat';
 
 // ── Constantes ───────────────────────────────────────────────
 
@@ -40,6 +46,28 @@ function calcHoras(inicio: string, fin: string): number | null {
   if (!inicio || !fin) return null;
   const diff = (new Date(fin).getTime() - new Date(inicio).getTime()) / 3600000;
   return diff > 0 ? +diff.toFixed(2) : null;
+}
+
+function fmtFechaTabla(f: string): string {
+  try {
+    return new Date(f + 'T12:00:00').toLocaleDateString('es-ES');
+  } catch {
+    return f;
+  }
+}
+
+function horasRegistro(r: TrabajoRegistro): string {
+  const h = r.hora_inicio && r.hora_fin ? calcHoras(r.hora_inicio, r.hora_fin) : null;
+  return h != null ? String(h) : '—';
+}
+
+function operariosCelda(r: TrabajoRegistro): string {
+  if (r.num_operarios != null && r.num_operarios > 0) {
+    return r.nombres_operarios
+      ? `${r.num_operarios} · ${r.nombres_operarios}`
+      : String(r.num_operarios);
+  }
+  return r.nombres_operarios ?? '—';
 }
 
 // ── Modal registro ────────────────────────────────────────────
@@ -84,8 +112,11 @@ function ModalRegistro({ tipoBloque, onClose }: ModalRegistroProps) {
   // Data
   const { data: personal  = [] } = usePersonal();
   const { data: persExt   = [] } = usePersonalExterno();
-  const { data: tractores = [] } = useTractores();
-  const { data: aperos    = [] } = useAperos(tractorId || undefined);
+  const { data: tractores = [] } = useTractoresEnInventario();
+  const { data: aperosInv = [] } = useAperosEnInventario();
+  const aperos = tractorId
+    ? aperosInv.filter(a => a.tractor_id === tractorId)
+    : aperosInv;
   const { data: camiones  = [] } = useCamiones();
   const { data: parcelas  = [] } = useParcelas(finca || undefined);
 
@@ -287,6 +318,7 @@ function ModalRegistro({ tipoBloque, onClose }: ModalRegistroProps) {
           {esMaq && (
             <div className="space-y-3 pt-1">
               <p className="text-[9px] font-black text-orange-400/80 uppercase tracking-widest border-t border-white/5 pt-3">Maquinaria</p>
+              <p className="text-[8px] text-slate-500 leading-snug">Solo equipo registrado en Inventario (ubicaciones).</p>
 
               <div>
                 <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tractor</label>
@@ -296,6 +328,9 @@ function ModalRegistro({ tipoBloque, onClose }: ModalRegistroProps) {
                     <option key={t.id} value={t.id}>{t.matricula}{t.marca ? ` · ${t.marca}` : ''}</option>
                   ))}
                 </select>
+                {tractores.length === 0 && (
+                  <p className="text-[8px] text-amber-500/90 mt-1">No hay tractores en inventario.</p>
+                )}
               </div>
 
               {tractorId && (
@@ -708,114 +743,6 @@ function TarjetaIncidencia({ inc }: { inc: TrabajoIncidencia }) {
   );
 }
 
-// ── Generación PDF ────────────────────────────────────────────
-
-async function generarPDF(registros: TrabajoRegistro[], incidencias: TrabajoIncidencia[]) {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const W   = doc.internal.pageSize.getWidth();
-  let y     = 20;
-
-  const checkPage = (need = 10) => { if (y + need > 280) { doc.addPage(); y = 20; } };
-  const writeLine = (text: string, size = 9, bold = false, color: [number, number, number] = [255, 255, 255]) => {
-    doc.setFontSize(size); doc.setFont('helvetica', bold ? 'bold' : 'normal'); doc.setTextColor(...color);
-    doc.text(text, 14, y); y += size * 0.45;
-  };
-  const separator = () => {
-    checkPage(6); doc.setDrawColor(56, 189, 248); doc.setLineWidth(0.2); doc.line(14, y, W - 14, y); y += 4;
-  };
-
-  doc.setFillColor(2, 6, 23);
-  doc.rect(0, 0, W, doc.internal.pageSize.getHeight(), 'F');
-
-  doc.setFillColor(15, 23, 42);
-  doc.roundedRect(10, 8, W - 20, 20, 2, 2, 'F');
-  doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(56, 189, 248);
-  doc.text('AGRÍCOLA MARVIC', 16, 17);
-  doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-  doc.text('Informe de Trabajos', 16, 23);
-  doc.text(formatFechaCompleta(new Date().toISOString()), W - 50, 23);
-  y = 36;
-
-  const abiertas = incidencias.filter(i => i.estado !== 'resuelta').length;
-  const urgentes = incidencias.filter(i => i.urgente && i.estado !== 'resuelta').length;
-  doc.setFillColor(15, 23, 42);
-  doc.roundedRect(10, y, W - 20, 14, 2, 2, 'F');
-  doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(248, 113, 113);
-  doc.text(`Incidencias abiertas: ${abiertas}  |  Urgentes: ${urgentes}  |  Total registros: ${registros.length}`, 16, y + 9);
-  y += 20;
-
-  const porBloque: Record<TipoBloque, TrabajoRegistro[]> = {
-    logistica: [], maquinaria_agricola: [], mano_obra_interna: [], mano_obra_externa: [],
-  };
-  registros.forEach(r => porBloque[r.tipo_bloque].push(r));
-
-  for (const bloque of BLOQUES) {
-    const lista = porBloque[bloque.id];
-    if (!lista.length) continue;
-
-    checkPage(14);
-    doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(56, 189, 248);
-    doc.text(bloque.label.toUpperCase(), 14, y);
-    doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-    doc.text(`${lista.length} registros`, W - 40, y);
-    y += 6; separator();
-
-    for (const r of lista) {
-      checkPage(18);
-      doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
-      doc.text(r.tipo_trabajo, 14, y);
-      doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-      doc.text(formatFechaCompleta(r.fecha), W - 50, y);
-      y += 5;
-
-      const horas = r.hora_inicio && r.hora_fin ? calcHoras(r.hora_inicio, r.hora_fin) : null;
-      const detalles = [
-        r.finca && `Finca: ${r.finca}`,
-        r.num_operarios && `${r.num_operarios} operarios`,
-        r.nombres_operarios,
-        r.hora_inicio && `${formatHora(r.hora_inicio)} → ${formatHora(r.hora_fin)}`,
-        horas && `${horas}h`,
-      ].filter(Boolean).join('  ·  ');
-      if (detalles) {
-        doc.setFontSize(7.5); doc.setTextColor(148, 163, 184);
-        doc.text(detalles, 14, y); y += 4;
-      }
-      if (r.notas) {
-        doc.setFontSize(7); doc.setTextColor(71, 85, 105);
-        const lines = doc.splitTextToSize(r.notas, W - 28) as string[];
-        lines.forEach((l: string) => { checkPage(4); doc.text(l, 14, y); y += 3.5; });
-      }
-      y += 2;
-    }
-    y += 4;
-  }
-
-  if (incidencias.length) {
-    checkPage(14);
-    doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(56, 189, 248);
-    doc.text('INCIDENCIAS', 14, y);
-    y += 6; separator();
-
-    for (const inc of incidencias) {
-      checkPage(14);
-      doc.setFontSize(9); doc.setFont('helvetica', 'bold');
-      doc.setTextColor(inc.urgente ? 239 : 255, inc.urgente ? 68 : 255, inc.urgente ? 68 : 255);
-      doc.text((inc.urgente ? '[URGENTE] ' : '') + inc.titulo, 14, y);
-      doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-      doc.text(inc.estado.toUpperCase(), W - 40, y);
-      y += 5;
-      if (inc.descripcion) {
-        doc.setFontSize(7.5); doc.setTextColor(148, 163, 184);
-        const lines = doc.splitTextToSize(inc.descripcion, W - 28) as string[];
-        lines.forEach((l: string) => { checkPage(4); doc.text(l, 14, y); y += 3.5; });
-      }
-      y += 2;
-    }
-  }
-
-  doc.save(`Trabajos_${new Date().toISOString().slice(0, 10)}.pdf`);
-}
-
 // ── Componente principal ──────────────────────────────────────
 
 export default function Trabajos() {
@@ -827,19 +754,256 @@ export default function Trabajos() {
   const [modalRegistro,   setModalRegistro]   = useState<TipoBloque | null>(null);
   const [modalIncidencia, setModalIncidencia] = useState(false);
   const [tabIncidencias,  setTabIncidencias]  = useState(false);
+  const [generandoPdf, setGenerandoPdf] = useState(false);
+  const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
+  const pdfMenuRef = useRef<HTMLDivElement>(null);
 
   const { data: kpis }        = useKPIsTrabajos();
   const { data: incidencias } = useIncidencias();
   const { data: registros }   = useRegistrosTrabajos(activeBloque ?? undefined);
+  const { data: registrosTodos = [] } = useRegistrosTrabajos();
 
   const incAbiertas = (incidencias ?? []).filter(i => i.estado !== 'resuelta').length;
   const incUrgentes = (incidencias ?? []).filter(i => i.urgente && i.estado !== 'resuelta').length;
+
+  useEffect(() => {
+    if (!pdfMenuOpen) return;
+    function onDown(ev: MouseEvent) {
+      if (pdfMenuRef.current && !pdfMenuRef.current.contains(ev.target as Node)) {
+        setPdfMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [pdfMenuOpen]);
+
+  async function generarTrabajosCompleto() {
+    const ref = new Date();
+    const fs = ref.toISOString().slice(0, 10);
+    const incs = incidencias ?? [];
+    const ordenRegs = [...registrosTodos].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.created_at.localeCompare(a.created_at));
+    await generarPDFCorporativoBase({
+      titulo: 'TRABAJOS',
+      subtitulo: 'Informe completo — registros e incidencias',
+      fecha: ref,
+      filename: `Trabajos_Completo_${fs}.pdf`,
+      accentColor: PDF_COLORS.amber,
+      bloques: [
+        ctx => {
+          pdfCorporateSection(ctx, 'Registros de trabajo');
+          if (ordenRegs.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin registros.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          pdfCorporateTable(
+            ctx,
+            ['FECHA', 'FINCA', 'PARCELA', 'TIPO TRABAJO', 'OPERARIOS', 'HORAS'],
+            [24, 34, 28, 44, 34, 18],
+            ordenRegs.map(r => [
+              fmtFechaTabla(r.fecha),
+              r.finca ?? '—',
+              r.parcel_id ?? '—',
+              r.tipo_trabajo,
+              operariosCelda(r),
+              horasRegistro(r),
+            ]),
+          );
+        },
+        ctx => {
+          pdfCorporateSection(ctx, 'Incidencias');
+          if (incs.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin incidencias.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          pdfCorporateTable(
+            ctx,
+            ['FECHA', 'FINCA', 'TÍTULO', 'ESTADO', 'URGENTE'],
+            [24, 34, 76, 28, 20],
+            incs.map(i => [
+              fmtFechaTabla(i.fecha),
+              i.finca ?? '—',
+              i.titulo,
+              i.estado,
+              i.urgente ? 'Sí' : 'No',
+            ]),
+          );
+        },
+      ],
+    });
+  }
+
+  async function generarSoloRegistros() {
+    const ref = new Date();
+    const fs = ref.toISOString().slice(0, 10);
+    const ordenRegs = [...registrosTodos].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.created_at.localeCompare(a.created_at));
+    await generarPDFCorporativoBase({
+      titulo: 'TRABAJOS — REGISTROS',
+      subtitulo: 'Registros de trabajo',
+      fecha: ref,
+      filename: `Trabajos_Registros_${fs}.pdf`,
+      accentColor: PDF_COLORS.amber,
+      bloques: [
+        ctx => {
+          pdfCorporateSection(ctx, 'Registros de trabajo');
+          if (ordenRegs.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin registros.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          pdfCorporateTable(
+            ctx,
+            ['FECHA', 'FINCA', 'PARCELA', 'TIPO TRABAJO', 'OPERARIOS', 'HORAS'],
+            [24, 34, 28, 44, 34, 18],
+            ordenRegs.map(r => [
+              fmtFechaTabla(r.fecha),
+              r.finca ?? '—',
+              r.parcel_id ?? '—',
+              r.tipo_trabajo,
+              operariosCelda(r),
+              horasRegistro(r),
+            ]),
+          );
+        },
+      ],
+    });
+  }
+
+  async function generarSoloIncidenciasTrabajos() {
+    const ref = new Date();
+    const fs = ref.toISOString().slice(0, 10);
+    const incs = incidencias ?? [];
+    await generarPDFCorporativoBase({
+      titulo: 'TRABAJOS — INCIDENCIAS',
+      subtitulo: 'Todas las incidencias',
+      fecha: ref,
+      filename: `Trabajos_Incidencias_${fs}.pdf`,
+      accentColor: PDF_COLORS.amber,
+      bloques: [
+        ctx => {
+          pdfCorporateSection(ctx, 'Incidencias');
+          if (incs.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin incidencias.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          pdfCorporateTable(
+            ctx,
+            ['FECHA', 'FINCA', 'TÍTULO', 'ESTADO', 'URGENTE'],
+            [24, 34, 76, 28, 20],
+            incs.map(i => [
+              fmtFechaTabla(i.fecha),
+              i.finca ?? '—',
+              i.titulo,
+              i.estado,
+              i.urgente ? 'Sí' : 'No',
+            ]),
+          );
+        },
+      ],
+    });
+  }
+
+  async function generarIncidenciasAbiertas() {
+    const ref = new Date();
+    const fs = ref.toISOString().slice(0, 10);
+    const abiertas = (incidencias ?? []).filter(i => i.estado !== 'resuelta');
+    await generarPDFCorporativoBase({
+      titulo: 'TRABAJOS — INCIDENCIAS ABIERTAS',
+      subtitulo: 'Estado distinto de resuelta',
+      fecha: ref,
+      filename: `Trabajos_Incidencias_Abiertas_${fs}.pdf`,
+      accentColor: PDF_COLORS.amber,
+      bloques: [
+        ctx => {
+          pdfCorporateSection(ctx, 'Incidencias abiertas');
+          if (abiertas.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('No hay incidencias abiertas.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          pdfCorporateTable(
+            ctx,
+            ['FECHA', 'FINCA', 'TÍTULO', 'ESTADO', 'URGENTE'],
+            [24, 34, 76, 28, 20],
+            abiertas.map(i => [
+              fmtFechaTabla(i.fecha),
+              i.finca ?? '—',
+              i.titulo,
+              i.estado,
+              i.urgente ? 'Sí' : 'No',
+            ]),
+          );
+        },
+      ],
+    });
+  }
+
+  async function generarResumenTrabajos() {
+    const ref = new Date();
+    const fs = ref.toISOString().slice(0, 10);
+    const nRegs = registrosTodos.length;
+    const nAb = incAbiertas;
+    const nUr = incUrgentes;
+    await generarPDFCorporativoBase({
+      titulo: 'TRABAJOS — RESUMEN',
+      subtitulo: 'Indicadores operativos',
+      fecha: ref,
+      filename: `Trabajos_Resumen_${fs}.pdf`,
+      accentColor: PDF_COLORS.amber,
+      bloques: [
+        ctx => {
+          pdfCorporateSection(ctx, 'Resumen operativo');
+          pdfCorporateTable(
+            ctx,
+            ['INDICADOR', 'VALOR'],
+            [95, 87],
+            [
+              ['Total registros', String(nRegs)],
+              ['Incidencias abiertas', String(nAb)],
+              ['Incidencias urgentes', String(nUr)],
+            ],
+          );
+        },
+      ],
+    });
+  }
+
+  async function onElegirPdf(op: 1 | 2 | 3 | 4 | 5) {
+    setPdfMenuOpen(false);
+    setGenerandoPdf(true);
+    try {
+      if (op === 1) await generarTrabajosCompleto();
+      else if (op === 2) await generarSoloRegistros();
+      else if (op === 3) await generarSoloIncidenciasTrabajos();
+      else if (op === 4) await generarIncidenciasAbiertas();
+      else await generarResumenTrabajos();
+    } finally {
+      setGenerandoPdf(false);
+    }
+  }
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-[#020617] text-white' : 'bg-slate-50 text-slate-900'} flex flex-col`}>
 
       {/* HEADER */}
-      <header className={`w-full ${isDark ? 'bg-slate-900/80 border-white/10' : 'bg-white/90 border-slate-200'} border-b px-4 py-2 flex items-center gap-3 z-50`}>
+      <header className={`w-full ${isDark ? 'bg-slate-900/80 border-white/10' : 'bg-white/90 border-slate-200'} border-b pl-14 pr-4 py-2 flex items-center gap-3 z-50`}>
         <button onClick={() => navigate('/dashboard')} className="flex items-center gap-1.5 text-slate-400 hover:text-[#38bdf8] transition-colors">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-[9px] font-black uppercase tracking-widest">Dashboard</span>
@@ -857,11 +1021,48 @@ export default function Trabajos() {
               {incUrgentes} urgente{incUrgentes > 1 ? 's' : ''}
             </button>
           )}
-          <button onClick={() => generarPDF(registros ?? [], incidencias ?? [])}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#38bdf8]/20 bg-[#38bdf8]/5 hover:bg-[#38bdf8]/10 text-[#38bdf8] text-[9px] font-black uppercase tracking-widest transition-colors"
-          >
-            <FileText className="w-3 h-3" />PDF
-          </button>
+          <div className="relative" ref={pdfMenuRef}>
+            <button
+              type="button"
+              onClick={() => setPdfMenuOpen(o => !o)}
+              disabled={generandoPdf}
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#38bdf8]/20 bg-[#38bdf8]/5 hover:bg-[#38bdf8]/10 text-[#38bdf8] text-[9px] font-black uppercase tracking-widest transition-colors disabled:opacity-50"
+            >
+              {generandoPdf
+                ? <span className="w-3 h-3 border-2 border-[#38bdf8]/20 border-t-[#38bdf8] rounded-full animate-spin" />
+                : null}
+              PDF {pdfMenuOpen ? '▲' : '▼'}
+            </button>
+            {pdfMenuOpen && (
+              <div
+                className={`absolute right-0 top-full z-[70] mt-1 min-w-[248px] rounded-lg border shadow-lg py-1 ${
+                  isDark
+                    ? 'border-slate-600 bg-slate-900 text-slate-100 shadow-black/40'
+                    : 'border-slate-200 bg-white text-slate-800 shadow-slate-400/20'
+                }`}
+              >
+                {[
+                  { k: 1 as const, label: 'Informe completo trabajos' },
+                  { k: 2 as const, label: 'Solo registros de trabajo' },
+                  { k: 3 as const, label: 'Solo incidencias' },
+                  { k: 4 as const, label: 'Incidencias abiertas' },
+                  { k: 5 as const, label: 'Resumen operativo' },
+                ].map(({ k, label }) => (
+                  <button
+                    key={k}
+                    type="button"
+                    disabled={generandoPdf}
+                    onClick={() => onElegirPdf(k)}
+                    className={`w-full px-3 py-2.5 text-left text-xs font-medium transition-colors disabled:opacity-50 ${
+                      isDark ? 'hover:bg-slate-800 text-slate-200' : 'hover:bg-slate-50 text-slate-800'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </header>
 

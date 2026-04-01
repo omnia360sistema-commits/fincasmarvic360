@@ -4,6 +4,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext";
+import { SidebarProvider } from "./context/SidebarContext";
+import AppLayout from "./components/AppLayout";
 import FarmSelector from "./pages/FarmSelector";
 import FarmMap from "./pages/FarmMap";
 import Dashboard from "./pages/Dashboard";
@@ -24,32 +26,36 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <ThemeProvider>
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Dashboard />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/farm" element={<FarmSelector />} />
-            <Route path="/farm/:farmName" element={<FarmMap />} />
-            <Route path="/qr/:cuadrilla_id" element={<QRCuadrilla />} />
-            <Route path="/inventario" element={<Inventario />} />
-            <Route path="/inventario/:ubicacionId" element={<InventarioUbicacion />} />
-            <Route path="/parte-diario" element={<ParteDiario />} />
-            <Route path="/trabajos" element={<Trabajos />} />
-            <Route path="/logistica" element={<Logistica />} />
-            <Route path="/maquinaria" element={<Maquinaria />} />
-            <Route path="/personal" element={<Personal />} />
-            <Route path="/estado-general" element={<EstadoGeneral />} />
-            <Route path="/historicos" element={<Historicos />} />
-            <Route path="/exportar-pdf" element={<ExportarPDF />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
+    <SidebarProvider>
+      <QueryClientProvider client={queryClient}>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <Routes>
+              <Route path="/qr/:cuadrilla_id" element={<QRCuadrilla />} />
+              <Route element={<AppLayout />}>
+                <Route path="/" element={<Dashboard />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/farm" element={<FarmSelector />} />
+                <Route path="/farm/:farmName" element={<FarmMap />} />
+                <Route path="/inventario" element={<Inventario />} />
+                <Route path="/inventario/:ubicacionId" element={<InventarioUbicacion />} />
+                <Route path="/parte-diario" element={<ParteDiario />} />
+                <Route path="/trabajos" element={<Trabajos />} />
+                <Route path="/logistica" element={<Logistica />} />
+                <Route path="/maquinaria" element={<Maquinaria />} />
+                <Route path="/personal" element={<Personal />} />
+                <Route path="/estado-general" element={<EstadoGeneral />} />
+                <Route path="/historicos" element={<Historicos />} />
+                <Route path="/exportar-pdf" element={<ExportarPDF />} />
+                <Route path="*" element={<NotFound />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </QueryClientProvider>
+    </SidebarProvider>
   </ThemeProvider>
 );
 

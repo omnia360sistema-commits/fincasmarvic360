@@ -12,7 +12,7 @@ export default function FarmSelector() {
     <div className="min-h-screen bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-white flex flex-col transition-colors duration-300">
 
       {/* BARRA SUPERIOR */}
-      <header className="w-full bg-white/90 dark:bg-slate-900/80 border-b border-slate-200 dark:border-white/10 px-6 py-3 flex items-center gap-4">
+      <header className="w-full bg-white/90 dark:bg-slate-900/80 border-b border-slate-200 dark:border-white/10 pl-14 pr-6 py-3 flex items-center gap-4">
         <button
           onClick={() => navigate('/dashboard')}
           className="flex items-center gap-2 text-slate-400 hover:text-[#38bdf8] transition-colors"

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Truck, Users, Plus, X, FileText,
@@ -15,7 +15,13 @@ import {
 } from '../hooks/useLogistica';
 import { usePersonal, Personal } from '../hooks/usePersonal';
 import { uploadImage, buildStoragePath } from '../utils/uploadImage';
-import jsPDF from 'jspdf';
+import {
+  generarPDFCorporativoBase,
+  pdfCorporateSection,
+  pdfCorporateTable,
+  PDF_COLORS,
+  PDF_MARGIN,
+} from '../utils/pdfUtils';
 import { FINCAS_NOMBRES as FINCAS } from '../constants/farms';
 
 // ── Constantes ────────────────────────────────────────────────
@@ -61,6 +67,56 @@ function calcEficiencia(km: string, litros: string): string | null {
   const l = parseFloat(litros);
   if (k > 0 && l > 0) return (k / l).toFixed(1);
   return null;
+}
+
+function mismoDiaCalendario(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+}
+
+function fmtViajeHora(iso: string | null): string {
+  if (!iso) return '—';
+  try {
+    return new Date(iso).toLocaleString('es-ES', {
+      day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+    });
+  } catch {
+    return '—';
+  }
+}
+
+function matriculaDe(camiones: Camion[], id: string | null): string {
+  if (!id) return '—';
+  return camiones.find(c => c.id === id)?.matricula ?? '—';
+}
+
+function nombreConductorDe(personal: Personal[], id: string | null): string {
+  if (!id) return '—';
+  return personal.find(p => p.id === id)?.nombre ?? '—';
+}
+
+function estadoCamionTexto(c: Camion): string {
+  if (!c.activo) return 'Inactivo';
+  const hoy = new Date();
+  const proxItv = c.fecha_proxima_itv ? new Date(c.fecha_proxima_itv) : null;
+  if (proxItv && proxItv < hoy) return 'Activo · ITV vencida';
+  if (proxItv) {
+    const d = Math.ceil((proxItv.getTime() - hoy.getTime()) / 86400000);
+    if (d >= 0 && d < 30) return `Activo · ITV en ${d}d`;
+  }
+  return 'Activo';
+}
+
+function fmtFechaCorta(f: string | null): string {
+  if (!f) return '—';
+  try {
+    return new Date(f).toLocaleDateString('es-ES');
+  } catch {
+    return '—';
+  }
 }
 
 // ── Modal Nuevo Camión ────────────────────────────────────────
@@ -766,97 +822,6 @@ function TarjetaConductor({ conductor, viajes, camiones }: {
   );
 }
 
-// ── PDF ───────────────────────────────────────────────────────
-
-async function generarPDF(
-  camiones: Camion[],
-  conductores: Personal[],
-  viajes: Viaje[],
-  mantenimientos: MantenimientoCamion[]
-) {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const W   = doc.internal.pageSize.getWidth();
-  let y     = 20;
-
-  const checkPage = (n = 10) => { if (y + n > 280) { doc.addPage(); y = 20; } };
-  const line = (t: string, s = 9, b = false, r = 255, g = 255, bv = 255) => {
-    doc.setFontSize(s); doc.setFont('helvetica', b ? 'bold' : 'normal');
-    doc.setTextColor(r, g, bv); doc.text(t, 14, y); y += s * 0.45;
-  };
-  const sep = () => {
-    checkPage(6); doc.setDrawColor(167, 139, 250); doc.setLineWidth(0.2);
-    doc.line(14, y, W - 14, y); y += 4;
-  };
-
-  doc.setFillColor(2, 6, 23);
-  doc.rect(0, 0, W, doc.internal.pageSize.getHeight(), 'F');
-  doc.setFillColor(15, 23, 42);
-  doc.roundedRect(10, 8, W - 20, 20, 2, 2, 'F');
-  doc.setFontSize(14); doc.setFont('helvetica', 'bold'); doc.setTextColor(167, 139, 250);
-  doc.text('AGRÍCOLA MARVIC — LOGÍSTICA', 16, 17);
-  doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-  doc.text(new Date().toLocaleDateString('es-ES'), W - 40, 23);
-  y = 36;
-
-  // Resumen
-  doc.setFillColor(15, 23, 42);
-  doc.roundedRect(10, y, W - 20, 14, 2, 2, 'F');
-  doc.setFontSize(8); doc.setFont('helvetica', 'bold'); doc.setTextColor(167, 139, 250);
-  const totalKmViajes = viajes.reduce((s, v) => s + (v.km_recorridos ?? 0), 0);
-  const totalEurMant  = mantenimientos.reduce((s, m) => s + (m.coste_euros ?? 0), 0);
-  doc.text(`Camiones: ${camiones.length}  ·  Conductores: ${conductores.length}  ·  Viajes: ${viajes.length}  ·  ${totalKmViajes.toLocaleString('es-ES')} km`, 16, y + 6);
-  doc.setTextColor(100, 116, 139);
-  doc.text(`Mantenimientos: ${mantenimientos.length}  ·  Coste total: ${totalEurMant.toFixed(2)}€`, 16, y + 11);
-  y += 20;
-
-  // Camiones
-  doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(167, 139, 250);
-  doc.text('CAMIONES', 14, y); y += 6; sep();
-
-  for (const c of camiones) {
-    checkPage(18);
-    doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
-    doc.text(c.matricula, 14, y);
-    doc.setFontSize(8); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-    doc.text(c.activo ? 'ACTIVO' : 'INACTIVO', W - 40, y);
-    y += 5;
-    const info = [
-      c.marca, c.modelo,
-      c.anio   ? String(c.anio) : null,
-      c.kilometros_actuales != null ? `${c.kilometros_actuales.toLocaleString('es-ES')} km` : null,
-      c.fecha_proxima_itv ? `ITV: ${new Date(c.fecha_proxima_itv).toLocaleDateString('es-ES')}` : null,
-    ].filter(Boolean).join(' · ');
-    if (info) { doc.setFontSize(7.5); doc.setTextColor(148, 163, 184); doc.text(info, 14, y); y += 4; }
-    const misMant = mantenimientos.filter(m => m.camion_id === c.id);
-    if (misMant.length > 0) {
-      doc.setFontSize(7); doc.setTextColor(71, 85, 105);
-      doc.text(`${misMant.length} mantenimientos · ${misMant.reduce((s, m) => s + (m.coste_euros ?? 0), 0).toFixed(2)}€`, 14, y); y += 4;
-    }
-    y += 2;
-  }
-  y += 4;
-
-  // Conductores
-  checkPage(14);
-  doc.setFontSize(10); doc.setFont('helvetica', 'bold'); doc.setTextColor(167, 139, 250);
-  doc.text('CONDUCTORES', 14, y); y += 6; sep();
-
-  for (const cond of conductores) {
-    checkPage(14);
-    doc.setFontSize(9); doc.setFont('helvetica', 'bold'); doc.setTextColor(255, 255, 255);
-    doc.text(cond.nombre, 14, y);
-    const condViajes = viajes.filter(v => v.personal_id === cond.id);
-    const condKm     = condViajes.reduce((s, v) => s + (v.km_recorridos ?? 0), 0);
-    doc.setFontSize(7.5); doc.setFont('helvetica', 'normal'); doc.setTextColor(100, 116, 139);
-    doc.text(`${condViajes.length} viajes · ${condKm.toLocaleString('es-ES')} km`, W - 55, y);
-    y += 5;
-    if (cond.telefono) { doc.setTextColor(148, 163, 184); doc.text(cond.telefono, 14, y); y += 4; }
-    y += 2;
-  }
-
-  doc.save(`Logistica_${new Date().toISOString().slice(0, 10)}.pdf`);
-}
-
 // ── Componente principal ──────────────────────────────────────
 
 export default function Logistica() {
@@ -867,6 +832,9 @@ export default function Logistica() {
   const [tab,         setTab]         = useState<TabType>('camiones');
   const [modalCamion, setModalCamion] = useState(false);
   const [modalViaje,  setModalViaje]  = useState(false);
+  const [generandoPdf, setGenerandoPdf] = useState(false);
+  const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
+  const pdfMenuRef = useRef<HTMLDivElement>(null);
 
   const { data: kpis          = { totalCamiones: 0, camionesActivos: 0, totalConductores: 0, totalViajes: 0 } } = useKPIsLogistica();
   const { data: camiones      = [] } = useCamiones();
@@ -878,12 +846,254 @@ export default function Logistica() {
 
   const totalKmViajes = viajes.reduce((s, v) => s + (v.km_recorridos ?? 0), 0);
   const totalCosteMant = mants.reduce((s, m) => s + (m.coste_euros ?? 0), 0);
+  const totalLitros = viajes.reduce((s, v) => s + (v.gasto_gasolina_litros ?? 0), 0);
+  const totalEurComb = viajes.reduce((s, v) => s + (v.gasto_gasolina_euros ?? 0), 0);
+
+  useEffect(() => {
+    if (!pdfMenuOpen) return;
+    function onDown(ev: MouseEvent) {
+      if (pdfMenuRef.current && !pdfMenuRef.current.contains(ev.target as Node)) {
+        setPdfMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onDown);
+    return () => document.removeEventListener('mousedown', onDown);
+  }, [pdfMenuOpen]);
+
+  async function generarLogisticaCompleta() {
+    const ref = new Date();
+    const fs = ref.toISOString().slice(0, 10);
+    await generarPDFCorporativoBase({
+      titulo: 'LOGÍSTICA',
+      subtitulo: 'Informe completo de flota y operaciones',
+      fecha: ref,
+      filename: `Logistica_Completa_${fs}.pdf`,
+      accentColor: PDF_COLORS.violet,
+      bloques: [
+        ctx => {
+          pdfCorporateSection(ctx, 'Camiones');
+          pdfCorporateTable(
+            ctx,
+            ['MATRÍCULA', 'MARCA', 'MODELO', 'KM ACTUAL', 'PRÓX. ITV', 'ESTADO'],
+            [28, 28, 32, 24, 28, 42],
+            camiones.map(c => [
+              c.matricula,
+              c.marca ?? '—',
+              c.modelo ?? '—',
+              c.kilometros_actuales != null ? c.kilometros_actuales.toLocaleString('es-ES') : '—',
+              fmtFechaCorta(c.fecha_proxima_itv),
+              estadoCamionTexto(c),
+            ]),
+          );
+        },
+        ctx => {
+          pdfCorporateSection(ctx, 'Viajes');
+          if (viajes.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin viajes registrados.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          pdfCorporateTable(
+            ctx,
+            ['HORA SALIDA', 'HORA LLEGADA', 'CAMIÓN', 'CONDUCTOR', 'DESTINO', 'KM'],
+            [30, 30, 22, 36, 44, 20],
+            viajes.map(v => [
+              fmtViajeHora(v.hora_salida),
+              fmtViajeHora(v.hora_llegada),
+              matriculaDe(camiones, v.camion_id),
+              nombreConductorDe(personal, v.personal_id),
+              v.destino ?? v.finca ?? '—',
+              v.km_recorridos != null ? String(v.km_recorridos) : '—',
+            ]),
+          );
+        },
+        ctx => {
+          pdfCorporateSection(ctx, 'Mantenimientos');
+          if (mants.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin mantenimientos registrados.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          pdfCorporateTable(
+            ctx,
+            ['FECHA', 'CAMIÓN', 'TIPO', 'DESCRIPCIÓN', 'COSTE €', 'PROVEEDOR'],
+            [24, 24, 22, 52, 22, 38],
+            mants.map(m => [
+              fmtFechaCorta(m.fecha),
+              matriculaDe(camiones, m.camion_id),
+              m.tipo,
+              m.descripcion ?? '—',
+              m.coste_euros != null ? m.coste_euros.toFixed(2) : '—',
+              m.proveedor ?? '—',
+            ]),
+          );
+        },
+      ],
+    });
+  }
+
+  async function generarSoloViajes() {
+    const ref = new Date();
+    const fs = ref.toISOString().slice(0, 10);
+    const delDia = viajes.filter(
+      v => v.hora_salida && mismoDiaCalendario(new Date(v.hora_salida), ref),
+    );
+    await generarPDFCorporativoBase({
+      titulo: 'LOGÍSTICA — VIAJES',
+      subtitulo: 'Movimientos del día',
+      fecha: ref,
+      filename: `Logistica_Viajes_${fs}.pdf`,
+      accentColor: PDF_COLORS.violet,
+      bloques: [
+        ctx => {
+          pdfCorporateSection(ctx, 'Viajes del día');
+          if (delDia.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin viajes registrados para hoy.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          pdfCorporateTable(
+            ctx,
+            ['HORA SALIDA', 'HORA LLEGADA', 'CAMIÓN', 'CONDUCTOR', 'DESTINO', 'KM'],
+            [30, 30, 22, 36, 44, 20],
+            delDia.map(v => [
+              fmtViajeHora(v.hora_salida),
+              fmtViajeHora(v.hora_llegada),
+              matriculaDe(camiones, v.camion_id),
+              nombreConductorDe(personal, v.personal_id),
+              v.destino ?? v.finca ?? '—',
+              v.km_recorridos != null ? String(v.km_recorridos) : '—',
+            ]),
+          );
+        },
+      ],
+    });
+  }
+
+  async function generarEstadoCamiones() {
+    const ref = new Date();
+    const fs = ref.toISOString().slice(0, 10);
+    await generarPDFCorporativoBase({
+      titulo: 'LOGÍSTICA — FLOTA',
+      subtitulo: 'Estado de camiones',
+      fecha: ref,
+      filename: `Logistica_Camiones_${fs}.pdf`,
+      accentColor: PDF_COLORS.violet,
+      bloques: [
+        ctx => {
+          pdfCorporateSection(ctx, 'Estado de camiones');
+          pdfCorporateTable(
+            ctx,
+            ['MATRÍCULA', 'MARCA', 'MODELO', 'ITV', 'ESTADO'],
+            [28, 32, 38, 32, 52],
+            camiones.map(c => [
+              c.matricula,
+              c.marca ?? '—',
+              c.modelo ?? '—',
+              fmtFechaCorta(c.fecha_proxima_itv),
+              estadoCamionTexto(c),
+            ]),
+          );
+        },
+      ],
+    });
+  }
+
+  async function generarMantenimientos() {
+    const ref = new Date();
+    const fs = ref.toISOString().slice(0, 10);
+    await generarPDFCorporativoBase({
+      titulo: 'LOGÍSTICA — MANTENIMIENTO',
+      subtitulo: 'Historial de intervenciones',
+      fecha: ref,
+      filename: `Logistica_Mantenimientos_${fs}.pdf`,
+      accentColor: PDF_COLORS.violet,
+      bloques: [
+        ctx => {
+          pdfCorporateSection(ctx, 'Mantenimientos');
+          if (mants.length === 0) {
+            ctx.checkPage(8);
+            ctx.doc.setFontSize(9);
+            ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin mantenimientos registrados.', PDF_MARGIN, ctx.y);
+            ctx.y += 6;
+            return;
+          }
+          pdfCorporateTable(
+            ctx,
+            ['FECHA', 'CAMIÓN', 'TIPO', 'COSTE €', 'PROVEEDOR'],
+            [28, 28, 32, 24, 70],
+            mants.map(m => [
+              fmtFechaCorta(m.fecha),
+              matriculaDe(camiones, m.camion_id),
+              m.tipo,
+              m.coste_euros != null ? m.coste_euros.toFixed(2) : '—',
+              m.proveedor ?? '—',
+            ]),
+          );
+        },
+      ],
+    });
+  }
+
+  async function generarResumenLogistica() {
+    const ref = new Date();
+    const fs = ref.toISOString().slice(0, 10);
+    const activos = camiones.filter(c => c.activo).length;
+    await generarPDFCorporativoBase({
+      titulo: 'LOGÍSTICA — RESUMEN',
+      subtitulo: 'Indicadores operativos',
+      fecha: ref,
+      filename: `Logistica_Resumen_${fs}.pdf`,
+      accentColor: PDF_COLORS.violet,
+      bloques: [
+        ctx => {
+          pdfCorporateSection(ctx, 'Resumen operativo');
+          pdfCorporateTable(
+            ctx,
+            ['INDICADOR', 'VALOR'],
+            [95, 87],
+            [
+              ['Total viajes', String(viajes.length)],
+              ['Km recorridos (acumulado)', totalKmViajes.toLocaleString('es-ES')],
+              ['Gasto combustible (litros)', totalLitros > 0 ? totalLitros.toFixed(1) : '—'],
+              ['Gasto combustible (euros)', totalEurComb > 0 ? `${totalEurComb.toFixed(2)} €` : '—'],
+              ['Camiones activos', String(activos)],
+            ],
+          );
+        },
+      ],
+    });
+  }
+
+  async function onElegirPdf(op: 1 | 2 | 3 | 4 | 5) {
+    setPdfMenuOpen(false);
+    setGenerandoPdf(true);
+    try {
+      if (op === 1) await generarLogisticaCompleta();
+      else if (op === 2) await generarSoloViajes();
+      else if (op === 3) await generarEstadoCamiones();
+      else if (op === 4) await generarMantenimientos();
+      else await generarResumenLogistica();
+    } finally {
+      setGenerandoPdf(false);
+    }
+  }
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-[#020617] text-white' : 'bg-slate-50 text-slate-900'} flex flex-col`}>
 
       {/* HEADER */}
-      <header className={`w-full ${isDark ? 'bg-slate-900/80 border-white/10' : 'bg-white/90 border-slate-200'} border-b px-4 py-2 flex items-center gap-3 z-50`}>
+      <header className={`w-full ${isDark ? 'bg-slate-900/80 border-white/10' : 'bg-white/90 border-slate-200'} border-b pl-14 pr-4 py-2 flex items-center gap-3 z-50`}>
         <button onClick={() => navigate('/dashboard')} className="flex items-center gap-1.5 text-slate-400 hover:text-[#38bdf8] transition-colors">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-[9px] font-black uppercase tracking-widest">Dashboard</span>
@@ -896,10 +1106,49 @@ export default function Logistica() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 text-[9px] font-black uppercase tracking-widest hover:bg-purple-500/20 transition-colors">
             <Plus className="w-3 h-3" />Viaje
           </button>
-          <button onClick={() => generarPDF(camiones, conductores, viajes, mants)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#38bdf8]/20 bg-[#38bdf8]/5 hover:bg-[#38bdf8]/10 text-[#38bdf8] text-[9px] font-black uppercase tracking-widest transition-colors">
-            <FileText className="w-3 h-3" />PDF
-          </button>
+          <div className="relative" ref={pdfMenuRef}>
+            <button
+              type="button"
+              onClick={() => setPdfMenuOpen(o => !o)}
+              disabled={generandoPdf}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#38bdf8]/20 bg-[#38bdf8]/5 hover:bg-[#38bdf8]/10 text-[#38bdf8] text-[9px] font-black uppercase tracking-widest transition-colors disabled:opacity-50"
+            >
+              {generandoPdf
+                ? <span className="w-3 h-3 border-2 border-[#38bdf8]/20 border-t-[#38bdf8] rounded-full animate-spin" />
+                : <FileText className="w-3 h-3" />}
+              PDF
+              <ChevronDown className={`w-3 h-3 transition-transform ${pdfMenuOpen ? 'rotate-180' : ''}`} />
+            </button>
+            {pdfMenuOpen && (
+              <div
+                className={`absolute right-0 top-full z-[70] mt-1 min-w-[260px] rounded-lg border shadow-lg py-1 ${
+                  isDark
+                    ? 'border-slate-600 bg-slate-900 text-slate-100 shadow-black/40'
+                    : 'border-slate-200 bg-white text-slate-800 shadow-slate-400/20'
+                }`}
+              >
+                {[
+                  { k: 1 as const, label: 'Informe completo logística' },
+                  { k: 2 as const, label: 'Solo viajes del día' },
+                  { k: 3 as const, label: 'Estado de camiones' },
+                  { k: 4 as const, label: 'Mantenimientos' },
+                  { k: 5 as const, label: 'Resumen operativo' },
+                ].map(({ k, label }) => (
+                  <button
+                    key={k}
+                    type="button"
+                    disabled={generandoPdf}
+                    onClick={() => onElegirPdf(k)}
+                    className={`w-full px-3 py-2.5 text-left text-xs font-medium transition-colors disabled:opacity-50 ${
+                      isDark ? 'hover:bg-slate-800 text-slate-200' : 'hover:bg-slate-50 text-slate-800'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </header>
 

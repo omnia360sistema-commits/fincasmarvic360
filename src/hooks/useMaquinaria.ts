@@ -84,6 +84,38 @@ export function useTractores() {
   });
 }
 
+/** Tractores dados de alta en al menos una ubicación de inventario (vista BD). */
+export function useTractoresEnInventario() {
+  return useQuery<Tractor[]>({
+    queryKey: ['v_tractores_en_inventario'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('v_tractores_en_inventario')
+        .select('*')
+        .order('matricula');
+      if (error) throw error;
+      return (data ?? []) as Tractor[];
+    },
+    staleTime: 30000,
+  });
+}
+
+/** Aperos (maquinaria_aperos) asignados a inventario vía inventario_ubicacion_activo. */
+export function useAperosEnInventario() {
+  return useQuery<Apero[]>({
+    queryKey: ['v_maquinaria_aperos_en_inventario'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('v_maquinaria_aperos_en_inventario')
+        .select('*')
+        .order('tipo');
+      if (error) throw error;
+      return (data ?? []) as Apero[];
+    },
+    staleTime: 30000,
+  });
+}
+
 // ── useAddTractor ─────────────────────────────────────────────
 export function useAddTractor() {
   const qc = useQueryClient();
@@ -97,7 +129,10 @@ export function useAddTractor() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['maquinaria_tractores'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['maquinaria_tractores'] });
+      qc.invalidateQueries({ queryKey: ['v_tractores_en_inventario'] });
+    },
   });
 }
 
@@ -112,7 +147,10 @@ export function useUpdateTractor() {
         .eq('id', id);
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['maquinaria_tractores'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['maquinaria_tractores'] });
+      qc.invalidateQueries({ queryKey: ['v_tractores_en_inventario'] });
+    },
   });
 }
 
@@ -147,7 +185,10 @@ export function useAddApero() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['maquinaria_aperos'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['maquinaria_aperos'] });
+      qc.invalidateQueries({ queryKey: ['v_maquinaria_aperos_en_inventario'] });
+    },
   });
 }
 
@@ -182,7 +223,9 @@ export function useAddUsoMaquinaria() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['maquinaria_uso'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['maquinaria_uso'] });
+    },
   });
 }
 

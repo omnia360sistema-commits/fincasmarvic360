@@ -283,7 +283,7 @@ export default function ExportarPDF() {
     <div className="min-h-screen bg-[#020617] text-white flex flex-col">
 
       {/* CABECERA */}
-      <header className="bg-slate-900/80 border-b border-white/10 px-4 py-2.5 flex items-center gap-3">
+      <header className="bg-slate-900/80 border-b border-white/10 pl-14 pr-4 py-2.5 flex items-center gap-3">
         <button
           onClick={() => navigate('/dashboard')}
           className="flex items-center gap-1.5 text-slate-400 hover:text-white transition-colors"

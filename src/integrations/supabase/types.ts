@@ -246,6 +246,39 @@ export type Database = {
           },
         ]
       }
+      aperos: {
+        Row: {
+          codigo: string | null
+          created_at: string | null
+          denominacion: string
+          estado: string | null
+          id: string
+          marca: string | null
+          ubicacion: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          codigo?: string | null
+          created_at?: string | null
+          denominacion: string
+          estado?: string | null
+          id?: string
+          marca?: string | null
+          ubicacion?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          codigo?: string | null
+          created_at?: string | null
+          denominacion?: string
+          estado?: string | null
+          id?: string
+          marca?: string | null
+          ubicacion?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       camiones: {
         Row: {
           activo: boolean | null
@@ -826,6 +859,68 @@ export type Database = {
           orden?: number
         }
         Relationships: []
+      }
+      inventario_ubicacion_activo: {
+        Row: {
+          apero_id: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          maquinaria_apero_id: string | null
+          maquinaria_tractor_id: string | null
+          notas: string | null
+          ubicacion_id: string
+        }
+        Insert: {
+          apero_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          maquinaria_apero_id?: string | null
+          maquinaria_tractor_id?: string | null
+          notas?: string | null
+          ubicacion_id: string
+        }
+        Update: {
+          apero_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          maquinaria_apero_id?: string | null
+          maquinaria_tractor_id?: string | null
+          notas?: string | null
+          ubicacion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventario_ubicacion_activo_apero_id_fkey"
+            columns: ["apero_id"]
+            isOneToOne: false
+            referencedRelation: "aperos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventario_ubicacion_activo_maquinaria_apero_id_fkey"
+            columns: ["maquinaria_apero_id"]
+            isOneToOne: false
+            referencedRelation: "maquinaria_aperos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventario_ubicacion_activo_maquinaria_tractor_id_fkey"
+            columns: ["maquinaria_tractor_id"]
+            isOneToOne: false
+            referencedRelation: "maquinaria_tractores"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "inventario_ubicacion_activo_ubicacion_id_fkey"
+            columns: ["ubicacion_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_ubicaciones"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       lecturas_sensor_planta: {
         Row: {
@@ -2185,9 +2280,107 @@ export type Database = {
           },
         ]
       }
+      catalogo_tipos_trabajo: {
+        Row: {
+          activo: boolean
+          categoria: string
+          created_at: string
+          id: string
+          nombre: string
+        }
+        Insert: {
+          activo?: boolean
+          categoria: string
+          created_at?: string
+          id?: string
+          nombre: string
+        }
+        Update: {
+          activo?: boolean
+          categoria?: string
+          created_at?: string
+          id?: string
+          nombre?: string
+        }
+        Relationships: []
+      }
+      catalogo_tipos_mantenimiento: {
+        Row: {
+          activo: boolean
+          created_at: string
+          id: string
+          modulo: string
+          nombre: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          id?: string
+          modulo: string
+          nombre: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          id?: string
+          modulo?: string
+          nombre?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
-      [_ in never]: never
+      v_inventario_activos_en_ubicacion: {
+        Row: {
+          activo_operativo: boolean | null
+          apero_id: string | null
+          asignacion_id: string | null
+          detalle: string | null
+          etiqueta: string | null
+          estado_texto_activo: string | null
+          maquinaria_tractor_id: string | null
+          tipo_activo: string | null
+          ubicacion_id: string | null
+          ubicacion_nombre: string | null
+          ubicacion_texto_legacy: string | null
+        }
+        Relationships: []
+      }
+      v_maquinaria_aperos_en_inventario: {
+        Row: {
+          activo: boolean
+          created_at: string | null
+          created_by: string | null
+          descripcion: string | null
+          foto_url: string | null
+          id: string
+          notas: string | null
+          tipo: string
+          tractor_id: string | null
+        }
+        Relationships: []
+      }
+      v_tractores_en_inventario: {
+        Row: {
+          activo: boolean
+          anio: number | null
+          created_at: string | null
+          created_by: string | null
+          fecha_proxima_itv: string | null
+          fecha_proxima_revision: string | null
+          ficha_tecnica: string | null
+          foto_url: string | null
+          gps_info: string | null
+          horas_motor: number | null
+          horas_proximo_mantenimiento: number | null
+          id: string
+          marca: string | null
+          matricula: string
+          modelo: string | null
+          notas: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       [_ in never]: never
