@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft, X, Clock, History, Plus, Package, AlertCircle,
   FlaskConical, Droplets, Layers, Wind, Wrench, Tractor, FileText, MoveRight,
@@ -13,8 +14,10 @@ import {
   useProductosCatalogo, useAddProductoCatalogo, useAddMovimiento,
   useActivosEnUbicacionVista, useInventarioUbicacionActivosAll,
   useAperosTablaInventario, useAssignActivoUbicacion, useRemoveActivoUbicacion,
-  useMaquinariaAperosAsignadosUbicacion,
+  useMaquinariaAperosAsignadosUbicacion, useResumenUbicacion,
+  useEntradas,
 } from '@/hooks/useInventario'
+import { RecordActions } from '@/components/base'
 import { useTractores, useAperos } from '@/hooks/useMaquinaria'
 
 type ActivoAssignTab = 'tractor' | 'apero' | 'maquinaria_apero'
@@ -61,6 +64,7 @@ type InformeTipo = 'historico' | 'categoria' | 'mes'
 export default function InventarioUbicacion() {
   const { ubicacionId } = useParams<{ ubicacionId: string }>()
   const navigate = useNavigate()
+  const qc = useQueryClient()
 
   // ── UI state ─────────────────────────────────────────────────
   const [activeCatId, setActiveCatId] = useState<string | null>(null)
@@ -111,6 +115,7 @@ export default function InventarioUbicacion() {
   const [generandoPDF,       setGenerandoPDF]       = useState(false)
   const [generandoExcel,     setGenerandoExcel]     = useState(false)
   const [pdfError,           setPdfError]           = useState<string | null>(null)
+  const [showPdfMenu,        setShowPdfMenu]        = useState(false)
   // ── Maquinaria / aperos (puente inventario) ─────────────────
   const [showActivoModal,    setShowActivoModal]    = useState(false)
   const [activoTab,          setActivoTab]          = useState<ActivoAssignTab>('tractor')
@@ -136,6 +141,8 @@ export default function InventarioUbicacion() {
   const addMovimiento               = useAddMovimiento()
   const { data: activosVista = [] } = useActivosEnUbicacionVista(ubicacionId ?? null)
   const { data: todasAsign = [] }  = useInventarioUbicacionActivosAll()
+  const { data: resumenUbic = [] } = useResumenUbicacion(ubicacionId ?? null)
+  const { data: entradasUbic = [] } = useEntradas(ubicacionId ?? null)
   const { data: aperosInv = [] }    = useAperosTablaInventario()
   const { data: tractores = [] }   = useTractores()
   const { data: maqAperosCat = [] } = useAperos()
@@ -758,15 +765,42 @@ export default function InventarioUbicacion() {
           )
         })}
 
-        {/* Separador + botón Informe PDF */}
+        {/* Separador + menú desplegable PDF */}
         <div className="w-full h-px bg-white/10 my-1" />
-        <button
-          onClick={() => { setPdfError(null); setShowInformeModal(true) }}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap bg-slate-900/90 border-white/10 text-slate-300 hover:border-[#38bdf8]/30 hover:text-[#38bdf8]"
-        >
-          <FileText className="w-3.5 h-3.5 shrink-0" />
-          Informe PDF
-        </button>
+        <div className="relative">
+          <button
+            onClick={() => setShowPdfMenu(v => !v)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap bg-slate-900/90 border-white/10 text-slate-300 hover:border-[#38bdf8]/30 hover:text-[#38bdf8] w-full"
+          >
+            <FileText className="w-3.5 h-3.5 shrink-0" />
+            Informes PDF
+            <ChevronDown className="w-3 h-3 ml-auto" />
+          </button>
+          {showPdfMenu && (
+            <div className="absolute right-0 top-full mt-1 w-56 bg-slate-900 border border-white/10 rounded-lg shadow-xl z-10 overflow-hidden">
+              {[
+                { label: 'Informe completo ubicacion', tipo: 'historico' as const },
+                { label: 'Stock actual por categoria', tipo: 'mes' as const },
+                { label: 'Por categoria especifica', tipo: 'categoria' as const },
+              ].map(({ label, tipo }) => (
+                <button
+                  key={tipo}
+                  onClick={() => { setInformeTipo(tipo); setPdfError(null); setShowInformeModal(true); setShowPdfMenu(false); }}
+                  className="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-300 hover:bg-[#38bdf8]/10 hover:text-[#38bdf8] transition-colors"
+                >
+                  {label}
+                </button>
+              ))}
+              <div className="w-full h-px bg-white/10" />
+              <button
+                onClick={() => { setInformeTipo('historico'); setShowInformeModal(true); setShowPdfMenu(false); }}
+                className="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-300 hover:bg-[#38bdf8]/10 hover:text-[#38bdf8] transition-colors"
+              >
+                Exportar Excel
+              </button>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ── PANEL LATERAL ──────────────────────────────────── */}
@@ -891,6 +925,19 @@ export default function InventarioUbicacion() {
                       {r.descripcion && (
                         <p className="text-[10px] text-slate-400 mt-0.5">{r.descripcion}</p>
                       )}
+                      <div className="flex justify-end mt-1">
+                        <RecordActions
+                          onDelete={async () => {
+                            if (!confirm('¿Eliminar este registro?')) return
+                            await supabase.from('inventario_registros').delete().eq('id', r.id)
+                            qc.invalidateQueries({ queryKey: ['inventario_registros', ubicacionId, activeCatId] })
+                            qc.invalidateQueries({ queryKey: ['inventario_ultimo_registro', ubicacionId, activeCatId] })
+                            qc.invalidateQueries({ queryKey: ['inventario_resumen_ubicacion', ubicacionId] })
+                            qc.invalidateQueries({ queryKey: ['inventario_total_registros'] })
+                            qc.invalidateQueries({ queryKey: ['inventario_conteos_ubicaciones'] })
+                          }}
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -917,6 +964,39 @@ export default function InventarioUbicacion() {
             </button>
           </div>
 
+        </div>
+      )}
+
+      {/* ── STOCK ACTUAL POR CATEGORÍA ─────────────────────── */}
+      {resumenUbic.length > 0 && (
+        <div className="absolute top-[84px] left-4 z-[997] w-[min(100%-2rem,22rem)] bg-slate-900/95 border border-[#38bdf8]/20 rounded-lg overflow-hidden shadow-lg">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-white/10 bg-[#38bdf8]/5">
+            <Package className="w-3.5 h-3.5 text-[#38bdf8]" />
+            <span className="text-[10px] font-black text-[#38bdf8] uppercase tracking-widest">Stock actual</span>
+          </div>
+          <div className="px-3 py-2 space-y-1 max-h-[28vh] overflow-y-auto">
+            {resumenUbic.map(r => {
+              const cat = (r as { inventario_categorias?: { nombre: string } | null }).inventario_categorias
+              // Entrada reciente: creada en los últimos 7 días
+              const esReciente = (Date.now() - new Date(r.created_at).getTime()) < 7 * 24 * 3600 * 1000
+              // Entradas de esta categoría en esta ubicación
+              const nEntradas = entradasUbic.filter(e => e.categoria_id === r.categoria_id).length
+              return (
+                <div key={r.id} className="flex items-center justify-between gap-2 py-1">
+                  <span className="text-[10px] text-slate-400 truncate">{cat?.nombre ?? '—'}</span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {esReciente && (
+                      <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded border border-green-500/40 text-green-400">Entrada reciente</span>
+                    )}
+                    {nEntradas > 0 && (
+                      <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded border border-[#38bdf8]/40 text-[#38bdf8]">{nEntradas} entrada{nEntradas !== 1 ? 's' : ''}</span>
+                    )}
+                    <span className="text-[11px] font-black text-white">{r.cantidad} <span className="text-slate-500 font-normal">{r.unidad}</span></span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 

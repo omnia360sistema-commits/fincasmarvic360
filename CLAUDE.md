@@ -1,8 +1,10 @@
 # AGRÍCOLA MARVIC 360 — CONTEXTO COMPLETO DEL PROYECTO
 
-## ESTADO ACTUAL DEL SISTEMA (02/04/2026 — rev. 12)
+# AGRÍCOLA MARVIC 360 — CONTEXTO COMPLETO DEL PROYECTO
 
-Sistema ERP agrícola funcional al ~95%. 13 módulos operativos + sidebar global + 3 páginas WIP pendientes de UI. **rev. 10–11 — PDF corporativo global + Logística + Maquinaria.** **rev. 12 — Módulo Trabajos adaptado a sistema PDF corporativo global con menú desplegable.** **Parte Diario:** menú PDF ejecutivo (5 informes) y motor `generarPDFCorporativo()` en `ParteDiario.tsx`.
+## ESTADO ACTUAL DEL SISTEMA (04/04/2026 — rev. 17)
+
+Sistema ERP agrícola funcional al ~98%. 13 módulos operativos + sidebar global + 3 páginas WIP pendientes de UI. **rev. 10–11 — PDF corporativo global + Logística + Maquinaria.** **rev. 12 — Módulo Trabajos adaptado a sistema PDF corporativo global con menú desplegable.** **rev. 13 — Módulo Maquinaria completado al 100%: tabla `maquinaria_aperos` creada en BD, código interno automático TR/AP (padStart 3), `estado_operativo` en tractores, `estado` en aperos, tabla `maquinaria_inventario_sync`, seed tipos trabajo maquinaria en `catalogo_tipos_trabajo`, SelectWithOther en marca/tipo/tipo_trabajo/tipo_mantenimiento/finca, AudioInput en notas/descripción/ficha técnica, PhotoAttachment en todas las fotos, RecordActions en tractores y aperos, badges de estado sin fondo (solo borde+texto), ITV en rojo si < 30 días, modal mantenimiento carga `catalogo_tipos_mantenimiento WHERE modulo='maquinaria'`, sincronización automática con `maquinaria_inventario_sync` al dar de alta.** **rev. 14 — Módulo Logística completado al 100%: tabla `vehiculos_empresa` (furgonetas/pick-up/turismos empresa), tabla `logistica_combustible`, tabla `logistica_inventario_sync`, campos `codigo_interno` y `estado_operativo` en `camiones`, código interno automático CM/VH (padStart 3), 6 tabs completos (Camiones/Vehículos/Conductores/Viajes/Mantenimiento/Combustible), Panel Estado Flota encima de tabs, SelectWithOther en marca/modelo/tipo/empresa/tipo_trabajo/finca/destino/gasolinera/taller, AudioInput en notas/descripción/ruta, PhotoAttachment en todas las fotos, RecordActions en todos los registros, badges estado sin fondo (solo borde+texto), ITV en rojo si < 30 días, mantenimiento soporta camión y vehículo empresa, GPS preparado para conexión futura, conductores tab solo lectura con enlace a Personal, sync inventario al dar de alta camión/vehículo, 9 hooks nuevos/modificados en useLogistica.ts.** **rev. 15 — Módulo Personal completado al 100%: campos nuevos en `personal` (codigo_interno, fecha_alta, carnet_tipo, carnet_caducidad, tacografo, finca_asignada, licencias) y en `personal_externo` (codigo_interno, persona_contacto, presupuesto, trabajos_realiza), tabla `personal_tipos_trabajo` con RLS anon, seed 13 tipos trabajo `operario_campo` en `catalogo_tipos_trabajo`, código interno automático OP/EN/CM/CC por categoría y EX para externos (padStart 3), panel resumen 5 columnas con contadores activos, alerta carnets caducados/próximos en rojo, 5 tabs (Operarios/Encargados/Maquinaria/Camión/Externa), SelectWithOther en finca_asignada/licencias/carnet_tipo, AudioInput en notas/trabajos_realiza/presupuesto, PhotoAttachment en foto personal, QR generado con `qrcode` npm (imagen 200px) + botón descargar PNG por ficha, RecordActions en todos los registros, tipos trabajo asignables/eliminables por operario desde ficha expandida, hooks nuevos: useDeletePersonal, useDeletePersonalExterno, useTiposTrabajoPersonal, useAddTipoTrabajoPersonal, useRemoveTipoTrabajoPersonal, useTiposTrabajoCatalogoPersonal, useAddTipoTrabajoCatalogo, CATEGORIA_PREFIJOS exportado.** **Parte Diario:** menú PDF ejecutivo (5 informes) y motor `generarPDFCorporativo()` en `ParteDiario.tsx`. **rev. 17 — Inventario + Parte Diario completados: tablas `proveedores`, `proveedores_precios`, `inventario_entradas`, `cierres_jornada` creadas en BD con RLS anon; `trabajos_registro` con campos nuevos (`estado_planificacion`, `prioridad`, `fecha_planificada`, `fecha_original`, `tractor_id`, `apero_id`); `types.ts` actualizado con 4 tablas nuevas + campos trabajos_registro; `Inventario.tsx` con 3 tabs (Ubicaciones/Entradas/Proveedores), modal Nueva Entrada crea registro automático en `inventario_registros`, tab Proveedores con lista de precios expandible; `InventarioUbicacion.tsx` con RecordActions en registros, sección Stock Actual visible, menú PDF 5 opciones; `ParteDiario.tsx` con RecordActions (editar+eliminar) en todos los bloques A/B/C/D, edición en modo update vía supabase directo, AudioInput en todos los campos de notas/texto/donde/notas_descarga, botón Cerrar Jornada visible solo si fecha=hoy con confirm() → useCerrarJornada() → modal resultado con 4 KPIs + botón Ver Planificación; hooks nuevos: useProveedores, useAddProveedor, useUpdateProveedor, useDeleteProveedor, usePreciosProveedor, useAddPrecioProveedor, useUpdatePrecioProveedor, useEntradas, useAddEntrada, useDeleteEntrada, useStockActual, useCierresJornada, useAddCierreJornada, useCerrarJornada, useUpdateEstadoTrabajo; sin romper funcionalidad PDF existente.**
 
 ---
 
@@ -96,7 +98,7 @@ doc/
 | InventarioUbicacion | `/inventario/:id` | 7 categorías, panel lateral, modales, Excel/PDF. Bridge table `inventario_ubicacion_activo` para tractores/aperos |
 | ParteDiario | `/parte-diario` | 4 bloques A/B/C/D + navegador fechas + menú PDF ejecutivo (5 variantes). Bloque C: foto opcional; D: foto. PDF corporativo vía `generarPDFCorporativo()` en `ParteDiario.tsx` (cabecera logo 45mm, tablas, pie firmado + «Página X de Y») |
 | Trabajos | `/trabajos` | 4 sub-bloques + incidencias + selector cascada finca→parcela. PDF vía `generarPDFCorporativoBase` + menú (completo, registros, incidencias, abiertas, resumen) |
-| Logistica | `/logistica` | Camiones+viajes+mantenimiento. Conductor desde `personal (categoria=conductor_camion)`. PDF vía `generarPDFCorporativoBase()` + menú (completo, viajes hoy, camiones, mantenimientos, resumen) |
+| Logistica | `/logistica` | Camiones+vehículos empresa+viajes+mantenimiento+combustible. 6 tabs. Conductor desde `personal (categoria=conductor_camion)`. Código interno CM/VH automático. `estado_operativo` en camiones y vehículos. Panel Estado Flota. Sync `logistica_inventario_sync` al dar de alta. PDF vía `generarPDFCorporativoBase()` + menú (completo, viajes hoy, estado flota, mantenimientos, resumen) |
 | Maquinaria | `/maquinaria` | Tractores+aperos+uso+mantenimiento. Tractorista desde `personal (categoria=conductor_maquinaria)`. `tractorista TEXT NULL` es legacy. PDF vía `generarPDFCorporativoBase` + menú (completo, tractores, aperos activos, uso, mantenimientos) |
 | Personal | `/personal` | 5 tabs (Operarios/Encargados/Maquinaria/Camión/Externa) + QR auto + PDF |
 | QRCuadrilla | `/qr/:cuadrilla_id` | Pantalla fullscreen móvil, sin login, sin sidebar |
@@ -278,14 +280,32 @@ doc/
 
 | Hook | Descripción |
 |---|---|
-| `useCamiones()` | FUENTE PRINCIPAL de camiones (todos, sin filtro activo) |
-| `useAddCamion()` | Añadir camión |
+| `useCamiones()` | FUENTE PRINCIPAL de camiones (select *) |
+| `useAddCamion()` | Añadir camión — genera código CM001+ — sync inventario si viene ubicacion_id |
 | `useUpdateCamion()` | Actualizar camión (patch parcial) |
+| `useDeleteCamion()` | Eliminar camión + invalida sync inventario |
+| `useVehiculosEmpresa()` | Todos los vehículos empresa |
+| `useAddVehiculoEmpresa()` | Añadir vehículo — genera código VH001+ — sync inventario |
+| `useUpdateVehiculoEmpresa()` | Actualizar vehículo (patch parcial) |
+| `useDeleteVehiculoEmpresa()` | Eliminar vehículo |
 | `useViajes(personalId?)` | Viajes con filtro opcional por personal_id |
 | `useAddViaje()` | Añadir viaje |
-| `useMantenimientoCamion(camionId?)` | Mantenimiento con filtro opcional |
-| `useAddMantenimientoCamion()` | Añadir mantenimiento camión |
-| `useKPIsLogistica()` | totalCamiones, camionesActivos, totalConductores (desde personal), totalViajes |
+| `useUpdateViaje()` | Actualizar viaje (patch parcial) |
+| `useDeleteViaje()` | Eliminar viaje |
+| `useMantenimientoCamion(camionId?)` | Mantenimiento con filtro opcional (camion_id) |
+| `useAddMantenimientoCamion()` | Añadir mantenimiento |
+| `useUpdateMantenimientoCamion()` | Actualizar mantenimiento |
+| `useDeleteMantenimiento()` | Eliminar mantenimiento |
+| `useCombustible(vehiculoId?, vehiculoTipo?)` | Repostajes con filtros opcionales |
+| `useAddCombustible()` | Añadir repostaje |
+| `useUpdateCombustible()` | Actualizar repostaje |
+| `useDeleteCombustible()` | Eliminar repostaje |
+| `useLogisticaInventarioSync()` | Todas las asignaciones activas |
+| `useAddLogisticaSync()` | Añadir asignación sync inventario |
+| `useTiposTrabajoLogistica()` | Tipos trabajo de `catalogo_tipos_trabajo WHERE categoria='logistica'` |
+| `useAddTipoTrabajoLogistica()` | Añadir tipo trabajo logística al catálogo |
+| `useTiposMantenimientoLogistica()` | Tipos mant. de `catalogo_tipos_mantenimiento WHERE modulo='logistica'` |
+| `useKPIsLogistica()` | totalCamiones, camionesActivos, totalVehiculos, totalConductores, totalViajes |
 
 ⚠️ **NO EXISTE** `useConductores` — era legacy. Los conductores se leen de `personal` con `categoria='conductor_camion'`.
 
@@ -311,11 +331,18 @@ doc/
 | Hook | Descripción |
 |---|---|
 | `usePersonal(categoria?)` | Personal con filtro opcional por categoría |
-| `useAddPersonal()` | Añadir personal |
+| `useAddPersonal()` | Añadir personal — genera código OP/EN/CM/CC001+ por categoría |
 | `useUpdatePersonal()` | Actualizar personal (patch parcial) |
+| `useDeletePersonal()` | Eliminar personal por id |
 | `usePersonalExterno()` | Personal externo (todos) |
-| `useAddPersonalExterno()` | Añadir personal externo |
+| `useAddPersonalExterno()` | Añadir personal externo — genera código EX001+ |
 | `useUpdatePersonalExterno()` | Actualizar personal externo |
+| `useDeletePersonalExterno()` | Eliminar personal externo por id |
+| `useTiposTrabajoPersonal(personalId)` | Tipos trabajo asignados a un operario (JOIN personal_tipos_trabajo→catalogo) |
+| `useAddTipoTrabajoPersonal()` | Insertar fila en personal_tipos_trabajo |
+| `useRemoveTipoTrabajoPersonal()` | Eliminar fila de personal_tipos_trabajo |
+| `useTiposTrabajoCatalogoPersonal(categoria)` | Catálogo tipos trabajo filtrado por categoría |
+| `useAddTipoTrabajoCatalogo()` | Añadir tipo trabajo al catálogo (devuelve el registro creado) |
 | `useKPIsPersonal()` | total, activos, externos, porCategoria |
 
 ### `src/hooks/useGeoJSON.ts`
@@ -432,25 +459,43 @@ personal_externo             — id UUID PK, nombre_empresa, nif, telefono_conta
                                tipo TEXT CHECK(destajo|jornal_servicio), activo, qr_code TEXT UNIQUE,
                                notas, created_by
 
--- LOGÍSTICA (3 tablas activas)
+-- LOGÍSTICA (6 tablas activas)
 camiones                     — id UUID PK, matricula UNIQUE, activo, marca, modelo, anio,
                                kilometros_actuales, fecha_itv, fecha_proxima_itv, fecha_proxima_revision,
                                km_proximo_mantenimiento, gps_info, notas_mantenimiento, foto_url,
-                               capacidad_kg, empresa_transporte, tipo, created_by
+                               capacidad_kg, empresa_transporte, tipo, created_by,
+                               codigo_interno TEXT UNIQUE, estado_operativo TEXT CHECK(disponible|en_uso|mantenimiento|baja)
+vehiculos_empresa            — id UUID PK, codigo_interno TEXT UNIQUE, matricula UNIQUE,
+                               marca, modelo, anio, tipo CHECK(furgoneta|turismo|pick_up|otro),
+                               conductor_habitual_id UUID FK→personal, km_actuales,
+                               estado_operativo TEXT CHECK(disponible|en_uso|mantenimiento|baja),
+                               fecha_proxima_itv, fecha_proxima_revision, foto_url, notas, gps_info, created_by
 logistica_viajes             — id UUID PK, conductor_id UUID FK (legacy), personal_id UUID FK→personal,
                                camion_id, finca, destino, trabajo_realizado, ruta,
                                hora_salida, hora_llegada, gasto_gasolina_litros, gasto_gasolina_euros,
                                km_recorridos, notas, created_by
 logistica_mantenimiento      — id UUID PK, camion_id UUID FK, tipo, descripcion, fecha, coste_euros,
                                proveedor, foto_url, foto_url_2, created_by
+                               ⚠️ camion_id almacena ID tanto de camión como de vehículo empresa
+logistica_combustible        — id UUID PK, vehiculo_tipo TEXT CHECK(camion|vehiculo),
+                               vehiculo_id UUID (no FK específico), conductor_id UUID FK→personal,
+                               fecha, litros, coste_total, gasolinera, foto_url, notas, created_by
+logistica_inventario_sync    — id UUID PK, tipo TEXT CHECK(camion|vehiculo), vehiculo_id UUID,
+                               ubicacion_id UUID FK→inventario_ubicaciones, activo BOOL
+                               RLS: anon full access
 logistica_conductores        — DEPRECATED — solo lectura histórica (nombre, telefono, activo)
 
--- MAQUINARIA (4 tablas activas)
+-- MAQUINARIA (5 tablas activas)
 maquinaria_tractores         — id UUID PK, matricula UNIQUE, marca, modelo, anio, horas_motor,
                                ficha_tecnica, activo, foto_url, notas, fecha_proxima_itv,
-                               fecha_proxima_revision, horas_proximo_mantenimiento, gps_info, created_by
+                               fecha_proxima_revision, horas_proximo_mantenimiento, gps_info, created_by,
+                               codigo_interno TEXT UNIQUE, estado_operativo TEXT CHECK(disponible|en_uso|mantenimiento|baja)
 maquinaria_aperos            — id UUID PK, tipo, descripcion, tractor_id UUID FK, activo,
-                               foto_url, notas, created_by
+                               foto_url, notas, created_by,
+                               codigo_interno TEXT UNIQUE, estado TEXT CHECK(disponible|asignado|en_reparacion|baja)
+maquinaria_inventario_sync   — id UUID PK, tipo TEXT CHECK(tractor|apero), maquinaria_id UUID,
+                               ubicacion_id UUID FK→inventario_ubicaciones, activo BOOL, created_at
+                               RLS: anon full access
 maquinaria_uso               — id UUID PK, tractor_id, apero_id, tractorista TEXT NULL (legacy),
                                personal_id UUID FK→personal, finca, parcel_id TEXT, tipo_trabajo,
                                fecha, hora_inicio, hora_fin, horas_trabajadas, gasolina_litros,
@@ -700,3 +745,10 @@ El sistema NO tiene datos históricos digitales todavía. Todo se construye desd
 3. Espera a que JuanPe diga qué quiere hacer
 4. Muestra el plan antes de ejecutar
 5. Un archivo a la vez, con verificación build entre cada cambio
+
+CLAUDE_rev16_append.txt al final de tu CLAUDE.md.
+
+Resumen de lo entregado:
+
+useTrabajos.ts — 19 hooks: todos los existentes intactos + usePlanificacionDia, useAddTrabajoPlanificado, useUpdateTrabajoPlanificado, useDeleteTrabajo, useUpdateEstadoPlanificacion, usePlanificacionCampana, useAddPlanificacionCampana, useUpdatePlanificacionCampana, useDeletePlanificacionCampana, useCierresJornada, useAddCierreJornada, useCerrarJornada
+Trabajos.tsx — módulo completamente refactorizado: título PLANIFICACIÓN DE TRABAJOS, 3 tabs, panel estado día con navegador, badges prioridad/estado solo borde, RecordActions en todo, SelectWithOther/AudioInput/PhotoAttachment en todos los modales, lógica cierre jornada completa, diseño sin emojis

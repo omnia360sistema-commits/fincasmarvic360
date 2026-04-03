@@ -300,6 +300,8 @@ export type Database = {
           modelo: string | null
           notas_mantenimiento: string | null
           tipo: string | null
+          codigo_interno: string | null
+          estado_operativo: string | null
         }
         Insert: {
           activo?: boolean | null
@@ -321,6 +323,8 @@ export type Database = {
           modelo?: string | null
           notas_mantenimiento?: string | null
           tipo?: string | null
+          codigo_interno?: string | null
+          estado_operativo?: string | null
         }
         Update: {
           activo?: boolean | null
@@ -342,6 +346,8 @@ export type Database = {
           modelo?: string | null
           notas_mantenimiento?: string | null
           tipo?: string | null
+          codigo_interno?: string | null
+          estado_operativo?: string | null
         }
         Relationships: []
       }
@@ -366,8 +372,8 @@ export type Database = {
           fecha_fin?: string | null
           fecha_inicio: string
           id?: string
-          numero_expediente?: string | null
-          observaciones?: string | null
+          numero_expediente: string | null
+          observaciones: string | null
           parcel_id: string
         }
         Update: {
@@ -456,7 +462,7 @@ export type Database = {
           rendimiento_kg_ha?: number | null
         }
         Update: {
-          ciclo_dias?: number
+          ciclo_dias: number
           created_at?: string | null
           es_ecologico?: boolean | null
           id?: string
@@ -1134,12 +1140,164 @@ export type Database = {
           },
         ]
       }
+      logistica_combustible: {
+        Row: {
+          id: string
+          vehiculo_tipo: string
+          vehiculo_id: string
+          conductor_id: string | null
+          fecha: string | null
+          litros: number | null
+          coste_total: number | null
+          gasolinera: string | null
+          foto_url: string | null
+          notas: string | null
+          created_at: string
+          created_by: string | null
+        }
+        Insert: {
+          id?: string
+          vehiculo_tipo: string
+          vehiculo_id: string
+          conductor_id?: string | null
+          fecha?: string | null
+          litros?: number | null
+          coste_total?: number | null
+          gasolinera?: string | null
+          foto_url?: string | null
+          notas?: string | null
+          created_at?: string
+          created_by?: string | null
+        }
+        Update: {
+          vehiculo_tipo?: string
+          vehiculo_id?: string
+          conductor_id?: string | null
+          fecha?: string | null
+          litros?: number | null
+          coste_total?: number | null
+          gasolinera?: string | null
+          foto_url?: string | null
+          notas?: string | null
+          created_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistica_combustible_conductor_id_fkey"
+            columns: ["conductor_id"]
+            isOneToOne: false
+            referencedRelation: "personal"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      logistica_inventario_sync: {
+        Row: {
+          id: string
+          tipo: string
+          vehiculo_id: string
+          ubicacion_id: string
+          activo: boolean
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tipo: string
+          vehiculo_id: string
+          ubicacion_id: string
+          activo?: boolean
+          created_at?: string
+        }
+        Update: {
+          tipo?: string
+          vehiculo_id?: string
+          ubicacion_id?: string
+          activo?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "logistica_inventario_sync_ubicacion_id_fkey"
+            columns: ["ubicacion_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_ubicaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehiculos_empresa: {
+        Row: {
+          id: string
+          codigo_interno: string | null
+          matricula: string
+          marca: string | null
+          modelo: string | null
+          anio: number | null
+          tipo: string | null
+          conductor_habitual_id: string | null
+          km_actuales: number | null
+          estado_operativo: string | null
+          fecha_proxima_itv: string | null
+          fecha_proxima_revision: string | null
+          foto_url: string | null
+          notas: string | null
+          gps_info: string | null
+          created_at: string
+          created_by: string | null
+        }
+        Insert: {
+          id?: string
+          codigo_interno?: string | null
+          matricula: string
+          marca?: string | null
+          modelo?: string | null
+          anio?: number | null
+          tipo?: string | null
+          conductor_habitual_id?: string | null
+          km_actuales?: number | null
+          estado_operativo?: string | null
+          fecha_proxima_itv?: string | null
+          fecha_proxima_revision?: string | null
+          foto_url?: string | null
+          notas?: string | null
+          gps_info?: string | null
+          created_at?: string
+          created_by?: string | null
+        }
+        Update: {
+          codigo_interno?: string | null
+          matricula?: string
+          marca?: string | null
+          modelo?: string | null
+          anio?: number | null
+          tipo?: string | null
+          conductor_habitual_id?: string | null
+          km_actuales?: number | null
+          estado_operativo?: string | null
+          fecha_proxima_itv?: string | null
+          fecha_proxima_revision?: string | null
+          foto_url?: string | null
+          notas?: string | null
+          gps_info?: string | null
+          created_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehiculos_empresa_conductor_habitual_id_fkey"
+            columns: ["conductor_habitual_id"]
+            isOneToOne: false
+            referencedRelation: "personal"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       maquinaria_aperos: {
         Row: {
           activo: boolean
+          codigo_interno: string | null
           created_at: string | null
           created_by: string | null
           descripcion: string | null
+          estado: string | null
           foto_url: string | null
           id: string
           notas: string | null
@@ -1148,9 +1306,11 @@ export type Database = {
         }
         Insert: {
           activo?: boolean
+          codigo_interno?: string | null
           created_at?: string | null
           created_by?: string | null
           descripcion?: string | null
+          estado?: string | null
           foto_url?: string | null
           id?: string
           notas?: string | null
@@ -1159,9 +1319,11 @@ export type Database = {
         }
         Update: {
           activo?: boolean
+          codigo_interno?: string | null
           created_at?: string | null
           created_by?: string | null
           descripcion?: string | null
+          estado?: string | null
           foto_url?: string | null
           id?: string
           notas?: string | null
@@ -1231,12 +1393,49 @@ export type Database = {
           },
         ]
       }
+      maquinaria_inventario_sync: {
+        Row: {
+          activo: boolean
+          created_at: string
+          id: string
+          maquinaria_id: string
+          tipo: string
+          ubicacion_id: string
+        }
+        Insert: {
+          activo?: boolean
+          created_at?: string
+          id?: string
+          maquinaria_id: string
+          tipo: string
+          ubicacion_id: string
+        }
+        Update: {
+          activo?: boolean
+          created_at?: string
+          id?: string
+          maquinaria_id?: string
+          tipo?: string
+          ubicacion_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maquinaria_inventario_sync_ubicacion_id_fkey"
+            columns: ["ubicacion_id"]
+            isOneToOne: false
+            referencedRelation: "inventario_ubicaciones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       maquinaria_tractores: {
         Row: {
           activo: boolean
           anio: number | null
+          codigo_interno: string | null
           created_at: string | null
           created_by: string | null
+          estado_operativo: string | null
           fecha_proxima_itv: string | null
           fecha_proxima_revision: string | null
           ficha_tecnica: string | null
@@ -1253,8 +1452,10 @@ export type Database = {
         Insert: {
           activo?: boolean
           anio?: number | null
+          codigo_interno?: string | null
           created_at?: string | null
           created_by?: string | null
+          estado_operativo?: string | null
           fecha_proxima_itv?: string | null
           fecha_proxima_revision?: string | null
           ficha_tecnica?: string | null
@@ -1271,8 +1472,10 @@ export type Database = {
         Update: {
           activo?: boolean
           anio?: number | null
+          codigo_interno?: string | null
           created_at?: string | null
           created_by?: string | null
+          estado_operativo?: string | null
           fecha_proxima_itv?: string | null
           fecha_proxima_revision?: string | null
           ficha_tecnica?: string | null
@@ -1754,41 +1957,62 @@ export type Database = {
       personal: {
         Row: {
           activo: boolean
+          carnet_caducidad: string | null
+          carnet_tipo: string | null
           categoria: string
+          codigo_interno: string | null
           created_at: string
           created_by: string | null
           dni: string | null
+          fecha_alta: string | null
+          finca_asignada: string | null
           foto_url: string | null
           id: string
+          licencias: string | null
           nombre: string
           notas: string | null
           qr_code: string
+          tacografo: boolean | null
           telefono: string | null
         }
         Insert: {
           activo?: boolean
+          carnet_caducidad?: string | null
+          carnet_tipo?: string | null
           categoria: string
+          codigo_interno?: string | null
           created_at?: string
           created_by?: string | null
           dni?: string | null
+          fecha_alta?: string | null
+          finca_asignada?: string | null
           foto_url?: string | null
           id?: string
+          licencias?: string | null
           nombre: string
           notas?: string | null
           qr_code?: string
+          tacografo?: boolean | null
           telefono?: string | null
         }
         Update: {
           activo?: boolean
+          carnet_caducidad?: string | null
+          carnet_tipo?: string | null
           categoria?: string
+          codigo_interno?: string | null
           created_at?: string
           created_by?: string | null
           dni?: string | null
+          fecha_alta?: string | null
+          finca_asignada?: string | null
           foto_url?: string | null
           id?: string
+          licencias?: string | null
           nombre?: string
           notas?: string | null
           qr_code?: string
+          tacografo?: boolean | null
           telefono?: string | null
         }
         Relationships: []
@@ -1796,41 +2020,89 @@ export type Database = {
       personal_externo: {
         Row: {
           activo: boolean
+          codigo_interno: string | null
           created_at: string
           created_by: string | null
           id: string
           nif: string | null
           nombre_empresa: string
           notas: string | null
+          persona_contacto: string | null
+          presupuesto: string | null
           qr_code: string
           telefono_contacto: string | null
           tipo: string
+          trabajos_realiza: string | null
         }
         Insert: {
           activo?: boolean
+          codigo_interno?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           nif?: string | null
           nombre_empresa: string
           notas?: string | null
+          persona_contacto?: string | null
+          presupuesto?: string | null
           qr_code?: string
           telefono_contacto?: string | null
           tipo: string
+          trabajos_realiza?: string | null
         }
         Update: {
           activo?: boolean
+          codigo_interno?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
           nif?: string | null
           nombre_empresa?: string
           notas?: string | null
+          persona_contacto?: string | null
+          presupuesto?: string | null
           qr_code?: string
           telefono_contacto?: string | null
           tipo?: string
+          trabajos_realiza?: string | null
         }
         Relationships: []
+      }
+      personal_tipos_trabajo: {
+        Row: {
+          created_at: string
+          id: string
+          personal_id: string
+          tipo_trabajo_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          personal_id: string
+          tipo_trabajo_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          personal_id?: string
+          tipo_trabajo_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personal_tipos_trabajo_personal_id_fkey"
+            columns: ["personal_id"]
+            isOneToOne: false
+            referencedRelation: "personal"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personal_tipos_trabajo_tipo_trabajo_id_fkey"
+            columns: ["tipo_trabajo_id"]
+            isOneToOne: false
+            referencedRelation: "catalogo_tipos_trabajo"
+            referencedColumns: ["id"]
+          }
+        ]
       }
       plantings: {
         Row: {
@@ -2102,9 +2374,13 @@ export type Database = {
       }
       trabajos_registro: {
         Row: {
+          apero_id: string | null
           created_at: string | null
           created_by: string | null
+          estado_planificacion: string | null
           fecha: string
+          fecha_original: string | null
+          fecha_planificada: string | null
           finca: string | null
           foto_url: string | null
           hora_fin: string | null
@@ -2114,13 +2390,19 @@ export type Database = {
           notas: string | null
           num_operarios: number | null
           parcel_id: string | null
+          prioridad: string | null
+          tractor_id: string | null
           tipo_bloque: string
           tipo_trabajo: string
         }
         Insert: {
+          apero_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          estado_planificacion?: string | null
           fecha?: string
+          fecha_original?: string | null
+          fecha_planificada?: string | null
           finca?: string | null
           foto_url?: string | null
           hora_fin?: string | null
@@ -2130,13 +2412,19 @@ export type Database = {
           notas?: string | null
           num_operarios?: number | null
           parcel_id?: string | null
+          prioridad?: string | null
+          tractor_id?: string | null
           tipo_bloque: string
           tipo_trabajo: string
         }
         Update: {
+          apero_id?: string | null
           created_at?: string | null
           created_by?: string | null
+          estado_planificacion?: string | null
           fecha?: string
+          fecha_original?: string | null
+          fecha_planificada?: string | null
           finca?: string | null
           foto_url?: string | null
           hora_fin?: string | null
@@ -2146,8 +2434,184 @@ export type Database = {
           notas?: string | null
           num_operarios?: number | null
           parcel_id?: string | null
+          prioridad?: string | null
+          tractor_id?: string | null
           tipo_bloque?: string
           tipo_trabajo?: string
+        }
+        Relationships: []
+      }
+      cierres_jornada: {
+        Row: {
+          cerrado_at: string
+          cerrado_by: string | null
+          fecha: string
+          id: string
+          notas: string | null
+          parte_diario_id: string | null
+          trabajos_arrastrados: number | null
+          trabajos_ejecutados: number | null
+          trabajos_pendientes: number | null
+        }
+        Insert: {
+          cerrado_at?: string
+          cerrado_by?: string | null
+          fecha: string
+          id?: string
+          notas?: string | null
+          parte_diario_id?: string | null
+          trabajos_arrastrados?: number | null
+          trabajos_ejecutados?: number | null
+          trabajos_pendientes?: number | null
+        }
+        Update: {
+          cerrado_at?: string
+          cerrado_by?: string | null
+          fecha?: string
+          id?: string
+          notas?: string | null
+          parte_diario_id?: string | null
+          trabajos_arrastrados?: number | null
+          trabajos_ejecutados?: number | null
+          trabajos_pendientes?: number | null
+        }
+        Relationships: []
+      }
+      inventario_entradas: {
+        Row: {
+          categoria_id: string
+          created_at: string
+          created_by: string | null
+          fecha: string | null
+          foto_albaran: string | null
+          id: string
+          importe_total: number | null
+          notas: string | null
+          precio_unitario: number | null
+          producto_id: string | null
+          proveedor_id: string | null
+          cantidad: number
+          receptor: string | null
+          ubicacion_id: string
+          unidad: string
+        }
+        Insert: {
+          categoria_id: string
+          created_at?: string
+          created_by?: string | null
+          fecha?: string | null
+          foto_albaran?: string | null
+          id?: string
+          importe_total?: number | null
+          notas?: string | null
+          precio_unitario?: number | null
+          producto_id?: string | null
+          proveedor_id?: string | null
+          cantidad: number
+          receptor?: string | null
+          ubicacion_id: string
+          unidad: string
+        }
+        Update: {
+          categoria_id?: string
+          created_at?: string
+          created_by?: string | null
+          fecha?: string | null
+          foto_albaran?: string | null
+          id?: string
+          importe_total?: number | null
+          notas?: string | null
+          precio_unitario?: number | null
+          producto_id?: string | null
+          proveedor_id?: string | null
+          cantidad?: number
+          receptor?: string | null
+          ubicacion_id?: string
+          unidad?: string
+        }
+        Relationships: []
+      }
+      proveedores: {
+        Row: {
+          activo: boolean | null
+          codigo_interno: string | null
+          created_at: string
+          created_by: string | null
+          direccion: string | null
+          email: string | null
+          foto_url: string | null
+          id: string
+          nif: string | null
+          nombre: string
+          notas: string | null
+          persona_contacto: string | null
+          telefono: string | null
+          tipo: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          codigo_interno?: string | null
+          created_at?: string
+          created_by?: string | null
+          direccion?: string | null
+          email?: string | null
+          foto_url?: string | null
+          id?: string
+          nif?: string | null
+          nombre: string
+          notas?: string | null
+          persona_contacto?: string | null
+          telefono?: string | null
+          tipo?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          codigo_interno?: string | null
+          created_at?: string
+          created_by?: string | null
+          direccion?: string | null
+          email?: string | null
+          foto_url?: string | null
+          id?: string
+          nif?: string | null
+          nombre?: string
+          notas?: string | null
+          persona_contacto?: string | null
+          telefono?: string | null
+          tipo?: string | null
+        }
+        Relationships: []
+      }
+      proveedores_precios: {
+        Row: {
+          activo: boolean | null
+          created_at: string
+          fecha_vigencia: string | null
+          id: string
+          precio_unitario: number | null
+          producto: string
+          proveedor_id: string
+          unidad: string | null
+        }
+        Insert: {
+          activo?: boolean | null
+          created_at?: string
+          fecha_vigencia?: string | null
+          id?: string
+          precio_unitario?: number | null
+          producto: string
+          proveedor_id: string
+          unidad?: string | null
+        }
+        Update: {
+          activo?: boolean | null
+          created_at?: string
+          fecha_vigencia?: string | null
+          id?: string
+          precio_unitario?: number | null
+          producto?: string
+          proveedor_id?: string
+          unidad?: string | null
         }
         Relationships: []
       }

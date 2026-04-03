@@ -19,18 +19,31 @@ export interface Tractor {
   fecha_proxima_revision:      string | null;
   horas_proximo_mantenimiento: number | null;
   gps_info:                    string | null;
+  codigo_interno:              string | null;
+  estado_operativo:            string | null;
 }
 
 export interface Apero {
-  id:          string;
-  tipo:        string;
-  descripcion: string | null;
-  tractor_id:  string | null;
-  activo:      boolean;
-  foto_url:    string | null;
-  notas:       string | null;
-  created_at:  string;
-  created_by:  string | null;
+  id:             string;
+  tipo:           string;
+  descripcion:    string | null;
+  tractor_id:     string | null;
+  activo:         boolean;
+  foto_url:       string | null;
+  notas:          string | null;
+  created_at:     string;
+  created_by:     string | null;
+  codigo_interno: string | null;
+  estado:         string | null;
+}
+
+export interface SyncMaquinariaInventario {
+  id:            string;
+  tipo:          'tractor' | 'apero';
+  maquinaria_id: string;
+  ubicacion_id:  string;
+  activo:        boolean;
+  created_at:    string;
 }
 
 export interface UsoMaquinaria {
@@ -120,18 +133,52 @@ export function useAperosEnInventario() {
 export function useAddTractor() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: Omit<Tractor, 'id' | 'created_at'>) => {
+    mutationFn: async (payload: Omit<Tractor, 'id' | 'created_at'> & { ubicacion_id?: string | null }) => {
+      const { ubicacion_id, ...rest } = payload;
+
+      // Generar codigo_interno automático TR001, TR002…
+      const { count } = await supabase
+        .from('maquinaria_tractores')
+        .select('*', { count: 'exact', head: true });
+      const codigo_interno = `TR${String((count ?? 0) + 1).padStart(3, '0')}`;
+
       const { data, error } = await supabase
         .from('maquinaria_tractores')
-        .insert([payload])
+        .insert([{ ...rest, codigo_interno }])
         .select()
         .single();
       if (error) throw error;
+
+      // Sincronizar con inventario si se especificó ubicación
+      if (ubicacion_id && data?.id) {
+        await supabase.from('maquinaria_inventario_sync').insert({
+          tipo: 'tractor',
+          maquinaria_id: data.id,
+          ubicacion_id,
+        });
+      }
+
       return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['maquinaria_tractores'] });
       qc.invalidateQueries({ queryKey: ['v_tractores_en_inventario'] });
+      qc.invalidateQueries({ queryKey: ['maquinaria_inventario_sync'] });
+    },
+  });
+}
+
+// ── useDeleteTractor ──────────────────────────────────────────
+export function useDeleteTractor() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('maquinaria_tractores').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['maquinaria_tractores'] });
+      qc.invalidateQueries({ queryKey: ['maquinaria_kpis'] });
     },
   });
 }
@@ -176,18 +223,52 @@ export function useAperos(tractorId?: string) {
 export function useAddApero() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: Omit<Apero, 'id' | 'created_at'>) => {
+    mutationFn: async (payload: Omit<Apero, 'id' | 'created_at'> & { ubicacion_id?: string | null }) => {
+      const { ubicacion_id, ...rest } = payload;
+
+      // Generar codigo_interno automático AP001, AP002…
+      const { count } = await supabase
+        .from('maquinaria_aperos')
+        .select('*', { count: 'exact', head: true });
+      const codigo_interno = `AP${String((count ?? 0) + 1).padStart(3, '0')}`;
+
       const { data, error } = await supabase
         .from('maquinaria_aperos')
-        .insert([payload])
+        .insert([{ ...rest, codigo_interno }])
         .select()
         .single();
       if (error) throw error;
+
+      // Sincronizar con inventario si se especificó ubicación
+      if (ubicacion_id && data?.id) {
+        await supabase.from('maquinaria_inventario_sync').insert({
+          tipo: 'apero',
+          maquinaria_id: data.id,
+          ubicacion_id,
+        });
+      }
+
       return data;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['maquinaria_aperos'] });
       qc.invalidateQueries({ queryKey: ['v_maquinaria_aperos_en_inventario'] });
+      qc.invalidateQueries({ queryKey: ['maquinaria_inventario_sync'] });
+    },
+  });
+}
+
+// ── useDeleteApero ────────────────────────────────────────────
+export function useDeleteApero() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('maquinaria_aperos').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['maquinaria_aperos'] });
+      qc.invalidateQueries({ queryKey: ['maquinaria_kpis'] });
     },
   });
 }
@@ -261,6 +342,75 @@ export function useAddMantenimientoTractor() {
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['maquinaria_mantenimiento'] }),
+  });
+}
+
+// ── useTiposTrabajoMaquinaria ─────────────────────────────────
+export function useTiposTrabajoMaquinaria() {
+  return useQuery<{ id: string; nombre: string }[]>({
+    queryKey: ['catalogo_tipos_trabajo', 'maquinaria'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('catalogo_tipos_trabajo')
+        .select('id, nombre')
+        .eq('categoria', 'maquinaria')
+        .eq('activo', true)
+        .order('nombre');
+      if (error) throw error;
+      return (data ?? []) as { id: string; nombre: string }[];
+    },
+    staleTime: 60000,
+  });
+}
+
+export function useAddTipoTrabajoMaquinaria() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (nombre: string) => {
+      const { data, error } = await supabase
+        .from('catalogo_tipos_trabajo')
+        .insert({ nombre, categoria: 'maquinaria', activo: true })
+        .select('id, nombre')
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['catalogo_tipos_trabajo', 'maquinaria'] }),
+  });
+}
+
+// ── useSyncMaquinariaInventario ───────────────────────────────
+export function useSyncMaquinariaInventario() {
+  return useQuery<SyncMaquinariaInventario[]>({
+    queryKey: ['maquinaria_inventario_sync'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('maquinaria_inventario_sync')
+        .select('*')
+        .eq('activo', true);
+      if (error) throw error;
+      return (data ?? []) as SyncMaquinariaInventario[];
+    },
+    staleTime: 30000,
+  });
+}
+
+export function useAddSyncMaquinaria() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { tipo: 'tractor' | 'apero'; maquinaria_id: string; ubicacion_id: string }) => {
+      const { data, error } = await supabase
+        .from('maquinaria_inventario_sync')
+        .insert(payload)
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['maquinaria_inventario_sync'] });
+      qc.invalidateQueries({ queryKey: ['inventario_ubicacion_activo'] });
+    },
   });
 }
 

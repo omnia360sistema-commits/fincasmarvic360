@@ -23,6 +23,14 @@ export const CATEGORIA_COLORS: Record<CategoriaPersonal, string> = {
   conductor_camion:    '#a78bfa',
 };
 
+// Prefijos de código interno por categoría
+export const CATEGORIA_PREFIJOS: Record<CategoriaPersonal, string> = {
+  operario_campo:      'OP',
+  encargado:           'EN',
+  conductor_maquinaria:'CM',
+  conductor_camion:    'CC',
+};
+
 export type TipoExterno = 'destajo' | 'jornal_servicio';
 
 export const TIPO_EXTERNO_LABELS: Record<TipoExterno, string> = {
@@ -31,30 +39,49 @@ export const TIPO_EXTERNO_LABELS: Record<TipoExterno, string> = {
 };
 
 export interface Personal {
-  id:         string;
-  nombre:     string;
-  dni:        string | null;
-  telefono:   string | null;
-  categoria:  CategoriaPersonal;
-  activo:     boolean;
-  foto_url:   string | null;
-  qr_code:    string;
-  notas:      string | null;
-  created_at: string;
-  created_by: string | null;
+  id:               string;
+  nombre:           string;
+  dni:              string | null;
+  telefono:         string | null;
+  categoria:        CategoriaPersonal;
+  activo:           boolean;
+  foto_url:         string | null;
+  qr_code:          string;
+  notas:            string | null;
+  created_at:       string;
+  created_by:       string | null;
+  codigo_interno:   string | null;
+  fecha_alta:       string | null;
+  carnet_tipo:      string | null;
+  carnet_caducidad: string | null;
+  tacografo:        boolean | null;
+  finca_asignada:   string | null;
+  licencias:        string | null;
 }
 
 export interface PersonalExterno {
-  id:                string;
-  nombre_empresa:    string;
-  nif:               string | null;
-  telefono_contacto: string | null;
-  tipo:              TipoExterno;
-  activo:            boolean;
-  qr_code:           string;
-  notas:             string | null;
-  created_at:        string;
-  created_by:        string | null;
+  id:               string;
+  nombre_empresa:   string;
+  nif:              string | null;
+  telefono_contacto:string | null;
+  tipo:             TipoExterno;
+  activo:           boolean;
+  qr_code:          string;
+  notas:            string | null;
+  created_at:       string;
+  created_by:       string | null;
+  codigo_interno:   string | null;
+  persona_contacto: string | null;
+  presupuesto:      string | null;
+  trabajos_realiza: string | null;
+}
+
+export interface TipoTrabajoCatalogo {
+  id:         string;
+  nombre:     string;
+  categoria:  string;
+  activo:     boolean;
+  created_at: string;
 }
 
 // ── Hooks personal fijo ──────────────────────────────────────────────────────
@@ -80,15 +107,36 @@ export function useAddPersonal() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: {
-      nombre:    string;
-      dni?:      string | null;
-      telefono?: string | null;
-      categoria: CategoriaPersonal;
-      activo?:   boolean;
-      foto_url?: string | null;
-      notas?:    string | null;
+      nombre:           string;
+      dni?:             string | null;
+      telefono?:        string | null;
+      categoria:        CategoriaPersonal;
+      activo?:          boolean;
+      foto_url?:        string | null;
+      notas?:           string | null;
+      fecha_alta?:      string | null;
+      carnet_tipo?:     string | null;
+      carnet_caducidad?:string | null;
+      tacografo?:       boolean | null;
+      finca_asignada?:  string | null;
+      licencias?:       string | null;
     }) => {
-      const { error } = await supabase.from('personal').insert(payload);
+      // Generar código interno: prefijo + correlativo 3 dígitos por categoría
+      const prefijo = CATEGORIA_PREFIJOS[payload.categoria];
+      const { data: existentes } = await supabase
+        .from('personal')
+        .select('codigo_interno')
+        .like('codigo_interno', `${prefijo}%`);
+      const nums = (existentes ?? [])
+        .map(r => parseInt((r.codigo_interno ?? '').slice(2), 10))
+        .filter(n => !isNaN(n));
+      const siguiente = nums.length > 0 ? Math.max(...nums) + 1 : 1;
+      const codigo_interno = `${prefijo}${String(siguiente).padStart(3, '0')}`;
+
+      const { error } = await supabase.from('personal').insert({
+        ...payload,
+        codigo_interno,
+      });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['personal'] }),
@@ -100,6 +148,17 @@ export function useUpdatePersonal() {
   return useMutation({
     mutationFn: async ({ id, ...payload }: Partial<Personal> & { id: string }) => {
       const { error } = await supabase.from('personal').update(payload).eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['personal'] }),
+  });
+}
+
+export function useDeletePersonal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('personal').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['personal'] }),
@@ -127,14 +186,31 @@ export function useAddPersonalExterno() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: {
-      nombre_empresa:     string;
-      nif?:               string | null;
-      telefono_contacto?: string | null;
-      tipo:               TipoExterno;
-      activo?:            boolean;
-      notas?:             string | null;
+      nombre_empresa:    string;
+      nif?:              string | null;
+      telefono_contacto?:string | null;
+      tipo:              TipoExterno;
+      activo?:           boolean;
+      notas?:            string | null;
+      persona_contacto?: string | null;
+      presupuesto?:      string | null;
+      trabajos_realiza?: string | null;
     }) => {
-      const { error } = await supabase.from('personal_externo').insert(payload);
+      // Generar código interno EX + correlativo 3 dígitos
+      const { data: existentes } = await supabase
+        .from('personal_externo')
+        .select('codigo_interno')
+        .like('codigo_interno', 'EX%');
+      const nums = (existentes ?? [])
+        .map(r => parseInt((r.codigo_interno ?? '').slice(2), 10))
+        .filter(n => !isNaN(n));
+      const siguiente = nums.length > 0 ? Math.max(...nums) + 1 : 1;
+      const codigo_interno = `EX${String(siguiente).padStart(3, '0')}`;
+
+      const { error } = await supabase.from('personal_externo').insert({
+        ...payload,
+        codigo_interno,
+      });
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['personal_externo'] }),
@@ -149,6 +225,94 @@ export function useUpdatePersonalExterno() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['personal_externo'] }),
+  });
+}
+
+export function useDeletePersonalExterno() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('personal_externo').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['personal_externo'] }),
+  });
+}
+
+// ── Hooks tipos trabajo personal ─────────────────────────────────────────────
+
+export function useTiposTrabajoPersonal(personalId: string) {
+  return useQuery({
+    queryKey: ['personal_tipos_trabajo', personalId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('personal_tipos_trabajo')
+        .select('tipo_trabajo_id, catalogo_tipos_trabajo:tipo_trabajo_id(id, nombre, categoria, activo, created_at)')
+        .eq('personal_id', personalId);
+      if (error) throw error;
+      return (data ?? []).map(r => r.catalogo_tipos_trabajo as unknown as TipoTrabajoCatalogo);
+    },
+    staleTime: 30000,
+    enabled: !!personalId,
+  });
+}
+
+export function useAddTipoTrabajoPersonal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ personal_id, tipo_trabajo_id }: { personal_id: string; tipo_trabajo_id: string }) => {
+      const { error } = await supabase.from('personal_tipos_trabajo').insert({ personal_id, tipo_trabajo_id });
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['personal_tipos_trabajo', vars.personal_id] }),
+  });
+}
+
+export function useRemoveTipoTrabajoPersonal() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ personal_id, tipo_trabajo_id }: { personal_id: string; tipo_trabajo_id: string }) => {
+      const { error } = await supabase
+        .from('personal_tipos_trabajo')
+        .delete()
+        .eq('personal_id', personal_id)
+        .eq('tipo_trabajo_id', tipo_trabajo_id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['personal_tipos_trabajo', vars.personal_id] }),
+  });
+}
+
+export function useTiposTrabajoCatalogoPersonal(categoria: string) {
+  return useQuery({
+    queryKey: ['catalogo_tipos_trabajo', categoria],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('catalogo_tipos_trabajo')
+        .select('*')
+        .eq('categoria', categoria)
+        .eq('activo', true)
+        .order('nombre', { ascending: true });
+      if (error) throw error;
+      return (data ?? []) as TipoTrabajoCatalogo[];
+    },
+    staleTime: 60000,
+  });
+}
+
+export function useAddTipoTrabajoCatalogo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { nombre: string; categoria: string }) => {
+      const { data, error } = await supabase
+        .from('catalogo_tipos_trabajo')
+        .insert({ ...payload, activo: true })
+        .select()
+        .single();
+      if (error) throw error;
+      return data as TipoTrabajoCatalogo;
+    },
+    onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['catalogo_tipos_trabajo', vars.categoria] }),
   });
 }
 

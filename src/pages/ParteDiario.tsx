@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
-  ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Plus, Trash2,
-  FileText, Camera, Building2, Wrench, User, Truck,
+  ArrowLeft, ChevronLeft, ChevronRight, ChevronDown, Plus,
+  FileText, Camera, Building2, Wrench, User, Truck, LogOut,
 } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import type { Tables } from '@/integrations/supabase/types'
@@ -20,8 +20,10 @@ import {
   useDeleteEntradaParte,
   useGanaderos,
   useAddGanadero,
+  useCerrarJornada,
 } from '@/hooks/useParteDiario'
 import { usePersonal } from '@/hooks/usePersonal'
+import { SelectWithOther, AudioInput, RecordActions } from '@/components/base'
 import { FINCAS_NOMBRES as FINCAS } from '@/constants/farms'
 import { TIPOS_TRABAJO } from '@/constants/tiposTrabajo'
 import { ESTADOS_PARCELA } from '@/constants/estadosParcela'
@@ -521,6 +523,17 @@ export default function ParteDiario() {
 
   const esHoy = fecha === HOY
 
+  // Edit state per block
+  const [editIdA, setEditIdA] = useState<string | null>(null)
+  const [editIdB, setEditIdB] = useState<string | null>(null)
+  const [editIdC, setEditIdC] = useState<string | null>(null)
+  const [editIdD, setEditIdD] = useState<string | null>(null)
+  // Cerrar jornada
+  const [showCierre, setShowCierre] = useState(false)
+  const [cierreResultado, setCierreResultado] = useState<{
+    ejecutados: number; pendientes: number; arrastrados: number; incidenciasArrastradas: number
+  } | null>(null)
+
   const ensureHoy                             = useEnsureParteHoy()
   const { data: parte, isLoading: cargando }  = usePartePorFecha(fecha)
   const parteId                               = parte?.id ?? null
@@ -536,6 +549,7 @@ export default function ParteDiario() {
   const addResiduos    = useAddResiduos()
   const deleteEntrada  = useDeleteEntradaParte()
   const addGanadero    = useAddGanadero()
+  const cerrarJornada  = useCerrarJornada()
 
   const { data: conductoresCamion = [] } = usePersonal('conductor_camion')
   const { data: ganaderos          = [] } = useGanaderos()
@@ -572,25 +586,92 @@ export default function ParteDiario() {
     if (sig <= HOY) setFecha(sig)
   }
 
+  // ── Abrir modales en modo edición ──
+  function editarA(e: Tables<'parte_estado_finca'>) {
+    setEditIdA(e.id)
+    setFormA({
+      finca: e.finca ?? '', parcel_id: e.parcel_id ?? '', estado: e.estado ?? '',
+      num_operarios: e.num_operarios?.toString() ?? '',
+      nombres_operarios: e.nombres_operarios ?? '',
+      foto1: null, foto2: null, notas: e.notas ?? '',
+    })
+    setModal('A')
+  }
+  function editarB(e: Tables<'parte_trabajo'>) {
+    setEditIdB(e.id)
+    setFormB({
+      tipo_trabajo: e.tipo_trabajo ?? '', finca: e.finca ?? '',
+      ambito: e.ambito ?? 'finca_completa', parcelas: e.parcelas?.join(', ') ?? '',
+      num_operarios: e.num_operarios?.toString() ?? '',
+      nombres_operarios: e.nombres_operarios ?? '',
+      hora_inicio: e.hora_inicio ? new Date(e.hora_inicio).toTimeString().slice(0,5) : '',
+      hora_fin: e.hora_fin ? new Date(e.hora_fin).toTimeString().slice(0,5) : '',
+      foto1: null, foto2: null, notas: e.notas ?? '',
+    })
+    setModal('B')
+  }
+  function editarC(e: Tables<'parte_personal'>) {
+    setEditIdC(e.id)
+    setFormC({ texto: e.texto ?? '', con_quien: e.con_quien ?? '', donde: e.donde ?? '', foto: null })
+    setModal('C')
+  }
+  function editarD(e: Tables<'parte_residuos_vegetales'>) {
+    setEditIdD(e.id)
+    setFormD({
+      personal_id: e.personal_id ?? '', nombre_conductor: e.nombre_conductor ?? '',
+      hora_salida_nave: e.hora_salida_nave ? new Date(e.hora_salida_nave).toTimeString().slice(0,5) : '',
+      ganadero_id: e.ganadero_id ?? '', nombre_ganadero: e.nombre_ganadero ?? '', nuevo_ganadero: '',
+      hora_llegada_ganadero: e.hora_llegada_ganadero ? new Date(e.hora_llegada_ganadero).toTimeString().slice(0,5) : '',
+      hora_regreso_nave: e.hora_regreso_nave ? new Date(e.hora_regreso_nave).toTimeString().slice(0,5) : '',
+      notas_descarga: e.notas_descarga ?? '', foto: null,
+    })
+    setModal('D')
+  }
+
+  // ── Cerrar jornada ──
+  async function handleCerrarJornada() {
+    if (!parteId || !confirm('¿Cerrar la jornada de hoy? Se marcarán trabajos ejecutados/pendientes y se arrastrarán a mañana.')) return
+    try {
+      const res = await cerrarJornada.mutateAsync({ fecha, parteId })
+      setCierreResultado(res as { ejecutados: number; pendientes: number; arrastrados: number; incidenciasArrastradas: number })
+      setShowCierre(true)
+    } catch (e) {
+      alert('Error al cerrar jornada: ' + (e instanceof Error ? e.message : String(e)))
+    }
+  }
+
   // ── Submit Modal A ──
   async function submitA() {
     if (!parteId || !formA.finca) return
     setSaving(true)
     try {
-      const foto_url   = formA.foto1 ? await uploadFoto(formA.foto1, parteId) : null
-      const foto_url_2 = formA.foto2 ? await uploadFoto(formA.foto2, parteId) : null
       const numOp = parseInt(formA.num_operarios)
-      await addEstadoFinca.mutateAsync({
+      const patch = {
         parte_id: parteId,
         finca: formA.finca,
         parcel_id:         formA.parcel_id         || null,
         estado:            formA.estado             || null,
         num_operarios:     isNaN(numOp) ? null : numOp,
         nombres_operarios: formA.nombres_operarios  || null,
-        foto_url, foto_url_2,
         notas: formA.notas || null,
-      })
-      setModal(null); setFormA(initA())
+      }
+      if (editIdA) {
+        // Update — solo campos sin foto
+        await supabase.from('parte_estado_finca').update(patch).eq('id', editIdA)
+        if (formA.foto1) {
+          const url = await uploadFoto(formA.foto1, parteId)
+          if (url) await supabase.from('parte_estado_finca').update({ foto_url: url }).eq('id', editIdA)
+        }
+        if (formA.foto2) {
+          const url = await uploadFoto(formA.foto2, parteId)
+          if (url) await supabase.from('parte_estado_finca').update({ foto_url_2: url }).eq('id', editIdA)
+        }
+      } else {
+        const foto_url   = formA.foto1 ? await uploadFoto(formA.foto1, parteId) : null
+        const foto_url_2 = formA.foto2 ? await uploadFoto(formA.foto2, parteId) : null
+        await addEstadoFinca.mutateAsync({ ...patch, foto_url, foto_url_2 })
+      }
+      setModal(null); setFormA(initA()); setEditIdA(null)
     } finally { setSaving(false) }
   }
 
@@ -599,13 +680,11 @@ export default function ParteDiario() {
     if (!parteId || !formB.tipo_trabajo) return
     setSaving(true)
     try {
-      const foto_url   = formB.foto1 ? await uploadFoto(formB.foto1, parteId) : null
-      const foto_url_2 = formB.foto2 ? await uploadFoto(formB.foto2, parteId) : null
       const numOp = parseInt(formB.num_operarios)
       const parcelasArr = formB.ambito === 'parcelas_concretas' && formB.parcelas
         ? formB.parcelas.split(',').map(s => s.trim()).filter(Boolean)
         : null
-      await addTrabajo.mutateAsync({
+      const patch = {
         parte_id: parteId,
         tipo_trabajo: formB.tipo_trabajo,
         finca:  formB.finca  || null,
@@ -615,10 +694,18 @@ export default function ParteDiario() {
         nombres_operarios: formB.nombres_operarios || null,
         hora_inicio: timeToISO(fecha, formB.hora_inicio),
         hora_fin:    timeToISO(fecha, formB.hora_fin),
-        foto_url, foto_url_2,
         notas: formB.notas || null,
-      })
-      setModal(null); setFormB(initB())
+      }
+      if (editIdB) {
+        await supabase.from('parte_trabajo').update(patch).eq('id', editIdB)
+        if (formB.foto1) { const u = await uploadFoto(formB.foto1, parteId); if (u) await supabase.from('parte_trabajo').update({ foto_url: u }).eq('id', editIdB) }
+        if (formB.foto2) { const u = await uploadFoto(formB.foto2, parteId); if (u) await supabase.from('parte_trabajo').update({ foto_url_2: u }).eq('id', editIdB) }
+      } else {
+        const foto_url   = formB.foto1 ? await uploadFoto(formB.foto1, parteId) : null
+        const foto_url_2 = formB.foto2 ? await uploadFoto(formB.foto2, parteId) : null
+        await addTrabajo.mutateAsync({ ...patch, foto_url, foto_url_2 })
+      }
+      setModal(null); setFormB(initB()); setEditIdB(null)
     } finally { setSaving(false) }
   }
 
@@ -627,15 +714,20 @@ export default function ParteDiario() {
     if (!parteId || !formC.texto.trim()) return
     setSaving(true)
     try {
-      const foto_url = formC.foto ? await uploadFoto(formC.foto, parteId) : null
-      await addPersonal.mutateAsync({
+      const patch = {
         parte_id:  parteId,
         texto:     formC.texto,
         con_quien: formC.con_quien || null,
         donde:     formC.donde     || null,
-        foto_url,
-      })
-      setModal(null); setFormC(initC())
+      }
+      if (editIdC) {
+        await supabase.from('parte_personal').update(patch).eq('id', editIdC)
+        if (formC.foto) { const u = await uploadFoto(formC.foto, parteId); if (u) await supabase.from('parte_personal').update({ foto_url: u }).eq('id', editIdC) }
+      } else {
+        const foto_url = formC.foto ? await uploadFoto(formC.foto, parteId) : null
+        await addPersonal.mutateAsync({ ...patch, foto_url })
+      }
+      setModal(null); setFormC(initC()); setEditIdC(null)
     } finally { setSaving(false) }
   }
 
@@ -679,7 +771,7 @@ export default function ParteDiario() {
         personal_id:            formD.personal_id ?? null,
         ganadero_id:            ganaderoId,
       })
-      setModal(null); setFormD(initD())
+      setModal(null); setFormD(initD()); setEditIdD(null)
     } finally { setSaving(false) }
   }
 
@@ -974,10 +1066,11 @@ export default function ParteDiario() {
 
   // Pequeño componente de fila de entrada para reutilizar
   const EntradaRow = ({
-    hora, titulo, subtitulo, hasPhoto, tabla, id,
+    hora, titulo, subtitulo, hasPhoto, tabla, id, onEdit,
   }: {
     hora: string; titulo: string; subtitulo?: string
     hasPhoto?: boolean; tabla: string; id: string
+    onEdit?: () => void
   }) => (
     <div className="px-4 py-3 flex items-start justify-between gap-2 hover:bg-white/5 transition-colors">
       <div className="flex-1 min-w-0">
@@ -989,13 +1082,10 @@ export default function ParteDiario() {
         {subtitulo && <p className="text-[11px] text-slate-400 truncate mt-0.5">{subtitulo}</p>}
       </div>
       {esHoy && parteId && (
-        <button
-          onClick={() => eliminar(tabla, id)}
-          className="p-1.5 rounded text-slate-600 hover:text-red-400 hover:bg-red-400/10 transition-colors shrink-0"
-          title="Eliminar"
-        >
-          <Trash2 className="w-3.5 h-3.5" />
-        </button>
+        <RecordActions
+          onEdit={onEdit}
+          onDelete={() => eliminar(tabla, id)}
+        />
       )}
     </div>
   )
@@ -1118,6 +1208,19 @@ export default function ParteDiario() {
             </div>
           )}
         </div>
+
+        {esHoy && parteId && (
+          <button
+            type="button"
+            onClick={handleCerrarJornada}
+            disabled={cerrarJornada.isPending}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-orange-500/40 bg-orange-500/10 hover:bg-orange-500/20 text-orange-400 text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+            Cerrar jornada
+          </button>
+        )
+      }
       </header>
 
       {/* ── CONTENIDO PRINCIPAL ── */}
@@ -1156,6 +1259,7 @@ export default function ParteDiario() {
                   hasPhoto={!!(e.foto_url || e.foto_url_2)}
                   tabla="parte_estado_finca"
                   id={e.id}
+                  onEdit={() => editarA(e)}
                 />
               ))
           }
@@ -1184,6 +1288,7 @@ export default function ParteDiario() {
                   hasPhoto={!!(e.foto_url || e.foto_url_2)}
                   tabla="parte_trabajo"
                   id={e.id}
+                  onEdit={() => editarB(e)}
                 />
               ))
           }
@@ -1209,6 +1314,7 @@ export default function ParteDiario() {
                   hasPhoto={!!e.foto_url}
                   tabla="parte_personal"
                   id={e.id}
+                  onEdit={() => editarC(e)}
                 />
               ))
           }
@@ -1236,6 +1342,7 @@ export default function ParteDiario() {
                   ].filter(Boolean).join(' · ')}
                   tabla="parte_residuos_vegetales"
                   id={e.id}
+                  onEdit={() => editarD(e)}
                 />
               ))
           }
@@ -1330,11 +1437,11 @@ export default function ParteDiario() {
 
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Notas</label>
-                <textarea
-                  rows={3}
+                <AudioInput
                   value={formA.notas}
-                  onChange={e => setFormA(p => ({ ...p, notas: e.target.value }))}
-                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:border-[#38bdf8]/50 outline-none resize-none"
+                  onChange={v => setFormA(p => ({ ...p, notas: v }))}
+                  placeholder="Observaciones del estado..."
+                  rows={3}
                 />
               </div>
 
@@ -1500,11 +1607,11 @@ export default function ParteDiario() {
 
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Notas</label>
-                <textarea
-                  rows={3}
+                <AudioInput
                   value={formB.notas}
-                  onChange={e => setFormB(p => ({ ...p, notas: e.target.value }))}
-                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:border-[#38bdf8]/50 outline-none resize-none"
+                  onChange={v => setFormB(p => ({ ...p, notas: v }))}
+                  placeholder="Observaciones del trabajo..."
+                  rows={3}
                 />
               </div>
 
@@ -1561,13 +1668,11 @@ export default function ParteDiario() {
 
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Texto libre *</label>
-                <textarea
-                  rows={5}
+                <AudioInput
                   value={formC.texto}
-                  onChange={e => setFormC(p => ({ ...p, texto: e.target.value }))}
+                  onChange={v => setFormC(p => ({ ...p, texto: v }))}
                   placeholder="Qué gestiona, decisiones tomadas, observaciones..."
-                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:border-[#38bdf8]/50 outline-none resize-none"
-                  autoFocus
+                  rows={5}
                 />
               </div>
 
@@ -1584,12 +1689,11 @@ export default function ParteDiario() {
 
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Dónde</label>
-                <input
-                  type="text"
+                <AudioInput
                   value={formC.donde}
-                  onChange={e => setFormC(p => ({ ...p, donde: e.target.value }))}
+                  onChange={v => setFormC(p => ({ ...p, donde: v }))}
                   placeholder="Murcia, nave, oficina..."
-                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:border-[#38bdf8]/50 outline-none"
+                  rows={1}
                 />
               </div>
 
@@ -1720,11 +1824,11 @@ export default function ParteDiario() {
               {/* NOTAS */}
               <div>
                 <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Notas de la descarga</label>
-                <textarea
-                  rows={3}
+                <AudioInput
                   value={formD.notas_descarga}
-                  onChange={e => setFormD(p => ({ ...p, notas_descarga: e.target.value }))}
-                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:border-[#38bdf8]/50 outline-none resize-none"
+                  onChange={v => setFormD(p => ({ ...p, notas_descarga: v }))}
+                  placeholder="Observaciones del viaje..."
+                  rows={3}
                 />
               </div>
 
@@ -1777,6 +1881,52 @@ export default function ParteDiario() {
                 >
                   {saving && <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />}
                   Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════ */}
+      {/* MODAL — RESULTADO CIERRE DE JORNADA                       */}
+      {/* ══════════════════════════════════════════════════════════ */}
+      {showCierre && cierreResultado && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-md shadow-2xl">
+            <div className="border-b border-white/10 px-5 py-3 flex items-center justify-between">
+              <span className="text-sm font-black uppercase tracking-widest text-orange-400">Jornada cerrada</span>
+              <button onClick={() => setShowCierre(false)} className="text-slate-500 hover:text-white text-lg leading-none">×</button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  { label: 'Trabajos ejecutados', value: cierreResultado.ejecutados, color: 'text-green-400' },
+                  { label: 'Pendientes arrastrados', value: cierreResultado.arrastrados, color: 'text-orange-400' },
+                  { label: 'Incidencias arrastradas', value: cierreResultado.incidenciasArrastradas, color: 'text-red-400' },
+                  { label: 'Pendientes marcados', value: cierreResultado.pendientes, color: 'text-slate-400' },
+                ].map(({ label, value, color }) => (
+                  <div key={label} className="bg-slate-800/60 border border-white/10 rounded-lg px-3 py-3 text-center">
+                    <p className={`text-2xl font-black ${color}`}>{value}</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">{label}</p>
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-slate-500 text-center">
+                Los trabajos pendientes e incidencias urgentes han sido arrastrados a manana con prioridad alta.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowCierre(false)}
+                  className="flex-1 py-2.5 rounded-lg border border-white/10 text-slate-400 text-sm hover:border-white/20 transition-colors"
+                >
+                  Cerrar
+                </button>
+                <button
+                  onClick={() => { setShowCierre(false); navigate('/trabajos') }}
+                  className="flex-1 py-2.5 rounded-lg bg-orange-600 text-white text-sm font-black hover:bg-orange-500 transition-colors"
+                >
+                  Ver planificacion
                 </button>
               </div>
             </div>

@@ -359,3 +359,207 @@ export function useAddGanadero() {
     },
   })
 }
+
+/*
+================================================
+14. CIERRES DE JORNADA
+================================================
+*/
+
+export function useCierresJornada() {
+  return useQuery({
+    queryKey: ['cierres_jornada'],
+    queryFn: async () => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('cierres_jornada')
+        .select('*')
+        .order('fecha', { ascending: false })
+      if (error) throw error
+      return (data ?? []) as import('@/integrations/supabase/types').Tables<'cierres_jornada'>[]
+    },
+    staleTime: 30000,
+  })
+}
+
+export function useAddCierreJornada() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async (record: import('@/integrations/supabase/types').TablesInsert<'cierres_jornada'>) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('cierres_jornada')
+        .insert(record)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cierres_jornada'] })
+    },
+  })
+}
+
+/*
+================================================
+15. CERRAR JORNADA — lógica completa de arrastre
+================================================
+*/
+
+export function useCerrarJornada() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({ fecha, parteId }: { fecha: string; parteId: string }) => {
+      // 1. Trabajos planificados del día
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data: planificados } = await (supabase as any)
+        .from('trabajos_registro')
+        .select('*')
+        .eq('fecha_planificada', fecha)
+        .neq('estado_planificacion', 'cancelado')
+
+      // 2. Trabajos ejecutados hoy en parte_trabajo
+      const { data: parteTrabajo } = await supabase
+        .from('parte_trabajo')
+        .select('tipo_trabajo')
+        .eq('parte_id', parteId)
+
+      const tiposEjecutados = new Set(
+        (parteTrabajo ?? []).map((t: { tipo_trabajo: string }) => t.tipo_trabajo.toLowerCase().trim())
+      )
+
+      let ejecutados = 0
+      let pendientes = 0
+      const arrastrados: typeof planificados = []
+
+      for (const trabajo of planificados ?? []) {
+        const coincide = tiposEjecutados.has((trabajo.tipo_trabajo ?? '').toLowerCase().trim())
+        if (coincide) {
+          // Marcar como ejecutado
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any)
+            .from('trabajos_registro')
+            .update({ estado_planificacion: 'ejecutado' })
+            .eq('id', trabajo.id)
+          ejecutados++
+        } else {
+          // Marcar como pendiente
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          await (supabase as any)
+            .from('trabajos_registro')
+            .update({ estado_planificacion: 'pendiente' })
+            .eq('id', trabajo.id)
+          pendientes++
+          arrastrados.push(trabajo)
+        }
+      }
+
+      // 3. Arrastrar pendientes a mañana
+      const manana = new Date(fecha + 'T12:00:00')
+      manana.setDate(manana.getDate() + 1)
+      const fechaManana = manana.toISOString().split('T')[0]
+
+      for (const trabajo of arrastrados) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from('trabajos_registro').insert({
+          tipo_bloque: trabajo.tipo_bloque,
+          tipo_trabajo: trabajo.tipo_trabajo,
+          finca: trabajo.finca ?? null,
+          parcel_id: trabajo.parcel_id ?? null,
+          num_operarios: trabajo.num_operarios ?? null,
+          nombres_operarios: trabajo.nombres_operarios ?? null,
+          hora_inicio: null,
+          hora_fin: null,
+          notas: trabajo.notas ?? null,
+          fecha: fechaManana,
+          fecha_planificada: fechaManana,
+          fecha_original: trabajo.fecha_original ?? trabajo.fecha_planificada ?? trabajo.fecha,
+          estado_planificacion: 'borrador',
+          prioridad: 'alta',
+          tractor_id: trabajo.tractor_id ?? null,
+          apero_id: trabajo.apero_id ?? null,
+        })
+      }
+
+      // 4. Incidencias urgentes no resueltas → tarea nueva para mañana
+      const { data: incidencias } = await supabase
+        .from('trabajos_incidencias')
+        .select('*')
+        .eq('fecha', fecha)
+        .eq('urgente', true)
+        .neq('estado', 'resuelta')
+
+      let incidenciasArrastradas = 0
+      for (const inc of incidencias ?? []) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from('trabajos_registro').insert({
+          tipo_bloque: 'mano_obra_interna',
+          tipo_trabajo: 'Incidencia urgente',
+          finca: inc.finca ?? null,
+          parcel_id: inc.parcel_id ?? null,
+          notas: inc.descripcion ?? null,
+          fecha: fechaManana,
+          fecha_planificada: fechaManana,
+          fecha_original: fecha,
+          estado_planificacion: 'borrador',
+          prioridad: 'alta',
+        })
+        incidenciasArrastradas++
+      }
+
+      // 5. Registrar cierre
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from('cierres_jornada').insert({
+        fecha,
+        parte_diario_id: parteId,
+        trabajos_ejecutados: ejecutados,
+        trabajos_pendientes: pendientes,
+        trabajos_arrastrados: arrastrados.length + incidenciasArrastradas,
+      })
+
+      return { ejecutados, pendientes, arrastrados: arrastrados.length, incidenciasArrastradas }
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['cierres_jornada'] })
+      qc.invalidateQueries({ queryKey: ['trabajos_registro'] })
+      qc.invalidateQueries({ queryKey: ['trabajos_incidencias'] })
+    },
+  })
+}
+
+/*
+================================================
+16. UPDATE ESTADO TRABAJO — estado_planificacion + prioridad
+================================================
+*/
+
+export function useUpdateEstadoTrabajo() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      estado_planificacion,
+      prioridad,
+    }: {
+      id: string
+      estado_planificacion: string
+      prioridad?: string
+    }) => {
+      const patch: Record<string, string> = { estado_planificacion }
+      if (prioridad) patch.prioridad = prioridad
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('trabajos_registro')
+        .update(patch)
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trabajos_registro'] })
+    },
+  })
+}

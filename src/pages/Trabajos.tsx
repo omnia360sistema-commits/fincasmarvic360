@@ -1,21 +1,29 @@
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  ArrowLeft, Truck, Tractor, Users, UserCheck,
-  AlertTriangle, Plus, X, Camera,
-  CheckCircle2, Clock, MapPin, ClipboardList, Briefcase,
+  ArrowLeft, ArrowRight, Truck, Tractor, Users, UserCheck,
+  AlertTriangle, Plus, X, Camera, CheckCircle2, Clock,
+  MapPin, ClipboardList, Briefcase, LogOut, ChevronLeft, ChevronRight,
+  Calendar, Layers, Leaf,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import {
   useRegistrosTrabajos, useAddTrabajoRegistro,
-  useIncidencias, useAddIncidencia, useUpdateIncidencia,
+  useIncidencias, useAddIncidencia, useUpdateIncidencia, useDeleteIncidencia,
   useKPIsTrabajos,
-  TipoBloque, TrabajoRegistro, TrabajoIncidencia,
+  usePlanificacionDia, useAddTrabajoPlanificado, useUpdateTrabajoPlanificado,
+  useDeleteTrabajo, useUpdateEstadoPlanificacion,
+  usePlanificacionCampana, useAddPlanificacionCampana,
+  useUpdatePlanificacionCampana, useDeletePlanificacionCampana,
+  useCerrarJornada,
+  TipoBloque, TrabajoRegistro, TrabajoIncidencia, PlanificacionCampana,
+  EstadoPlanificacion, Prioridad, EstadoCampana,
 } from '../hooks/useTrabajos';
-import { useParcelas, useAddPlanting, useAddHarvest } from '../hooks/useParcelData';
-import { usePersonal, usePersonalExterno } from '../hooks/usePersonal';
-import { useTractoresEnInventario, useAperosEnInventario, useAddUsoMaquinaria } from '../hooks/useMaquinaria';
-import { useCamiones, useAddViaje } from '../hooks/useLogistica';
+import { useParcelas, useAddPlanting, useAddHarvest, useCropCatalog } from '../hooks/useParcelData';
+import { usePersonal, usePersonalExterno, useTiposTrabajoCatalogoPersonal } from '../hooks/usePersonal';
+import { useTractores, useAperos } from '../hooks/useMaquinaria';
+import { useProductosCatalogo } from '../hooks/useInventario';
+import { SelectWithOther, AudioInput, PhotoAttachment, RecordActions } from '@/components/base';
 import {
   generarPDFCorporativoBase,
   pdfCorporateSection,
@@ -26,619 +34,405 @@ import {
 import { FINCAS_NOMBRES as FINCAS } from '../constants/farms';
 import { TIPOS_TRABAJO } from '../constants/tiposTrabajo';
 import { uploadImage, buildStoragePath } from '../utils/uploadImage';
-import { formatHora, formatFechaCorta } from '../utils/dateFormat';
+import { formatFechaCorta } from '../utils/dateFormat';
 
 // ── Constantes ───────────────────────────────────────────────
 
-const BLOQUES: { id: TipoBloque; label: string; icon: React.ElementType; color: string; desc: string }[] = [
-  { id: 'maquinaria_agricola', label: 'Maquinaria Agrícola', icon: Tractor,   color: '#fb923c', desc: 'Tractores, aperos y labores mecánicas' },
-  { id: 'logistica',           label: 'Logística',           icon: Truck,     color: '#a78bfa', desc: 'Transporte, rutas y entregas' },
-  { id: 'mano_obra_interna',   label: 'Mano Obra Interna',   icon: Users,     color: '#34d399', desc: 'Personal propio de Marvic' },
-  { id: 'mano_obra_externa',   label: 'Mano Obra Externa',   icon: UserCheck, color: '#60a5fa', desc: 'Subcontratas y cuadrillas externas' },
-];
-
-const TIPOS_PLANTACION = new Set(['Plantación', 'Trasplante', 'Siembra']);
-const TIPOS_COSECHA    = new Set(['Cosecha', 'Recolección']);
-
 const INPUT = 'w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none';
 
-function calcHoras(inicio: string, fin: string): number | null {
-  if (!inicio || !fin) return null;
-  const diff = (new Date(fin).getTime() - new Date(inicio).getTime()) / 3600000;
-  return diff > 0 ? +diff.toFixed(2) : null;
+const PRIORIDAD_STYLES: Record<Prioridad, { border: string; text: string; label: string }> = {
+  alta:  { border: 'border-red-500',    text: 'text-red-400',    label: 'ALTA' },
+  media: { border: 'border-slate-500',  text: 'text-slate-400',  label: 'MEDIA' },
+  baja:  { border: 'border-slate-600',  text: 'text-slate-500',  label: 'BAJA' },
+};
+
+const ESTADO_PLAN_STYLES: Record<EstadoPlanificacion, { border: string; text: string }> = {
+  borrador:   { border: 'border-slate-500',  text: 'text-slate-400' },
+  confirmado: { border: 'border-blue-500',   text: 'text-blue-400' },
+  ejecutado:  { border: 'border-green-500',  text: 'text-green-400' },
+  pendiente:  { border: 'border-red-500',    text: 'text-red-400' },
+  cancelado:  { border: 'border-slate-600',  text: 'text-slate-500' },
+};
+
+function hoy(): string {
+  return new Date().toISOString().slice(0, 10);
 }
 
-function fmtFechaTabla(f: string): string {
-  try {
-    return new Date(f + 'T12:00:00').toLocaleDateString('es-ES');
-  } catch {
-    return f;
-  }
+function addDays(fecha: string, n: number): string {
+  const d = new Date(fecha + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
 }
 
-function horasRegistro(r: TrabajoRegistro): string {
-  const h = r.hora_inicio && r.hora_fin ? calcHoras(r.hora_inicio, r.hora_fin) : null;
-  return h != null ? String(h) : '—';
+function fmtFecha(f: string): string {
+  try { return new Date(f + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }); }
+  catch { return f; }
 }
 
-function operariosCelda(r: TrabajoRegistro): string {
-  if (r.num_operarios != null && r.num_operarios > 0) {
-    return r.nombres_operarios
-      ? `${r.num_operarios} · ${r.nombres_operarios}`
-      : String(r.num_operarios);
-  }
-  return r.nombres_operarios ?? '—';
+// ── Badge Prioridad ───────────────────────────────────────────
+function BadgePrioridad({ p }: { p: Prioridad | null }) {
+  if (!p) return null;
+  const s = PRIORIDAD_STYLES[p];
+  return (
+    <span className={`inline-block border rounded px-1.5 py-0.5 text-[8px] font-black tracking-widest ${s.border} ${s.text}`}>
+      {s.label}
+    </span>
+  );
 }
 
-// ── Modal registro ────────────────────────────────────────────
+// ── Badge Estado ──────────────────────────────────────────────
+function BadgeEstado({ e }: { e: EstadoPlanificacion | null }) {
+  if (!e) return null;
+  const s = ESTADO_PLAN_STYLES[e];
+  return (
+    <span className={`inline-block border rounded px-1.5 py-0.5 text-[8px] font-black tracking-widest uppercase ${s.border} ${s.text}`}>
+      {e}
+    </span>
+  );
+}
 
-interface ModalRegistroProps { tipoBloque: TipoBloque; onClose: () => void }
+// ── Panel Estado Día ──────────────────────────────────────────
+interface PanelDiaProps {
+  fecha: string;
+  onPrev: () => void;
+  onNext: () => void;
+  onCerrar: () => void;
+  isDark: boolean;
+}
+function PanelDia({ fecha, onPrev, onNext, onCerrar, isDark }: PanelDiaProps) {
+  const { data: trabajos = [] } = usePlanificacionDia(fecha);
+  const esHoy = fecha === hoy();
 
-function ModalRegistro({ tipoBloque, onClose }: ModalRegistroProps) {
-  const bloque  = BLOQUES.find(b => b.id === tipoBloque)!;
-  const now     = new Date().toISOString().slice(0, 16);
+  const confirmados = trabajos.filter(t => t.estado_planificacion === 'confirmado').length;
+  const ejecutados  = trabajos.filter(t => t.estado_planificacion === 'ejecutado').length;
+  const pendientes  = trabajos.filter(t => t.estado_planificacion === 'pendiente').length;
+  const arrastrados = trabajos.filter(t => t.fecha_original && t.fecha_original !== t.fecha_planificada).length;
 
-  // Common
-  const [finca, setFinca]               = useState('');
-  const [parcelId, setParcelId]         = useState('');
-  const [tipoTrabajo, setTipoTrabajo]   = useState('');
-  const [horaInicio, setHoraInicio]     = useState(now);
-  const [horaFin, setHoraFin]           = useState('');
-  const [notas, setNotas]               = useState('');
-  const [foto, setFoto]                 = useState<File | null>(null);
-  const [uploading, setUploading]       = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
+  return (
+    <div className={`rounded-xl border p-4 mb-4 ${isDark ? 'bg-slate-900/60 border-white/10' : 'bg-white border-slate-200'}`}>
+      {/* Navegador fecha */}
+      <div className="flex items-center justify-between mb-3">
+        <button onClick={onPrev} className="p-1.5 rounded-lg border border-white/10 text-slate-400 hover:text-white transition-colors">
+          <ChevronLeft className="w-4 h-4" />
+        </button>
+        <div className="text-center">
+          <p className="text-[11px] font-black text-white uppercase tracking-widest">{fmtFecha(fecha)}</p>
+          {esHoy && <p className="text-[9px] text-[#38bdf8] font-black uppercase tracking-widest">Hoy</p>}
+        </div>
+        <button onClick={onNext} className="p-1.5 rounded-lg border border-white/10 text-slate-400 hover:text-white transition-colors">
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      </div>
 
-  // Maquinaria
-  const [tractorId, setTractorId]   = useState('');
-  const [aperoId, setAperoId]       = useState('');
-  const [personalId, setPersonalId] = useState('');
-  const [gasolinaL, setGasolinaL]   = useState('');
+      {/* Contadores */}
+      <div className="grid grid-cols-4 gap-2 mb-3">
+        {[
+          { label: 'Confirmados', value: confirmados, color: 'text-blue-400' },
+          { label: 'Ejecutados',  value: ejecutados,  color: 'text-green-400' },
+          { label: 'Pendientes',  value: pendientes,  color: pendientes > 0 ? 'text-red-400' : 'text-slate-400' },
+          { label: 'Arrastrados', value: arrastrados, color: arrastrados > 0 ? 'text-red-400' : 'text-slate-400' },
+        ].map(k => (
+          <div key={k.label} className="text-center">
+            <p className={`text-xl font-black ${k.color}`}>{k.value}</p>
+            <p className="text-[8px] text-slate-500 uppercase tracking-wider">{k.label}</p>
+          </div>
+        ))}
+      </div>
 
-  // Logística extra
-  const [camionId, setCamionId]         = useState('');
-  const [destino, setDestino]           = useState('');
-  const [kmRecorridos, setKmRecorridos] = useState('');
+      {/* Botón cerrar jornada */}
+      {esHoy && (
+        <button
+          onClick={onCerrar}
+          className="w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-colors"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          Cerrar jornada
+        </button>
+      )}
+    </div>
+  );
+}
 
-  // Operarios (mano interna / externa)
-  const [nombresSelec, setNombresSelec] = useState<string[]>([]);
-  const [nombreLibre, setNombreLibre]   = useState('');
+// ── Modal Trabajo Planificado ─────────────────────────────────
+interface ModalTrabajoPlanProps {
+  fecha: string;
+  editData?: TrabajoRegistro | null;
+  onClose: () => void;
+}
 
-  // Campo integration
-  const [cultivo, setCultivo]         = useState('');
-  const [variedad, setVariedad]       = useState('');
-  const [produccionKg, setProduccionKg] = useState('');
+function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
+  const isEdit = !!editData;
 
-  // Data
-  const { data: personal  = [] } = usePersonal();
-  const { data: persExt   = [] } = usePersonalExterno();
-  const { data: tractores = [] } = useTractoresEnInventario();
-  const { data: aperosInv = [] } = useAperosEnInventario();
-  const aperos = tractorId
-    ? aperosInv.filter(a => a.tractor_id === tractorId)
-    : aperosInv;
-  const { data: camiones  = [] } = useCamiones();
+  const [fechaPlan,    setFechaPlan]    = useState(editData?.fecha_planificada ?? fecha);
+  const [finca,        setFinca]        = useState(editData?.finca ?? '');
+  const [parcelId,     setParcelId]     = useState(editData?.parcel_id ?? '');
+  const [tipoBloque,   setTipoBloque]   = useState<TipoBloque>(editData?.tipo_bloque ?? 'mano_obra_interna');
+  const [tipoTrabajo,  setTipoTrabajo]  = useState(editData?.tipo_trabajo ?? '');
+  const [personalSel,  setPersonalSel]  = useState<string[]>(editData?.recursos_personal ?? []);
+  const [tractorId,    setTractorId]    = useState(editData?.tractor_id ?? '');
+  const [aperoId,      setAperoId]      = useState(editData?.apero_id ?? '');
+  const [materiales,   setMateriales]   = useState<{ nombre: string; cantidad: string }[]>(
+    editData?.materiales_previstos ? (editData.materiales_previstos as { nombre: string; cantidad: string }[]) : []
+  );
+  const [prioridad,    setPrioridad]    = useState<Prioridad>(editData?.prioridad ?? 'media');
+  const [estado,       setEstado]       = useState<EstadoPlanificacion>(editData?.estado_planificacion ?? 'borrador');
+  const [notas,        setNotas]        = useState(editData?.notas ?? '');
+  const [foto,         setFoto]         = useState<File | null>(null);
+  const [horaInicio,   setHoraInicio]   = useState(editData?.hora_inicio?.slice(0, 5) ?? '');
+  const [horaFin,      setHoraFin]      = useState(editData?.hora_fin?.slice(0, 5) ?? '');
+  const [matNombre,    setMatNombre]    = useState('');
+  const [matCantidad,  setMatCantidad]  = useState('');
+  const [saving,       setSaving]       = useState(false);
+
   const { data: parcelas  = [] } = useParcelas(finca || undefined);
+  const { data: personal  = [] } = usePersonal();
+  const { data: tractores = [] } = useTractores();
+  const { data: aperos    = [] } = useAperos(tractorId || undefined);
+  const { data: tiposCat  = [] } = useTiposTrabajoCatalogoPersonal('');
 
-  // Mutations
-  const addTrabajo  = useAddTrabajoRegistro();
-  const addUso      = useAddUsoMaquinaria();
-  const addViaje    = useAddViaje();
-  const addPlanting = useAddPlanting();
-  const addHarvest  = useAddHarvest();
+  const addMut    = useAddTrabajoPlanificado();
+  const updateMut = useUpdateTrabajoPlanificado();
 
-  // Filtered personal
-  const tractoristas = personal.filter(p => p.activo && p.categoria === 'conductor_maquinaria');
-  const conductores  = personal.filter(p => p.activo && p.categoria === 'conductor_camion');
-  const operarios    = personal.filter(p => p.activo && ['operario_campo', 'encargado'].includes(p.categoria));
+  const tiposOpciones = [...new Set([...TIPOS_TRABAJO, ...tiposCat.map(t => t.nombre)])];
+  const personalActivo = personal.filter(p => p.activo);
 
-  // Derived
-  const horas         = useMemo(() => calcHoras(horaInicio, horaFin), [horaInicio, horaFin]);
-  const esMaq         = tipoBloque === 'maquinaria_agricola';
-  const esLog         = tipoBloque === 'logistica';
-  const esInterna     = tipoBloque === 'mano_obra_interna';
-  const esExterna     = tipoBloque === 'mano_obra_externa';
-  const esPlantacion  = TIPOS_PLANTACION.has(tipoTrabajo);
-  const esCosecha     = TIPOS_COSECHA.has(tipoTrabajo);
-
-  const conductorNombre = personal.find(p => p.id === personalId)?.nombre ?? '';
-  const numOpFinal  = (esMaq || esLog) ? (conductorNombre ? 1 : 0) : nombresSelec.length;
-  const nombresStr  = (esMaq || esLog) ? (conductorNombre || null) : (nombresSelec.join(', ') || null);
-
-  const addNombre = (n: string) => {
-    if (n && !nombresSelec.includes(n)) setNombresSelec(p => [...p, n]);
-  };
-  const removeNombre = (n: string) => setNombresSelec(p => p.filter(x => x !== n));
-
-  const handleSubmit = async () => {
-    if (!tipoTrabajo || !foto) return;
-    setUploading(true);
-    try {
-      const foto_url = await uploadImage(foto, 'parcel-images', buildStoragePath('trabajos', foto));
-      const fecha    = new Date().toISOString().slice(0, 10);
-
-      // 1 — trabajos_registro (siempre)
-      await addTrabajo.mutateAsync({
-        tipo_bloque:       tipoBloque,
-        fecha,
-        hora_inicio:       horaInicio || null,
-        hora_fin:          horaFin    || null,
-        finca:             finca      || null,
-        parcel_id:         parcelId   || null,
-        tipo_trabajo:      tipoTrabajo,
-        num_operarios:     numOpFinal > 0 ? numOpFinal : null,
-        nombres_operarios: nombresStr,
-        foto_url,
-        notas:             notas || null,
-        created_by:        'JuanPe',
-      });
-
-      // 2 — maquinaria_uso (solo bloque maquinaria con tractor)
-      if (esMaq && tractorId) {
-        await addUso.mutateAsync({
-          tractor_id:       tractorId  || null,
-          apero_id:         aperoId    || null,
-          tractorista:      conductorNombre,
-          personal_id:      personalId || null,
-          finca:            finca      || null,
-          parcel_id:        parcelId   || null,
-          tipo_trabajo:     tipoTrabajo || null,
-          fecha,
-          hora_inicio:      horaInicio || null,
-          hora_fin:         horaFin    || null,
-          horas_trabajadas: horas,
-          gasolina_litros:  gasolinaL ? parseFloat(gasolinaL) : null,
-          notas:            notas || null,
-          created_by:       'JuanPe',
-        });
-      }
-
-      // 3 — logistica_viajes (solo bloque logistica con camion)
-      if (esLog && camionId) {
-        await addViaje.mutateAsync({
-          conductor_id:          null,
-          personal_id:           personalId || null,
-          camion_id:             camionId   || null,
-          finca:                 finca      || null,
-          destino:               destino    || null,
-          trabajo_realizado:     tipoTrabajo,
-          ruta:                  null,
-          hora_salida:           horaInicio || null,
-          hora_llegada:          horaFin    || null,
-          gasto_gasolina_litros: null,
-          gasto_gasolina_euros:  null,
-          km_recorridos:         kmRecorridos ? parseFloat(kmRecorridos) : null,
-          notas:                 notas || null,
-          created_by:            'JuanPe',
-        });
-      }
-
-      // 4 — plantings (si tipo = plantación y hay parcela y cultivo)
-      if (parcelId && esPlantacion && cultivo.trim()) {
-        await addPlanting.mutateAsync({
-          parcel_id:   parcelId,
-          crop:        cultivo.trim(),
-          date:        fecha,
-          variedad:    variedad || null,
-          lote_semilla: null,
-        });
-      }
-
-      // 5 — harvests (si tipo = cosecha y hay parcela y cultivo)
-      if (parcelId && esCosecha && cultivo.trim()) {
-        await addHarvest.mutateAsync({
-          parcel_id:     parcelId,
-          crop:          cultivo.trim(),
-          date:          fecha,
-          production_kg: produccionKg ? parseFloat(produccionKg) : null,
-          price_kg:      null,
-        });
-      }
-
-      onClose();
-    } finally {
-      setUploading(false);
+  const addMaterial = () => {
+    if (matNombre.trim()) {
+      setMateriales(p => [...p, { nombre: matNombre.trim(), cantidad: matCantidad }]);
+      setMatNombre(''); setMatCantidad('');
     }
   };
 
-  const IconComp = bloque.icon;
-  const canSave  = !!tipoTrabajo && !!foto && !uploading && !addTrabajo.isPending;
+  const handleSubmit = async () => {
+    if (!tipoTrabajo.trim()) return;
+    setSaving(true);
+    try {
+      let foto_url = editData?.foto_url ?? null;
+      if (foto) foto_url = await uploadImage(foto, 'parcel-images', buildStoragePath('planificacion', foto));
+
+      const payload = {
+        tipo_bloque:          tipoBloque,
+        fecha:                fechaPlan,
+        hora_inicio:          horaInicio || null,
+        hora_fin:             horaFin || null,
+        finca:                finca || null,
+        parcel_id:            parcelId || null,
+        tipo_trabajo:         tipoTrabajo,
+        num_operarios:        personalSel.length || null,
+        nombres_operarios:    personalSel.join(', ') || null,
+        foto_url,
+        notas:                notas || null,
+        created_by:           'JuanPe',
+        estado_planificacion: estado,
+        prioridad,
+        fecha_planificada:    fechaPlan,
+        fecha_original:       editData?.fecha_original ?? null,
+        recursos_personal:    personalSel.length > 0 ? personalSel : null,
+        tractor_id:           tractorId || null,
+        apero_id:             aperoId || null,
+        materiales_previstos: materiales.length > 0 ? materiales : null,
+      };
+
+      if (isEdit) {
+        await updateMut.mutateAsync({ id: editData!.id, ...payload });
+      } else {
+        await addMut.mutateAsync(payload);
+      }
+      onClose();
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-
+      <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-md shadow-2xl flex flex-col max-h-[92vh]">
         {/* Header */}
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-white/10 shrink-0" style={{ borderLeftColor: bloque.color, borderLeftWidth: 3 }}>
-          <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: bloque.color + '20' }}>
-            <IconComp className="w-4 h-4" style={{ color: bloque.color }} />
-          </div>
-          <div className="flex-1">
-            <p className="text-[11px] font-black text-white uppercase tracking-wider">{bloque.label}</p>
-            <p className="text-[9px] text-slate-500">Nuevo registro</p>
-          </div>
-          <button onClick={onClose} className="text-slate-500 hover:text-white transition-colors">
-            <X className="w-4 h-4" />
-          </button>
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-white/10 shrink-0">
+          <Calendar className="w-4 h-4 text-[#38bdf8]" />
+          <p className="flex-1 text-[11px] font-black text-white uppercase tracking-wider">
+            {isEdit ? 'Editar trabajo' : 'Nuevo trabajo planificado'}
+          </p>
+          <button onClick={onClose} className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
         </div>
 
-        {/* Body */}
         <div className="p-5 space-y-3 overflow-y-auto flex-1">
-
-          {/* Tipo trabajo */}
+          {/* Fecha planificada */}
           <div>
-            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tipo de trabajo *</label>
-            <select value={tipoTrabajo} onChange={e => setTipoTrabajo(e.target.value)} className={INPUT}>
-              <option value="">Seleccionar…</option>
-              {TIPOS_TRABAJO.map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Fecha planificada</label>
+            <input type="date" value={fechaPlan} onChange={e => setFechaPlan(e.target.value)} className={INPUT} />
           </div>
 
           {/* Finca */}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Finca</label>
-            <select value={finca} onChange={e => { setFinca(e.target.value); setParcelId(''); }} className={INPUT}>
-              <option value="">— Todas / No aplica —</option>
-              {FINCAS.map(f => <option key={f} value={f}>{f}</option>)}
+            <SelectWithOther
+              value={finca}
+              onChange={v => { setFinca(v); setParcelId(''); }}
+              options={FINCAS}
+              placeholder="Seleccionar finca…"
+            />
+          </div>
+
+          {/* Parcela cascada */}
+          {finca && parcelas.length > 0 && (
+            <div>
+              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Parcela</label>
+              <SelectWithOther
+                value={parcelId}
+                onChange={setParcelId}
+                options={parcelas.map(p => p.parcel_id)}
+                placeholder="Finca completa"
+              />
+            </div>
+          )}
+
+          {/* Tipo bloque */}
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tipo bloque</label>
+            <select value={tipoBloque} onChange={e => setTipoBloque(e.target.value as TipoBloque)} className={INPUT}>
+              <option value="mano_obra_interna">Mano Obra Interna</option>
+              <option value="mano_obra_externa">Mano Obra Externa</option>
+              <option value="maquinaria_agricola">Maquinaria Agrícola</option>
+              <option value="logistica">Logística</option>
             </select>
           </div>
 
-          {/* Parcela (cascade) */}
-          {finca && parcelas.length > 0 && (
+          {/* Tipo trabajo */}
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tipo de trabajo *</label>
+            <SelectWithOther
+              value={tipoTrabajo}
+              onChange={setTipoTrabajo}
+              options={tiposOpciones}
+              placeholder="Seleccionar tipo…"
+            />
+          </div>
+
+          {/* Personal */}
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">
+              Personal asignado ({personalSel.length})
+            </label>
+            <SelectWithOther
+              value=""
+              onChange={v => { if (v && !personalSel.includes(v)) setPersonalSel(p => [...p, v]); }}
+              options={personalActivo.map(p => p.nombre)}
+              placeholder="+ Añadir operario…"
+            />
+            {personalSel.length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mt-2">
+                {personalSel.map(n => (
+                  <span key={n} className="flex items-center gap-1 px-2 py-1 bg-slate-700 rounded-full text-[10px] text-white">
+                    {n}
+                    <button onClick={() => setPersonalSel(p => p.filter(x => x !== n))} className="text-slate-400 hover:text-red-400">×</button>
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Tractor / Apero */}
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tractor</label>
+            <SelectWithOther
+              value={tractorId}
+              onChange={v => { setTractorId(v); setAperoId(''); }}
+              options={tractores.filter(t => t.activo).map(t => t.id)}
+              optionLabels={Object.fromEntries(tractores.map(t => [t.id, `${t.matricula}${t.marca ? ' · ' + t.marca : ''}`]))}
+              placeholder="Sin tractor"
+            />
+          </div>
+          {tractorId && (
             <div>
-              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Parcela / Sector</label>
-              <select value={parcelId} onChange={e => setParcelId(e.target.value)} className={INPUT}>
-                <option value="">— Finca completa —</option>
-                {parcelas.map(p => <option key={p.parcel_id} value={p.parcel_id}>{p.parcel_number}</option>)}
-              </select>
+              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Apero</label>
+              <SelectWithOther
+                value={aperoId}
+                onChange={setAperoId}
+                options={aperos.filter(a => a.activo).map(a => a.id)}
+                optionLabels={Object.fromEntries(aperos.map(a => [a.id, `${a.tipo}${a.descripcion ? ' · ' + a.descripcion : ''}`]))}
+                placeholder="Sin apero"
+              />
             </div>
           )}
 
-          {/* Hora inicio / fin */}
+          {/* Materiales */}
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Materiales previstos</label>
+            <div className="flex gap-2">
+              <input type="text" value={matNombre} onChange={e => setMatNombre(e.target.value)}
+                placeholder="Producto…" className="flex-1 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none" />
+              <input type="text" value={matCantidad} onChange={e => setMatCantidad(e.target.value)}
+                placeholder="Cant." className="w-20 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none" />
+              <button onClick={addMaterial} className="px-3 py-2 rounded-lg bg-slate-700 text-white text-[10px] font-black hover:bg-slate-600 transition-colors">+</button>
+            </div>
+            {materiales.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {materiales.map((m, i) => (
+                  <div key={i} className="flex items-center justify-between px-2 py-1.5 bg-slate-800 rounded-lg border border-white/10">
+                    <span className="text-[10px] text-white">{m.nombre} {m.cantidad && `· ${m.cantidad}`}</span>
+                    <button onClick={() => setMateriales(p => p.filter((_, j) => j !== i))} className="text-slate-500 hover:text-red-400 text-xs">×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Prioridad */}
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Prioridad</label>
+            <select value={prioridad} onChange={e => setPrioridad(e.target.value as Prioridad)} className={INPUT}>
+              <option value="alta">Alta</option>
+              <option value="media">Media</option>
+              <option value="baja">Baja</option>
+            </select>
+          </div>
+
+          {/* Estado planificación */}
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Estado</label>
+            <select value={estado} onChange={e => setEstado(e.target.value as EstadoPlanificacion)} className={INPUT}>
+              <option value="borrador">Borrador</option>
+              <option value="confirmado">Confirmado</option>
+              <option value="ejecutado">Ejecutado</option>
+              <option value="pendiente">Pendiente</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+
+          {/* Horas */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Hora inicio</label>
-              <input type="datetime-local" value={horaInicio} onChange={e => setHoraInicio(e.target.value)} className={INPUT} />
+              <input type="time" value={horaInicio} onChange={e => setHoraInicio(e.target.value)} className={INPUT} />
             </div>
             <div>
               <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Hora fin</label>
-              <input type="datetime-local" value={horaFin} onChange={e => setHoraFin(e.target.value)} className={INPUT} />
+              <input type="time" value={horaFin} onChange={e => setHoraFin(e.target.value)} className={INPUT} />
             </div>
           </div>
-
-          {/* Horas calculadas */}
-          {horas != null && (
-            <div className="flex items-center gap-2 px-3 py-2 bg-[#38bdf8]/5 rounded-lg border border-[#38bdf8]/20">
-              <Clock className="w-3.5 h-3.5 text-[#38bdf8]" />
-              <span className="text-[10px] font-black text-[#38bdf8]">{horas}h trabajadas</span>
-            </div>
-          )}
-
-          {/* ─── SECCIÓN MAQUINARIA ─── */}
-          {esMaq && (
-            <div className="space-y-3 pt-1">
-              <p className="text-[9px] font-black text-orange-400/80 uppercase tracking-widest border-t border-white/5 pt-3">Maquinaria</p>
-              <p className="text-[8px] text-slate-500 leading-snug">Solo equipo registrado en Inventario (ubicaciones).</p>
-
-              <div>
-                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tractor</label>
-                <select value={tractorId} onChange={e => { setTractorId(e.target.value); setAperoId(''); }} className={INPUT}>
-                  <option value="">— Sin tractor —</option>
-                  {tractores.filter(t => t.activo).map(t => (
-                    <option key={t.id} value={t.id}>{t.matricula}{t.marca ? ` · ${t.marca}` : ''}</option>
-                  ))}
-                </select>
-                {tractores.length === 0 && (
-                  <p className="text-[8px] text-amber-500/90 mt-1">No hay tractores en inventario.</p>
-                )}
-              </div>
-
-              {tractorId && (
-                <div>
-                  <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Apero</label>
-                  <select value={aperoId} onChange={e => setAperoId(e.target.value)} className={INPUT}>
-                    <option value="">— Sin apero —</option>
-                    {aperos.filter(a => a.activo).map(a => (
-                      <option key={a.id} value={a.id}>{a.tipo}{a.descripcion ? ` · ${a.descripcion}` : ''}</option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              <div>
-                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tractorista</label>
-                <select value={personalId} onChange={e => setPersonalId(e.target.value)} className={INPUT}>
-                  <option value="">— Sin asignar —</option>
-                  {tractoristas.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Gasolina (litros)</label>
-                <input type="number" min="0" step="0.5" value={gasolinaL} onChange={e => setGasolinaL(e.target.value)} placeholder="0.0" className={INPUT} />
-              </div>
-            </div>
-          )}
-
-          {/* ─── SECCIÓN LOGÍSTICA ─── */}
-          {esLog && (
-            <div className="space-y-3 pt-1">
-              <p className="text-[9px] font-black text-violet-400/80 uppercase tracking-widest border-t border-white/5 pt-3">Logística</p>
-
-              <div>
-                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Camión</label>
-                <select value={camionId} onChange={e => setCamionId(e.target.value)} className={INPUT}>
-                  <option value="">— Sin camión —</option>
-                  {camiones.filter(c => c.activo).map(c => (
-                    <option key={c.id} value={c.id}>{c.matricula}{c.marca ? ` · ${c.marca}` : ''}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Conductor</label>
-                <select value={personalId} onChange={e => setPersonalId(e.target.value)} className={INPUT}>
-                  <option value="">— Sin asignar —</option>
-                  {conductores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Destino</label>
-                <input type="text" value={destino} onChange={e => setDestino(e.target.value)} placeholder="Almería, Mercamurcia…" className={INPUT} />
-              </div>
-
-              <div>
-                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Km recorridos</label>
-                <input type="number" min="0" step="1" value={kmRecorridos} onChange={e => setKmRecorridos(e.target.value)} placeholder="0" className={INPUT} />
-              </div>
-            </div>
-          )}
-
-          {/* ─── SECCIÓN OPERARIOS (interna / externa) ─── */}
-          {(esInterna || esExterna) && (
-            <div>
-              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">
-                Operarios ({nombresSelec.length})
-              </label>
-
-              {esInterna && (
-                <select value="" onChange={e => { addNombre(e.target.value); e.currentTarget.value = ''; }} className={INPUT + ' mb-2'}>
-                  <option value="">+ Añadir desde Personal…</option>
-                  {operarios.map(p => <option key={p.id} value={p.nombre}>{p.nombre}</option>)}
-                </select>
-              )}
-
-              {esExterna && (
-                <select value="" onChange={e => { addNombre(e.target.value); e.currentTarget.value = ''; }} className={INPUT + ' mb-2'}>
-                  <option value="">+ Añadir empresa externa…</option>
-                  {persExt.filter(p => p.activo).map(p => <option key={p.id} value={p.nombre_empresa}>{p.nombre_empresa}</option>)}
-                </select>
-              )}
-
-              <div className="flex gap-2">
-                <input
-                  type="text" value={nombreLibre}
-                  onChange={e => setNombreLibre(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') { addNombre(nombreLibre.trim()); setNombreLibre(''); } }}
-                  placeholder="Nombre manual…"
-                  className="flex-1 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none"
-                />
-                <button type="button" onClick={() => { addNombre(nombreLibre.trim()); setNombreLibre(''); }}
-                  className="px-3 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest bg-slate-700 text-white hover:bg-slate-600 transition-colors"
-                >+</button>
-              </div>
-
-              {nombresSelec.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {nombresSelec.map(n => (
-                    <span key={n} className="flex items-center gap-1 px-2 py-1 bg-slate-700 rounded-full text-[10px] text-white">
-                      {n}
-                      <button type="button" onClick={() => removeNombre(n)} className="text-slate-400 hover:text-red-400">×</button>
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ─── CAMPO INTEGRATION (plantación / cosecha) ─── */}
-          {(esPlantacion || esCosecha) && parcelId && (
-            <div className="space-y-3 p-3 rounded-lg border border-green-500/20 bg-green-500/5">
-              <p className="text-[9px] font-black text-green-400 uppercase tracking-widest">
-                {esPlantacion ? '🌱 Registro Campo — Plantación' : '🌾 Registro Campo — Cosecha'}
-              </p>
-              <p className="text-[8px] text-slate-500 -mt-1">Se guardará también en el módulo Campo</p>
-
-              <div>
-                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Cultivo *</label>
-                <input type="text" value={cultivo} onChange={e => setCultivo(e.target.value)} placeholder="Brócoli, Lechuga…" className={INPUT} />
-              </div>
-
-              {esPlantacion && (
-                <div>
-                  <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Variedad</label>
-                  <input type="text" value={variedad} onChange={e => setVariedad(e.target.value)} placeholder="Ironman, Dazzle…" className={INPUT} />
-                </div>
-              )}
-
-              {esCosecha && (
-                <div>
-                  <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Producción (kg)</label>
-                  <input type="number" min="0" step="10" value={produccionKg} onChange={e => setProduccionKg(e.target.value)} placeholder="0" className={INPUT} />
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Notas */}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Notas</label>
-            <textarea value={notas} onChange={e => setNotas(e.target.value)} rows={2} placeholder="Observaciones…"
-              className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white resize-none focus:border-[#38bdf8]/50 focus:outline-none"
-            />
-          </div>
-
-          {/* Foto obligatoria */}
-          <div>
-            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">
-              Foto <span style={{ color: bloque.color }}>*</span>
-              {!foto && <span className="ml-2 text-red-400 normal-case font-normal">(obligatoria)</span>}
-            </label>
-            {foto ? (
-              <div className="flex items-center gap-3 p-2 bg-slate-800 rounded-lg border border-white/10">
-                <img src={URL.createObjectURL(foto)} alt="preview" className="w-12 h-12 object-cover rounded shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] text-white truncate">{foto.name}</p>
-                  <p className="text-[9px] text-slate-500">{(foto.size / 1024).toFixed(0)} KB</p>
-                </div>
-                <button type="button" onClick={() => setFoto(null)} className="text-slate-500 hover:text-red-400 transition-colors">×</button>
-              </div>
-            ) : (
-              <label className="flex items-center gap-3 p-3 bg-slate-800 rounded-lg border border-dashed border-red-500/30 cursor-pointer hover:border-red-500/50 transition-colors">
-                <Camera className="w-4 h-4 text-slate-500" />
-                <span className="text-[10px] text-slate-400">Tomar foto o seleccionar archivo</span>
-                <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) setFoto(f); }}
-                />
-              </label>
-            )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-5 py-3 border-t border-white/10 flex gap-2 shrink-0">
-          <button onClick={onClose}
-            className="flex-1 py-2 rounded-lg border border-white/10 text-[10px] font-black text-slate-400 hover:text-white transition-colors uppercase tracking-widest"
-          >Cancelar</button>
-          <button onClick={handleSubmit} disabled={!canSave}
-            className="flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors disabled:opacity-40 flex items-center justify-center gap-1"
-            style={{ backgroundColor: bloque.color, color: '#000' }}
-          >
-            {(uploading || addTrabajo.isPending) ? 'Guardando…' : 'Guardar'}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ── Modal incidencia ──────────────────────────────────────────
-
-function ModalIncidencia({ onClose }: { onClose: () => void }) {
-  const addMut  = useAddIncidencia();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [form, setForm] = useState({ urgente: false, titulo: '', descripcion: '', finca: '' });
-  const [foto, setFoto] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const set = (k: string, v: string | boolean) => setForm(p => ({ ...p, [k]: v }));
-
-  const handleSubmit = async () => {
-    if (!form.titulo.trim()) return;
-    setUploading(true);
-    try {
-      let foto_url: string | null = null;
-      if (foto) foto_url = await uploadImage(foto, 'parcel-images', buildStoragePath('incidencias', foto));
-      await addMut.mutateAsync({
-        urgente:          form.urgente,
-        titulo:           form.titulo,
-        descripcion:      form.descripcion || null,
-        finca:            form.finca || null,
-        parcel_id:        null,
-        estado:           'abierta',
-        foto_url,
-        fecha:            new Date().toISOString().slice(0, 10),
-        fecha_resolucion: null,
-        notas_resolucion: null,
-        created_by:       'JuanPe',
-      });
-      onClose();
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-md shadow-2xl overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-3 border-b border-white/10">
-          <AlertTriangle className="w-5 h-5 text-amber-400" />
-          <p className="flex-1 text-[11px] font-black text-white uppercase tracking-wider">Nueva incidencia</p>
-          <button onClick={onClose} className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
-        </div>
-
-        <div className="p-5 space-y-3 max-h-[70vh] overflow-y-auto">
-          {/* Urgente toggle */}
-          <div className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-slate-800/50">
-            <button onClick={() => set('urgente', !form.urgente)}
-              className={`w-10 h-5 rounded-full transition-colors relative ${form.urgente ? 'bg-red-500' : 'bg-slate-600'}`}
-            >
-              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${form.urgente ? 'left-5' : 'left-0.5'}`} />
-            </button>
-            <div>
-              <p className="text-[10px] font-black text-white uppercase tracking-wider">{form.urgente ? 'URGENTE' : 'No urgente'}</p>
-              <p className="text-[9px] text-slate-500">{form.urgente ? 'Requiere atención inmediata' : 'Se puede resolver en próximos días'}</p>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Título *</label>
-            <input type="text" value={form.titulo} onChange={e => set('titulo', e.target.value)}
-              placeholder="Descripción breve del problema…"
-              className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Finca</label>
-            <select value={form.finca} onChange={e => set('finca', e.target.value)}
-              className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none"
-            >
-              <option value="">— Sin finca específica —</option>
-              {FINCAS.map(f => <option key={f} value={f}>{f}</option>)}
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Descripción</label>
-            <textarea value={form.descripcion} onChange={e => set('descripcion', e.target.value)} rows={3}
-              placeholder="Detalle adicional…"
-              className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white resize-none focus:border-[#38bdf8]/50 focus:outline-none"
-            />
+            <AudioInput value={notas} onChange={setNotas} rows={3} placeholder="Observaciones…" />
           </div>
 
           {/* Foto */}
           <div>
-            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Foto</label>
-            {foto ? (
-              <div className="flex items-center gap-3 p-2 bg-slate-800 rounded-lg border border-white/10">
-                <img src={URL.createObjectURL(foto)} alt="preview" className="w-12 h-12 object-cover rounded shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-[10px] text-white truncate">{foto.name}</p>
-                  <p className="text-[9px] text-slate-500">{(foto.size / 1024).toFixed(0)} KB</p>
-                </div>
-                <button type="button" onClick={() => setFoto(null)} className="text-slate-500 hover:text-red-400">×</button>
-              </div>
-            ) : (
-              <label className="flex items-center gap-3 p-2 bg-slate-800 rounded-lg border border-dashed border-white/20 cursor-pointer hover:border-white/40 transition-colors">
-                <Camera className="w-4 h-4 text-slate-500" />
-                <span className="text-[10px] text-slate-400">Añadir foto (opcional)</span>
-                <input ref={fileRef} type="file" accept="image/*" capture="environment" className="hidden"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) setFoto(f); }}
-                />
-              </label>
-            )}
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Foto (opcional)</label>
+            <PhotoAttachment value={foto} onChange={setFoto} existingUrl={editData?.foto_url} />
           </div>
         </div>
 
-        <div className="px-5 py-3 border-t border-white/10 flex gap-2">
+        <div className="px-5 py-3 border-t border-white/10 flex gap-2 shrink-0">
           <button onClick={onClose}
             className="flex-1 py-2 rounded-lg border border-white/10 text-[10px] font-black text-slate-400 hover:text-white transition-colors uppercase tracking-widest"
           >Cancelar</button>
-          <button onClick={handleSubmit} disabled={!form.titulo || uploading || addMut.isPending}
-            className="flex-1 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-[10px] font-black text-black uppercase tracking-widest transition-colors disabled:opacity-40"
+          <button onClick={handleSubmit} disabled={!tipoTrabajo.trim() || saving}
+            className="flex-1 py-2 rounded-lg bg-[#38bdf8] text-[10px] font-black uppercase tracking-widest text-black transition-colors disabled:opacity-40"
           >
-            {(uploading || addMut.isPending) ? 'Guardando…' : 'Registrar'}
+            {saving ? 'Guardando…' : isEdit ? 'Actualizar' : 'Guardar'}
           </button>
         </div>
       </div>
@@ -646,357 +440,540 @@ function ModalIncidencia({ onClose }: { onClose: () => void }) {
   );
 }
 
-// ── Tarjeta registro ──────────────────────────────────────────
-
-function TarjetaRegistro({ r }: { r: TrabajoRegistro }) {
-  const bloque = BLOQUES.find(b => b.id === r.tipo_bloque);
-  const horas  = r.hora_inicio && r.hora_fin ? calcHoras(r.hora_inicio, r.hora_fin) : null;
+// ── Tarjeta Trabajo Planificado ───────────────────────────────
+function TarjetaTrabajoPlan({ t, onEdit }: { t: TrabajoRegistro; onEdit: () => void }) {
+  const deleteMut = useDeleteTrabajo();
+  const isDark = true;
 
   return (
-    <div className="p-3 rounded-lg border border-white/10 bg-slate-800/40 space-y-1.5">
+    <div className={`p-3 rounded-lg border border-white/10 bg-slate-800/40 space-y-2`}>
       <div className="flex items-start justify-between gap-2">
-        <p className="text-[11px] font-bold text-white leading-tight">{r.tipo_trabajo}</p>
-        <span className="text-[8px] font-black uppercase tracking-widest text-slate-500 whitespace-nowrap shrink-0">
-          {formatFechaCorta(r.fecha)}
-        </span>
+        <div className="flex items-center gap-2 flex-wrap min-w-0">
+          <BadgePrioridad p={t.prioridad} />
+          <BadgeEstado e={t.estado_planificacion} />
+        </div>
+        <RecordActions
+          onEdit={onEdit}
+          onDelete={() => deleteMut.mutate(t.id)}
+          deleteConfirmText="Eliminar este trabajo"
+        />
       </div>
-
-      <div className="flex items-center gap-3 flex-wrap">
-        {r.finca && (
+      <p className="text-[11px] font-bold text-white leading-tight">{t.tipo_trabajo}</p>
+      <div className="flex flex-wrap gap-3">
+        {t.finca && (
           <span className="flex items-center gap-1 text-[9px] text-slate-400">
-            <MapPin className="w-2.5 h-2.5" />{r.finca}{r.parcel_id ? ` · ${r.parcel_id}` : ''}
+            <MapPin className="w-2.5 h-2.5" />{t.finca}{t.parcel_id ? ` · ${t.parcel_id}` : ''}
           </span>
         )}
-        {(r.hora_inicio || r.hora_fin) && (
+        {(t.horaInicio || t.horaFin || t.hora_inicio || t.hora_fin) && (
           <span className="flex items-center gap-1 text-[9px] text-slate-400">
             <Clock className="w-2.5 h-2.5" />
-            {formatHora(r.hora_inicio)}{' → '}{formatHora(r.hora_fin)}
-            {horas != null && <span className="text-[#38bdf8] font-black ml-1">{horas}h</span>}
+            {t.hora_inicio?.slice(0, 5) ?? ''}{t.hora_fin ? ` → ${t.hora_fin.slice(0, 5)}` : ''}
           </span>
         )}
-        {r.num_operarios != null && r.num_operarios > 0 && (
+        {t.nombres_operarios && (
           <span className="flex items-center gap-1 text-[9px] text-slate-400">
-            <Users className="w-2.5 h-2.5" />{r.num_operarios} op.
-            {r.nombres_operarios && <span className="text-slate-500"> ({r.nombres_operarios})</span>}
+            <Users className="w-2.5 h-2.5" />{t.nombres_operarios}
           </span>
         )}
       </div>
-
-      {r.notas && <p className="text-[9px] text-slate-500 italic">{r.notas}</p>}
-
-      {bloque && (
-        <div className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded" style={{ backgroundColor: bloque.color + '18' }}>
-          <span className="text-[8px] font-black uppercase tracking-wider" style={{ color: bloque.color }}>{bloque.label}</span>
-        </div>
+      {t.fecha_original && t.fecha_original !== t.fecha_planificada && (
+        <p className="text-[8px] text-amber-400/80">Arrastrado desde {formatFechaCorta(t.fecha_original)}</p>
       )}
-
-      {r.foto_url && (
-        <img src={r.foto_url} alt="foto" className="w-full max-h-32 object-cover rounded-lg mt-1 opacity-80" />
+      {t.notas && <p className="text-[9px] text-slate-500 italic">{t.notas}</p>}
+      {t.materiales_previstos && Array.isArray(t.materiales_previstos) && t.materiales_previstos.length > 0 && (
+        <div className="flex flex-wrap gap-1">
+          {(t.materiales_previstos as { nombre: string; cantidad: string }[]).map((m, i) => (
+            <span key={i} className="px-1.5 py-0.5 bg-slate-700 rounded text-[8px] text-slate-300">{m.nombre} {m.cantidad}</span>
+          ))}
+        </div>
       )}
     </div>
   );
 }
 
-// ── Tarjeta incidencia ────────────────────────────────────────
+// ── Modal Campaña ─────────────────────────────────────────────
+function ModalCampana({ editData, onClose }: { editData?: PlanificacionCampana | null; onClose: () => void }) {
+  const isEdit = !!editData;
+  const [finca,      setFinca]      = useState(editData?.finca ?? '');
+  const [parcelId,   setParcelId]   = useState(editData?.parcel_id ?? '');
+  const [cultivo,    setCultivo]    = useState(editData?.cultivo ?? '');
+  const [fPlantacion,setFPlantacion] = useState(editData?.fecha_prevista_plantacion ?? '');
+  const [fCosecha,   setFCosecha]   = useState(editData?.fecha_estimada_cosecha ?? '');
+  const [recursos,   setRecursos]   = useState(editData?.recursos_estimados ?? '');
+  const [observaciones, setObservaciones] = useState(editData?.observaciones ?? '');
+  const [estado,     setEstado]     = useState<EstadoCampana>(editData?.estado ?? 'planificado');
+  const [saving,     setSaving]     = useState(false);
 
-function TarjetaIncidencia({ inc }: { inc: TrabajoIncidencia }) {
-  const updateMut = useUpdateIncidencia();
-  const colorEstado = inc.estado === 'resuelta' ? '#34d399' : inc.urgente ? '#ef4444' : '#f59e0b';
+  const { data: parcelas = [] } = useParcelas(finca || undefined);
+  const { data: cultivos  = [] } = useCropCatalog();
+  const addMut    = useAddPlanificacionCampana();
+  const updateMut = useUpdatePlanificacionCampana();
+
+  // Auto-calcular fecha cosecha desde ciclo_dias del cultivo
+  useEffect(() => {
+    if (!fPlantacion || !cultivo) return;
+    const cat = cultivos.find(c => c.nombre_interno === cultivo || c.nombre_display === cultivo);
+    if (cat?.ciclo_dias && !fCosecha) {
+      const d = new Date(fPlantacion + 'T12:00:00');
+      d.setDate(d.getDate() + cat.ciclo_dias);
+      setFCosecha(d.toISOString().slice(0, 10));
+    }
+  }, [fPlantacion, cultivo]);
+
+  const handleSubmit = async () => {
+    if (!finca.trim() || !cultivo.trim()) return;
+    setSaving(true);
+    try {
+      const payload = {
+        finca,
+        parcel_id:                parcelId || null,
+        cultivo,
+        fecha_prevista_plantacion: fPlantacion || null,
+        fecha_estimada_cosecha:   fCosecha || null,
+        recursos_estimados:       recursos || null,
+        observaciones:            observaciones || null,
+        estado,
+        created_by:               'JuanPe',
+      };
+      if (isEdit) await updateMut.mutateAsync({ id: editData!.id, ...payload });
+      else await addMut.mutateAsync(payload);
+      onClose();
+    } finally { setSaving(false); }
+  };
+
+  const cultivosOpciones = cultivos.map(c => c.nombre_display);
 
   return (
-    <div className={`p-3 rounded-lg border bg-slate-800/40 space-y-1.5 ${
-      inc.urgente && inc.estado !== 'resuelta' ? 'border-red-500/40' : 'border-white/10'
-    }`}>
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-md shadow-2xl flex flex-col max-h-[92vh]">
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-white/10 shrink-0">
+          <Leaf className="w-4 h-4 text-green-400" />
+          <p className="flex-1 text-[11px] font-black text-white uppercase tracking-wider">
+            {isEdit ? 'Editar campaña' : 'Nueva planificación campaña'}
+          </p>
+          <button onClick={onClose} className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="p-5 space-y-3 overflow-y-auto flex-1">
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Finca *</label>
+            <SelectWithOther value={finca} onChange={v => { setFinca(v); setParcelId(''); }} options={FINCAS} placeholder="Seleccionar finca…" />
+          </div>
+          {finca && parcelas.length > 0 && (
+            <div>
+              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Parcela</label>
+              <SelectWithOther value={parcelId} onChange={setParcelId} options={parcelas.map(p => p.parcel_id)} placeholder="Finca completa" />
+            </div>
+          )}
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Cultivo *</label>
+            <SelectWithOther value={cultivo} onChange={setCultivo} options={cultivosOpciones} placeholder="Seleccionar cultivo…" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Plantación prevista</label>
+              <input type="date" value={fPlantacion} onChange={e => setFPlantacion(e.target.value)} className={INPUT} />
+            </div>
+            <div>
+              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Cosecha estimada</label>
+              <input type="date" value={fCosecha} onChange={e => setFCosecha(e.target.value)} className={INPUT} />
+            </div>
+          </div>
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Recursos estimados</label>
+            <AudioInput value={recursos} onChange={setRecursos} rows={2} placeholder="Personal, maquinaria…" />
+          </div>
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Observaciones</label>
+            <AudioInput value={observaciones} onChange={setObservaciones} rows={2} placeholder="Notas adicionales…" />
+          </div>
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Estado</label>
+            <select value={estado} onChange={e => setEstado(e.target.value as EstadoCampana)} className={INPUT}>
+              <option value="planificado">Planificado</option>
+              <option value="en_curso">En curso</option>
+              <option value="completado">Completado</option>
+              <option value="cancelado">Cancelado</option>
+            </select>
+          </div>
+        </div>
+        <div className="px-5 py-3 border-t border-white/10 flex gap-2 shrink-0">
+          <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-white/10 text-[10px] font-black text-slate-400 hover:text-white uppercase tracking-widest">Cancelar</button>
+          <button onClick={handleSubmit} disabled={!finca.trim() || !cultivo.trim() || saving}
+            className="flex-1 py-2 rounded-lg bg-green-500 text-[10px] font-black uppercase tracking-widest text-black disabled:opacity-40"
+          >{saving ? 'Guardando…' : isEdit ? 'Actualizar' : 'Guardar'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Tarjeta Campaña ───────────────────────────────────────────
+function TarjetaCampana({ c, onEdit }: { c: PlanificacionCampana; onEdit: () => void }) {
+  const deleteMut = useDeletePlanificacionCampana();
+  const ESTADO_COLOR: Record<string, string> = {
+    planificado: 'text-blue-400 border-blue-500',
+    en_curso:    'text-amber-400 border-amber-500',
+    completado:  'text-green-400 border-green-500',
+    cancelado:   'text-slate-500 border-slate-600',
+  };
+  return (
+    <div className="p-3 rounded-lg border border-white/10 bg-slate-800/40 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-[11px] font-bold text-white">{c.cultivo}</p>
+          <p className="text-[9px] text-slate-400">{c.finca}{c.parcel_id ? ` · ${c.parcel_id}` : ''}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className={`border rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest ${ESTADO_COLOR[c.estado] ?? 'text-slate-400 border-slate-500'}`}>
+            {c.estado.replace('_', ' ')}
+          </span>
+          <RecordActions onEdit={onEdit} onDelete={() => deleteMut.mutate(c.id)} deleteConfirmText="Eliminar campaña" />
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-3">
+        {c.fecha_prevista_plantacion && (
+          <span className="text-[9px] text-slate-400">Plantación: {formatFechaCorta(c.fecha_prevista_plantacion)}</span>
+        )}
+        {c.fecha_estimada_cosecha && (
+          <span className="text-[9px] text-slate-400">Cosecha: {formatFechaCorta(c.fecha_estimada_cosecha)}</span>
+        )}
+      </div>
+      {c.observaciones && <p className="text-[9px] text-slate-500 italic">{c.observaciones}</p>}
+    </div>
+  );
+}
+
+// ── Modal Incidencia completo ─────────────────────────────────
+function ModalIncidencia({ editData, onClose }: { editData?: TrabajoIncidencia | null; onClose: () => void }) {
+  const isEdit = !!editData;
+  const [urgente,    setUrgente]    = useState(editData?.urgente ?? false);
+  const [titulo,     setTitulo]     = useState(editData?.titulo ?? '');
+  const [descripcion,setDescripcion] = useState(editData?.descripcion ?? '');
+  const [finca,      setFinca]      = useState(editData?.finca ?? '');
+  const [parcelId,   setParcelId]   = useState(editData?.parcel_id ?? '');
+  const [estado,     setEstado]     = useState(editData?.estado ?? 'abierta');
+  const [fResolucion,setFResolucion] = useState(editData?.fecha_resolucion ?? '');
+  const [notasResol, setNotasResol] = useState(editData?.notas_resolucion ?? '');
+  const [foto,       setFoto]       = useState<File | null>(null);
+  const [saving,     setSaving]     = useState(false);
+
+  const { data: parcelas = [] } = useParcelas(finca || undefined);
+  const addMut    = useAddIncidencia();
+  const updateMut = useUpdateIncidencia();
+  const addPlan   = useAddTrabajoPlanificado();
+
+  const handleSubmit = async () => {
+    if (!titulo.trim()) return;
+    setSaving(true);
+    try {
+      let foto_url = editData?.foto_url ?? null;
+      if (foto) foto_url = await uploadImage(foto, 'parcel-images', buildStoragePath('incidencias', foto));
+
+      const payload = {
+        urgente,
+        titulo,
+        descripcion: descripcion || null,
+        finca:       finca || null,
+        parcel_id:   parcelId || null,
+        estado:      estado as 'abierta' | 'en_proceso' | 'resuelta',
+        foto_url,
+        fecha:       editData?.fecha ?? hoy(),
+        fecha_resolucion: estado === 'resuelta' ? (fResolucion || hoy()) : null,
+        notas_resolucion: estado === 'resuelta' ? (notasResol || null) : null,
+        created_by:  'JuanPe',
+      };
+
+      if (isEdit) {
+        await updateMut.mutateAsync({ id: editData!.id, ...payload });
+      } else {
+        await addMut.mutateAsync(payload);
+        // Si urgente → crear trabajo planificado para mañana
+        if (urgente) {
+          await addPlan.mutateAsync({
+            tipo_bloque:          'mano_obra_interna',
+            fecha:                addDays(hoy(), 1),
+            hora_inicio:          null,
+            hora_fin:             null,
+            finca:                finca || null,
+            parcel_id:            parcelId || null,
+            tipo_trabajo:         `Incidencia: ${titulo}`,
+            num_operarios:        null,
+            nombres_operarios:    null,
+            foto_url:             null,
+            notas:                descripcion || null,
+            created_by:           'JuanPe',
+            estado_planificacion: 'borrador',
+            prioridad:            'alta',
+            fecha_planificada:    addDays(hoy(), 1),
+            fecha_original:       null,
+            recursos_personal:    null,
+            tractor_id:           null,
+            apero_id:             null,
+            materiales_previstos: null,
+          });
+        }
+      }
+      onClose();
+    } finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-md shadow-2xl flex flex-col max-h-[92vh]">
+        <div className="flex items-center gap-3 px-5 py-3 border-b border-white/10 shrink-0">
+          <AlertTriangle className="w-4 h-4 text-amber-400" />
+          <p className="flex-1 text-[11px] font-black text-white uppercase tracking-wider">
+            {isEdit ? 'Editar incidencia' : 'Nueva incidencia'}
+          </p>
+          <button onClick={onClose} className="text-slate-500 hover:text-white"><X className="w-4 h-4" /></button>
+        </div>
+        <div className="p-5 space-y-3 overflow-y-auto flex-1">
+          {/* Toggle urgente */}
+          <div className="flex items-center gap-3 p-3 rounded-lg border border-white/10 bg-slate-800/50">
+            <button onClick={() => setUrgente(p => !p)}
+              className={`w-10 h-5 rounded-full relative transition-colors ${urgente ? 'bg-red-500' : 'bg-slate-600'}`}
+            >
+              <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${urgente ? 'left-5' : 'left-0.5'}`} />
+            </button>
+            <div>
+              <p className="text-[10px] font-black text-white uppercase tracking-wider">{urgente ? 'URGENTE' : 'No urgente'}</p>
+              <p className="text-[9px] text-slate-500">{urgente ? 'Generará trabajo para mañana' : 'Se resuelve en próximos días'}</p>
+            </div>
+          </div>
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Título *</label>
+            <input type="text" value={titulo} onChange={e => setTitulo(e.target.value)}
+              placeholder="Descripción breve…" className={INPUT} />
+          </div>
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Descripción</label>
+            <AudioInput value={descripcion} onChange={setDescripcion} rows={3} placeholder="Detalle adicional…" />
+          </div>
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Finca</label>
+            <SelectWithOther value={finca} onChange={v => { setFinca(v); setParcelId(''); }} options={FINCAS} placeholder="Sin finca específica" />
+          </div>
+          {finca && parcelas.length > 0 && (
+            <div>
+              <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Parcela</label>
+              <SelectWithOther value={parcelId} onChange={setParcelId} options={parcelas.map(p => p.parcel_id)} placeholder="Finca completa" />
+            </div>
+          )}
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Estado</label>
+            <select value={estado} onChange={e => setEstado(e.target.value)} className={INPUT}>
+              <option value="abierta">Abierta</option>
+              <option value="en_proceso">En proceso</option>
+              <option value="resuelta">Resuelta</option>
+            </select>
+          </div>
+          {estado === 'resuelta' && (
+            <>
+              <div>
+                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Fecha resolución</label>
+                <input type="date" value={fResolucion} onChange={e => setFResolucion(e.target.value)} className={INPUT} />
+              </div>
+              <div>
+                <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Notas resolución</label>
+                <AudioInput value={notasResol} onChange={setNotasResol} rows={2} placeholder="Cómo se resolvió…" />
+              </div>
+            </>
+          )}
+          <div>
+            <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">
+              Foto {!isEdit && <span className="text-red-400">(obligatoria)</span>}
+            </label>
+            <PhotoAttachment value={foto} onChange={setFoto} existingUrl={editData?.foto_url} />
+          </div>
+        </div>
+        <div className="px-5 py-3 border-t border-white/10 flex gap-2 shrink-0">
+          <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-white/10 text-[10px] font-black text-slate-400 hover:text-white uppercase tracking-widest">Cancelar</button>
+          <button onClick={handleSubmit} disabled={!titulo.trim() || (!isEdit && !foto) || saving}
+            className="flex-1 py-2 rounded-lg bg-amber-500 text-[10px] font-black uppercase tracking-widest text-black disabled:opacity-40"
+          >{saving ? 'Guardando…' : isEdit ? 'Actualizar' : 'Registrar'}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Tarjeta Incidencia ────────────────────────────────────────
+function TarjetaIncidencia({ inc, onEdit }: { inc: TrabajoIncidencia; onEdit: () => void }) {
+  const deleteMut = useDeleteIncidencia();
+  const colorEstado = inc.estado === 'resuelta' ? '#34d399' : inc.urgente ? '#ef4444' : '#f59e0b';
+  return (
+    <div className={`p-3 rounded-lg border bg-slate-800/40 space-y-1.5 ${inc.urgente && inc.estado !== 'resuelta' ? 'border-red-500/40' : 'border-white/10'}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2">
           {inc.urgente && inc.estado !== 'resuelta' && <AlertTriangle className="w-3 h-3 text-red-400 shrink-0" />}
           <p className="text-[11px] font-bold text-white leading-tight">{inc.titulo}</p>
         </div>
-        <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded shrink-0"
-          style={{ color: colorEstado, backgroundColor: colorEstado + '18' }}
-        >
-          {inc.estado}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded border"
+            style={{ color: colorEstado, borderColor: colorEstado + '60' }}>
+            {inc.estado}
+          </span>
+          <RecordActions onEdit={onEdit} onDelete={() => deleteMut.mutate(inc.id)} deleteConfirmText="Eliminar incidencia" />
+        </div>
       </div>
-
-      {inc.finca && (
-        <span className="flex items-center gap-1 text-[9px] text-slate-400">
-          <MapPin className="w-2.5 h-2.5" />{inc.finca}
-        </span>
-      )}
+      {inc.finca && <span className="flex items-center gap-1 text-[9px] text-slate-400"><MapPin className="w-2.5 h-2.5" />{inc.finca}</span>}
       {inc.descripcion && <p className="text-[9px] text-slate-400">{inc.descripcion}</p>}
       {inc.foto_url && <img src={inc.foto_url} alt="foto" className="w-full max-h-28 object-cover rounded-lg opacity-80" />}
+    </div>
+  );
+}
 
-      {inc.estado !== 'resuelta' && (
-        <div className="flex gap-2 pt-1">
-          {inc.estado === 'abierta' && (
-            <button onClick={() => updateMut.mutate({ id: inc.id, estado: 'en_proceso' })}
-              className="text-[9px] font-black text-amber-400 hover:text-amber-300 uppercase tracking-widest"
-            >En proceso</button>
-          )}
-          <button onClick={() => updateMut.mutate({ id: inc.id, estado: 'resuelta', fecha_resolucion: new Date().toISOString().slice(0, 10) })}
-            className="text-[9px] font-black text-green-400 hover:text-green-300 uppercase tracking-widest"
-          >Resolver</button>
+// ── Modal Cierre Resultado ────────────────────────────────────
+interface CierreResultado {
+  ejecutados: number;
+  arrastrados: number;
+  incidenciasNuevasTrabajo: number;
+  pendientes: number;
+  fechaMañana: string;
+}
+function ModalCierreResultado({ resultado, onClose, onVerMañana }: {
+  resultado: CierreResultado;
+  onClose: () => void;
+  onVerMañana: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[400] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-sm shadow-2xl">
+        <div className="px-5 py-4 border-b border-white/10">
+          <p className="text-[11px] font-black text-white uppercase tracking-wider">Jornada cerrada</p>
         </div>
-      )}
+        <div className="p-5 space-y-3">
+          {[
+            { label: 'Trabajos ejecutados',              value: resultado.ejecutados,                color: 'text-green-400' },
+            { label: 'Trabajos arrastrados a mañana',    value: resultado.arrastrados,               color: resultado.arrastrados > 0 ? 'text-amber-400' : 'text-slate-400' },
+            { label: 'Incidencias que generaron trabajo',value: resultado.incidenciasNuevasTrabajo,  color: resultado.incidenciasNuevasTrabajo > 0 ? 'text-red-400' : 'text-slate-400' },
+            { label: 'Trabajos pendientes sin arrastrar', value: resultado.pendientes - resultado.arrastrados, color: 'text-slate-400' },
+          ].map(k => (
+            <div key={k.label} className="flex items-center justify-between">
+              <span className="text-[10px] text-slate-400">{k.label}</span>
+              <span className={`text-[14px] font-black ${k.color}`}>{k.value}</span>
+            </div>
+          ))}
+        </div>
+        <div className="px-5 py-3 border-t border-white/10 flex gap-2">
+          <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-white/10 text-[10px] font-black text-slate-400 hover:text-white uppercase tracking-widest">Cerrar</button>
+          <button onClick={onVerMañana}
+            className="flex-1 py-2 rounded-lg bg-[#38bdf8] text-[10px] font-black uppercase tracking-widest text-black"
+          >Ver planning de mañana</button>
+        </div>
+      </div>
     </div>
   );
 }
 
 // ── Componente principal ──────────────────────────────────────
+type TabPrincipal = 'diaria' | 'campana' | 'incidencias';
+type FiltroInc = 'todas' | 'urgentes' | 'no_urgentes';
 
 export default function Trabajos() {
   const navigate  = useNavigate();
   const { theme } = useTheme();
   const isDark    = theme === 'dark';
 
-  const [activeBloque,    setActiveBloque]    = useState<TipoBloque | null>(null);
-  const [modalRegistro,   setModalRegistro]   = useState<TipoBloque | null>(null);
-  const [modalIncidencia, setModalIncidencia] = useState(false);
-  const [tabIncidencias,  setTabIncidencias]  = useState(false);
-  const [generandoPdf, setGenerandoPdf] = useState(false);
-  const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
+  const [tab,               setTab]               = useState<TabPrincipal>('diaria');
+  const [fechaDia,          setFechaDia]          = useState(hoy());
+  const [modalTrabajo,      setModalTrabajo]      = useState(false);
+  const [editTrabajo,       setEditTrabajo]       = useState<TrabajoRegistro | null>(null);
+  const [modalCampana,      setModalCampana]      = useState(false);
+  const [editCampana,       setEditCampana]       = useState<PlanificacionCampana | null>(null);
+  const [modalIncidencia,   setModalIncidencia]   = useState(false);
+  const [editIncidencia,    setEditIncidencia]    = useState<TrabajoIncidencia | null>(null);
+  const [filtroInc,         setFiltroInc]         = useState<FiltroInc>('todas');
+  const [cierreResultado,   setCierreResultado]   = useState<CierreResultado | null>(null);
+  const [pdfMenuOpen,       setPdfMenuOpen]       = useState(false);
+  const [generandoPdf,      setGenerandoPdf]      = useState(false);
   const pdfMenuRef = useRef<HTMLDivElement>(null);
 
-  const { data: kpis }        = useKPIsTrabajos();
-  const { data: incidencias } = useIncidencias();
-  const { data: registros }   = useRegistrosTrabajos(activeBloque ?? undefined);
-  const { data: registrosTodos = [] } = useRegistrosTrabajos();
+  const { data: kpis }          = useKPIsTrabajos();
+  const { data: incidencias = [] } = useIncidencias();
+  const { data: campanas = [] }  = usePlanificacionCampana();
+  const { data: trabajosDia = [] } = usePlanificacionDia(fechaDia);
+  const cerrarJornada = useCerrarJornada();
 
-  const incAbiertas = (incidencias ?? []).filter(i => i.estado !== 'resuelta').length;
-  const incUrgentes = (incidencias ?? []).filter(i => i.urgente && i.estado !== 'resuelta').length;
+  const incAbiertas = incidencias.filter(i => i.estado !== 'resuelta').length;
+  const incUrgentes = incidencias.filter(i => i.urgente && i.estado !== 'resuelta').length;
+
+  const incFiltradas = useMemo(() => {
+    if (filtroInc === 'urgentes')    return incidencias.filter(i => i.urgente && i.estado !== 'resuelta');
+    if (filtroInc === 'no_urgentes') return incidencias.filter(i => !i.urgente);
+    return incidencias;
+  }, [incidencias, filtroInc]);
 
   useEffect(() => {
     if (!pdfMenuOpen) return;
-    function onDown(ev: MouseEvent) {
-      if (pdfMenuRef.current && !pdfMenuRef.current.contains(ev.target as Node)) {
-        setPdfMenuOpen(false);
-      }
-    }
+    const onDown = (ev: MouseEvent) => {
+      if (pdfMenuRef.current && !pdfMenuRef.current.contains(ev.target as Node)) setPdfMenuOpen(false);
+    };
     document.addEventListener('mousedown', onDown);
     return () => document.removeEventListener('mousedown', onDown);
   }, [pdfMenuOpen]);
 
-  async function generarTrabajosCompleto() {
+  const handleCerrarJornada = async () => {
+    if (!confirm(`¿Cerrar la jornada del ${fmtFecha(fechaDia)}?`)) return;
+    const resultado = await cerrarJornada.mutateAsync(fechaDia);
+    setCierreResultado(resultado);
+  };
+
+  // ── PDF ───────────────────────────────────────────────────
+  async function generarPDF() {
     const ref = new Date();
-    const fs = ref.toISOString().slice(0, 10);
-    const incs = incidencias ?? [];
-    const ordenRegs = [...registrosTodos].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.created_at.localeCompare(a.created_at));
+    const fs  = ref.toISOString().slice(0, 10);
     await generarPDFCorporativoBase({
-      titulo: 'TRABAJOS',
-      subtitulo: 'Informe completo — registros e incidencias',
+      titulo: 'PLANIFICACIÓN DE TRABAJOS',
+      subtitulo: 'Resumen planificación diaria, campaña e incidencias',
       fecha: ref,
-      filename: `Trabajos_Completo_${fs}.pdf`,
+      filename: `Planificacion_${fs}.pdf`,
       accentColor: PDF_COLORS.amber,
       bloques: [
         ctx => {
-          pdfCorporateSection(ctx, 'Registros de trabajo');
-          if (ordenRegs.length === 0) {
-            ctx.checkPage(8);
-            ctx.doc.setFontSize(9);
-            ctx.doc.setTextColor(100, 116, 139);
-            ctx.doc.text('Sin registros.', PDF_MARGIN, ctx.y);
-            ctx.y += 6;
-            return;
+          pdfCorporateSection(ctx, `Trabajos del día ${fechaDia}`);
+          if (trabajosDia.length === 0) {
+            ctx.checkPage(8); ctx.doc.setFontSize(9); ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin trabajos.', PDF_MARGIN, ctx.y); ctx.y += 6; return;
           }
-          pdfCorporateTable(
-            ctx,
-            ['FECHA', 'FINCA', 'PARCELA', 'TIPO TRABAJO', 'OPERARIOS', 'HORAS'],
-            [24, 34, 28, 44, 34, 18],
-            ordenRegs.map(r => [
-              fmtFechaTabla(r.fecha),
-              r.finca ?? '—',
-              r.parcel_id ?? '—',
-              r.tipo_trabajo,
-              operariosCelda(r),
-              horasRegistro(r),
-            ]),
-          );
+          pdfCorporateTable(ctx,
+            ['PRIORIDAD', 'TIPO TRABAJO', 'FINCA', 'PERSONAL', 'ESTADO'],
+            [22, 56, 38, 40, 26],
+            trabajosDia.map(t => [
+              t.prioridad ?? '—', t.tipo_trabajo, t.finca ?? '—',
+              t.nombres_operarios ?? '—', t.estado_planificacion ?? '—',
+            ]));
+        },
+        ctx => {
+          pdfCorporateSection(ctx, 'Planificación campaña');
+          if (campanas.length === 0) {
+            ctx.checkPage(8); ctx.doc.setFontSize(9); ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin campañas.', PDF_MARGIN, ctx.y); ctx.y += 6; return;
+          }
+          pdfCorporateTable(ctx,
+            ['FINCA', 'CULTIVO', 'PLANTACIÓN', 'COSECHA', 'ESTADO'],
+            [36, 40, 30, 30, 46],
+            campanas.map(c => [
+              c.finca, c.cultivo,
+              c.fecha_prevista_plantacion ?? '—', c.fecha_estimada_cosecha ?? '—', c.estado,
+            ]));
         },
         ctx => {
           pdfCorporateSection(ctx, 'Incidencias');
-          if (incs.length === 0) {
-            ctx.checkPage(8);
-            ctx.doc.setFontSize(9);
-            ctx.doc.setTextColor(100, 116, 139);
-            ctx.doc.text('Sin incidencias.', PDF_MARGIN, ctx.y);
-            ctx.y += 6;
-            return;
+          if (incidencias.length === 0) {
+            ctx.checkPage(8); ctx.doc.setFontSize(9); ctx.doc.setTextColor(100, 116, 139);
+            ctx.doc.text('Sin incidencias.', PDF_MARGIN, ctx.y); ctx.y += 6; return;
           }
-          pdfCorporateTable(
-            ctx,
+          pdfCorporateTable(ctx,
             ['FECHA', 'FINCA', 'TÍTULO', 'ESTADO', 'URGENTE'],
             [24, 34, 76, 28, 20],
-            incs.map(i => [
-              fmtFechaTabla(i.fecha),
-              i.finca ?? '—',
-              i.titulo,
-              i.estado,
-              i.urgente ? 'Sí' : 'No',
-            ]),
-          );
+            incidencias.map(i => [
+              i.fecha, i.finca ?? '—', i.titulo, i.estado, i.urgente ? 'Sí' : 'No',
+            ]));
         },
       ],
     });
-  }
-
-  async function generarSoloRegistros() {
-    const ref = new Date();
-    const fs = ref.toISOString().slice(0, 10);
-    const ordenRegs = [...registrosTodos].sort((a, b) => b.fecha.localeCompare(a.fecha) || b.created_at.localeCompare(a.created_at));
-    await generarPDFCorporativoBase({
-      titulo: 'TRABAJOS — REGISTROS',
-      subtitulo: 'Registros de trabajo',
-      fecha: ref,
-      filename: `Trabajos_Registros_${fs}.pdf`,
-      accentColor: PDF_COLORS.amber,
-      bloques: [
-        ctx => {
-          pdfCorporateSection(ctx, 'Registros de trabajo');
-          if (ordenRegs.length === 0) {
-            ctx.checkPage(8);
-            ctx.doc.setFontSize(9);
-            ctx.doc.setTextColor(100, 116, 139);
-            ctx.doc.text('Sin registros.', PDF_MARGIN, ctx.y);
-            ctx.y += 6;
-            return;
-          }
-          pdfCorporateTable(
-            ctx,
-            ['FECHA', 'FINCA', 'PARCELA', 'TIPO TRABAJO', 'OPERARIOS', 'HORAS'],
-            [24, 34, 28, 44, 34, 18],
-            ordenRegs.map(r => [
-              fmtFechaTabla(r.fecha),
-              r.finca ?? '—',
-              r.parcel_id ?? '—',
-              r.tipo_trabajo,
-              operariosCelda(r),
-              horasRegistro(r),
-            ]),
-          );
-        },
-      ],
-    });
-  }
-
-  async function generarSoloIncidenciasTrabajos() {
-    const ref = new Date();
-    const fs = ref.toISOString().slice(0, 10);
-    const incs = incidencias ?? [];
-    await generarPDFCorporativoBase({
-      titulo: 'TRABAJOS — INCIDENCIAS',
-      subtitulo: 'Todas las incidencias',
-      fecha: ref,
-      filename: `Trabajos_Incidencias_${fs}.pdf`,
-      accentColor: PDF_COLORS.amber,
-      bloques: [
-        ctx => {
-          pdfCorporateSection(ctx, 'Incidencias');
-          if (incs.length === 0) {
-            ctx.checkPage(8);
-            ctx.doc.setFontSize(9);
-            ctx.doc.setTextColor(100, 116, 139);
-            ctx.doc.text('Sin incidencias.', PDF_MARGIN, ctx.y);
-            ctx.y += 6;
-            return;
-          }
-          pdfCorporateTable(
-            ctx,
-            ['FECHA', 'FINCA', 'TÍTULO', 'ESTADO', 'URGENTE'],
-            [24, 34, 76, 28, 20],
-            incs.map(i => [
-              fmtFechaTabla(i.fecha),
-              i.finca ?? '—',
-              i.titulo,
-              i.estado,
-              i.urgente ? 'Sí' : 'No',
-            ]),
-          );
-        },
-      ],
-    });
-  }
-
-  async function generarIncidenciasAbiertas() {
-    const ref = new Date();
-    const fs = ref.toISOString().slice(0, 10);
-    const abiertas = (incidencias ?? []).filter(i => i.estado !== 'resuelta');
-    await generarPDFCorporativoBase({
-      titulo: 'TRABAJOS — INCIDENCIAS ABIERTAS',
-      subtitulo: 'Estado distinto de resuelta',
-      fecha: ref,
-      filename: `Trabajos_Incidencias_Abiertas_${fs}.pdf`,
-      accentColor: PDF_COLORS.amber,
-      bloques: [
-        ctx => {
-          pdfCorporateSection(ctx, 'Incidencias abiertas');
-          if (abiertas.length === 0) {
-            ctx.checkPage(8);
-            ctx.doc.setFontSize(9);
-            ctx.doc.setTextColor(100, 116, 139);
-            ctx.doc.text('No hay incidencias abiertas.', PDF_MARGIN, ctx.y);
-            ctx.y += 6;
-            return;
-          }
-          pdfCorporateTable(
-            ctx,
-            ['FECHA', 'FINCA', 'TÍTULO', 'ESTADO', 'URGENTE'],
-            [24, 34, 76, 28, 20],
-            abiertas.map(i => [
-              fmtFechaTabla(i.fecha),
-              i.finca ?? '—',
-              i.titulo,
-              i.estado,
-              i.urgente ? 'Sí' : 'No',
-            ]),
-          );
-        },
-      ],
-    });
-  }
-
-  async function generarResumenTrabajos() {
-    const ref = new Date();
-    const fs = ref.toISOString().slice(0, 10);
-    const nRegs = registrosTodos.length;
-    const nAb = incAbiertas;
-    const nUr = incUrgentes;
-    await generarPDFCorporativoBase({
-      titulo: 'TRABAJOS — RESUMEN',
-      subtitulo: 'Indicadores operativos',
-      fecha: ref,
-      filename: `Trabajos_Resumen_${fs}.pdf`,
-      accentColor: PDF_COLORS.amber,
-      bloques: [
-        ctx => {
-          pdfCorporateSection(ctx, 'Resumen operativo');
-          pdfCorporateTable(
-            ctx,
-            ['INDICADOR', 'VALOR'],
-            [95, 87],
-            [
-              ['Total registros', String(nRegs)],
-              ['Incidencias abiertas', String(nAb)],
-              ['Incidencias urgentes', String(nUr)],
-            ],
-          );
-        },
-      ],
-    });
-  }
-
-  async function onElegirPdf(op: 1 | 2 | 3 | 4 | 5) {
-    setPdfMenuOpen(false);
-    setGenerandoPdf(true);
-    try {
-      if (op === 1) await generarTrabajosCompleto();
-      else if (op === 2) await generarSoloRegistros();
-      else if (op === 3) await generarSoloIncidenciasTrabajos();
-      else if (op === 4) await generarIncidenciasAbiertas();
-      else await generarResumenTrabajos();
-    } finally {
-      setGenerandoPdf(false);
-    }
   }
 
   return (
@@ -1010,56 +987,31 @@ export default function Trabajos() {
         </button>
         <span className="text-slate-600">|</span>
         <Briefcase className="w-4 h-4 text-amber-400" />
-        <span className="text-[11px] font-black uppercase tracking-wider">Trabajos</span>
+        <div>
+          <p className="text-[11px] font-black uppercase tracking-wider leading-tight">Planificación de Trabajos</p>
+          <p className="text-[8px] text-slate-500 leading-tight">Gestión y seguimiento de trabajos diarios</p>
+        </div>
 
         <div className="ml-auto flex items-center gap-2">
           {incUrgentes > 0 && (
-            <button onClick={() => setTabIncidencias(true)}
+            <button onClick={() => setTab('incidencias')}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[9px] font-black uppercase tracking-widest animate-pulse"
             >
-              <AlertTriangle className="w-3 h-3" />
-              {incUrgentes} urgente{incUrgentes > 1 ? 's' : ''}
+              <AlertTriangle className="w-3 h-3" />{incUrgentes} urgente{incUrgentes > 1 ? 's' : ''}
             </button>
           )}
           <div className="relative" ref={pdfMenuRef}>
-            <button
-              type="button"
-              onClick={() => setPdfMenuOpen(o => !o)}
-              disabled={generandoPdf}
+            <button type="button" onClick={() => setPdfMenuOpen(o => !o)} disabled={generandoPdf}
               className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#38bdf8]/20 bg-[#38bdf8]/5 hover:bg-[#38bdf8]/10 text-[#38bdf8] text-[9px] font-black uppercase tracking-widest transition-colors disabled:opacity-50"
             >
-              {generandoPdf
-                ? <span className="w-3 h-3 border-2 border-[#38bdf8]/20 border-t-[#38bdf8] rounded-full animate-spin" />
-                : null}
+              {generandoPdf ? <span className="w-3 h-3 border-2 border-[#38bdf8]/20 border-t-[#38bdf8] rounded-full animate-spin" /> : null}
               PDF {pdfMenuOpen ? '▲' : '▼'}
             </button>
             {pdfMenuOpen && (
-              <div
-                className={`absolute right-0 top-full z-[70] mt-1 min-w-[248px] rounded-lg border shadow-lg py-1 ${
-                  isDark
-                    ? 'border-slate-600 bg-slate-900 text-slate-100 shadow-black/40'
-                    : 'border-slate-200 bg-white text-slate-800 shadow-slate-400/20'
-                }`}
-              >
-                {[
-                  { k: 1 as const, label: 'Informe completo trabajos' },
-                  { k: 2 as const, label: 'Solo registros de trabajo' },
-                  { k: 3 as const, label: 'Solo incidencias' },
-                  { k: 4 as const, label: 'Incidencias abiertas' },
-                  { k: 5 as const, label: 'Resumen operativo' },
-                ].map(({ k, label }) => (
-                  <button
-                    key={k}
-                    type="button"
-                    disabled={generandoPdf}
-                    onClick={() => onElegirPdf(k)}
-                    className={`w-full px-3 py-2.5 text-left text-xs font-medium transition-colors disabled:opacity-50 ${
-                      isDark ? 'hover:bg-slate-800 text-slate-200' : 'hover:bg-slate-50 text-slate-800'
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
+              <div className={`absolute right-0 top-full z-[70] mt-1 min-w-[200px] rounded-lg border shadow-lg py-1 ${isDark ? 'border-slate-600 bg-slate-900 text-slate-100 shadow-black/40' : 'border-slate-200 bg-white text-slate-800'}`}>
+                <button type="button" disabled={generandoPdf} onClick={async () => { setPdfMenuOpen(false); setGenerandoPdf(true); try { await generarPDF(); } finally { setGenerandoPdf(false); } }}
+                  className={`w-full px-3 py-2.5 text-left text-xs font-medium transition-colors disabled:opacity-50 ${isDark ? 'hover:bg-slate-800' : 'hover:bg-slate-50'}`}
+                >Informe completo</button>
               </div>
             )}
           </div>
@@ -1069,131 +1021,182 @@ export default function Trabajos() {
       <main className="flex-1 px-4 py-5 max-w-4xl mx-auto w-full">
 
         {/* KPIs */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        <div className="grid grid-cols-3 gap-3 mb-5">
           {[
-            { label: 'Registros',            value: kpis?.totalRegistros ?? 0,                        color: '#f59e0b' },
-            { label: 'Incidencias abiertas', value: incAbiertas,                                       color: incAbiertas > 0 ? '#ef4444' : '#34d399' },
-            { label: 'Urgentes',             value: incUrgentes,                                       color: incUrgentes > 0 ? '#ef4444' : '#64748b' },
-          ].map(kpi => (
-            <div key={kpi.label} className={`${isDark ? 'bg-slate-900/60 border-white/10' : 'bg-white border-slate-200'} border rounded-xl p-3 text-center`}>
-              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{kpi.label}</p>
-              <p className="text-2xl font-black" style={{ color: kpi.color }}>{kpi.value}</p>
+            { label: 'Planificados hoy', value: trabajosDia.length,  color: '#38bdf8' },
+            { label: 'Inc. abiertas',    value: incAbiertas,          color: incAbiertas > 0 ? '#ef4444' : '#34d399' },
+            { label: 'Urgentes',         value: incUrgentes,          color: incUrgentes > 0 ? '#ef4444' : '#64748b' },
+          ].map(k => (
+            <div key={k.label} className={`${isDark ? 'bg-slate-900/60 border-white/10' : 'bg-white border-slate-200'} border rounded-xl p-3 text-center`}>
+              <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">{k.label}</p>
+              <p className="text-2xl font-black" style={{ color: k.color }}>{k.value}</p>
             </div>
           ))}
         </div>
 
-        {/* TABS */}
+        {/* TABS PRINCIPALES */}
         <div className={`flex gap-1 mb-5 ${isDark ? 'bg-slate-900/60 border-white/10' : 'bg-white border-slate-200'} border rounded-xl p-1`}>
-          <button onClick={() => setTabIncidencias(false)}
-            className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors ${
-              !tabIncidencias ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'text-slate-400 hover:text-slate-300'
-            }`}
-          >
-            <ClipboardList className="w-3.5 h-3.5 inline mr-1.5" />Registros
-          </button>
-          <button onClick={() => setTabIncidencias(true)}
-            className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors relative ${
-              tabIncidencias ? 'bg-red-500/10 text-red-400 border border-red-500/20' : 'text-slate-400 hover:text-slate-300'
-            }`}
-          >
-            <AlertTriangle className="w-3.5 h-3.5 inline mr-1.5" />Incidencias
-            {incAbiertas > 0 && (
-              <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-[8px] font-black text-white">
-                {incAbiertas}
-              </span>
-            )}
-          </button>
+          {([
+            { id: 'diaria',      label: 'Planificación diaria', icon: Calendar },
+            { id: 'campana',     label: 'Campaña',              icon: Leaf },
+            { id: 'incidencias', label: 'Incidencias',          icon: AlertTriangle },
+          ] as { id: TabPrincipal; label: string; icon: React.ElementType }[]).map(t => {
+            const Icon = t.icon;
+            const active = tab === t.id;
+            return (
+              <button key={t.id} onClick={() => setTab(t.id)}
+                className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors relative flex items-center justify-center gap-1.5 ${
+                  active ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'text-slate-400 hover:text-slate-300'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />{t.label}
+                {t.id === 'incidencias' && incAbiertas > 0 && (
+                  <span className="ml-0.5 inline-flex items-center justify-center w-4 h-4 rounded-full bg-red-500 text-[8px] font-black text-white">{incAbiertas}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
 
-        {!tabIncidencias ? (
+        {/* ── TAB PLANIFICACIÓN DIARIA ── */}
+        {tab === 'diaria' && (
           <>
-            {/* 4 BLOQUES */}
-            <div className="grid grid-cols-2 gap-3 mb-5 sm:grid-cols-4">
-              {BLOQUES.map(b => {
-                const Icon  = b.icon;
-                const activo = activeBloque === b.id;
-                return (
-                  <button key={b.id} onClick={() => setActiveBloque(activo ? null : b.id)}
-                    className={`relative group p-4 rounded-xl border text-left transition-all ${
-                      activo
-                        ? 'shadow-lg'
-                        : `${isDark ? 'bg-slate-900/50 border-white/10 hover:border-white/20' : 'bg-white border-slate-200 hover:border-slate-300'}`
-                    }`}
-                    style={activo ? { backgroundColor: b.color + '15', borderColor: b.color + '60' } : {}}
-                  >
-                    <div className="w-8 h-8 rounded-lg flex items-center justify-center mb-2" style={{ backgroundColor: b.color + '20' }}>
-                      <Icon className="w-4 h-4" style={{ color: b.color }} />
-                    </div>
-                    <p className="text-[10px] font-black uppercase tracking-wide leading-tight">{b.label}</p>
-                    <p className="text-[8px] text-slate-400 mt-0.5">{b.desc}</p>
-                    <button onClick={e => { e.stopPropagation(); setModalRegistro(b.id); }}
-                      className="mt-2 flex items-center gap-1 text-[9px] font-black uppercase tracking-widest transition-colors hover:opacity-80"
-                      style={{ color: b.color }}
-                    >
-                      <Plus className="w-3 h-3" />Añadir
-                    </button>
-                  </button>
-                );
-              })}
-            </div>
+            <PanelDia
+              fecha={fechaDia}
+              onPrev={() => setFechaDia(d => addDays(d, -1))}
+              onNext={() => setFechaDia(d => addDays(d, 1))}
+              onCerrar={handleCerrarJornada}
+              isDark={isDark}
+            />
 
-            {/* Botones acción */}
-            <div className="flex gap-3 mb-5">
-              <button onClick={() => setModalIncidencia(true)}
-                className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-colors"
+            <hr className="border-white/10 mb-4" />
+
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                {trabajosDia.length} trabajo{trabajosDia.length !== 1 ? 's' : ''} — {fmtFecha(fechaDia)}
+              </p>
+              <button
+                onClick={() => { setEditTrabajo(null); setModalTrabajo(true); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#38bdf8]/10 border border-[#38bdf8]/30 text-[#38bdf8] text-[9px] font-black uppercase tracking-widest hover:bg-[#38bdf8]/20 transition-colors"
               >
-                <AlertTriangle className="w-3.5 h-3.5" />Registrar incidencia
+                <Plus className="w-3 h-3" />Nuevo trabajo
               </button>
-              {activeBloque && (
-                <button onClick={() => setActiveBloque(null)}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg border border-white/10 text-slate-400 text-[10px] font-black uppercase tracking-widest hover:text-white transition-colors"
-                >
-                  <X className="w-3 h-3" />Ver todos
-                </button>
-              )}
             </div>
 
-            {/* Lista registros */}
-            <div className="space-y-2">
-              {(registros ?? []).length === 0 ? (
-                <div className="text-center py-12 text-slate-400">
-                  <ClipboardList className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-xs font-black uppercase tracking-widest">Sin registros</p>
-                  <p className="text-[10px] mt-1">Usa el botón Añadir en cada bloque</p>
-                </div>
-              ) : (
-                (registros ?? []).map(r => <TarjetaRegistro key={r.id} r={r} />)
-              )}
-            </div>
+            {trabajosDia.length === 0 ? (
+              <div className="text-center py-12 text-slate-400">
+                <Calendar className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-xs font-black uppercase tracking-widest">Sin trabajos planificados</p>
+                <p className="text-[10px] mt-1">Añade trabajos para este día</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {trabajosDia.map(t => (
+                  <TarjetaTrabajoPlan
+                    key={t.id}
+                    t={t}
+                    onEdit={() => { setEditTrabajo(t); setModalTrabajo(true); }}
+                  />
+                ))}
+              </div>
+            )}
           </>
-        ) : (
+        )}
+
+        {/* ── TAB CAMPAÑA ── */}
+        {tab === 'campana' && (
           <>
             <div className="flex items-center justify-between mb-4">
-              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
-                {(incidencias ?? []).length} incidencias
-              </p>
-              <button onClick={() => setModalIncidencia(true)}
+              <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{campanas.length} campañas</p>
+              <button
+                onClick={() => { setEditCampana(null); setModalCampana(true); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 text-[9px] font-black uppercase tracking-widest hover:bg-green-500/20 transition-colors"
+              >
+                <Plus className="w-3 h-3" />Nueva campaña
+              </button>
+            </div>
+            {campanas.length === 0 ? (
+              <div className="text-center py-12 text-slate-400">
+                <Leaf className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-xs font-black uppercase tracking-widest">Sin campañas planificadas</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {campanas.map(c => (
+                  <TarjetaCampana key={c.id} c={c} onEdit={() => { setEditCampana(c); setModalCampana(true); }} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ── TAB INCIDENCIAS ── */}
+        {tab === 'incidencias' && (
+          <>
+            <div className="flex items-center justify-between mb-3">
+              {/* Filtros */}
+              <div className="flex gap-1 p-1 bg-slate-900/60 border border-white/10 rounded-lg">
+                {(['todas', 'urgentes', 'no_urgentes'] as FiltroInc[]).map(f => (
+                  <button key={f} onClick={() => setFiltroInc(f)}
+                    className={`px-2.5 py-1 rounded text-[9px] font-black uppercase tracking-widest transition-colors ${filtroInc === f ? 'bg-amber-500/20 text-amber-400' : 'text-slate-400 hover:text-slate-300'}`}
+                  >{f.replace('_', ' ')}</button>
+                ))}
+              </div>
+              <button
+                onClick={() => { setEditIncidencia(null); setModalIncidencia(true); }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[9px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-colors"
               >
                 <Plus className="w-3 h-3" />Nueva
               </button>
             </div>
-            <div className="space-y-2">
-              {(incidencias ?? []).length === 0 ? (
-                <div className="text-center py-12 text-slate-400">
-                  <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                  <p className="text-xs font-black uppercase tracking-widest">Sin incidencias</p>
-                </div>
-              ) : (
-                (incidencias ?? []).map(i => <TarjetaIncidencia key={i.id} inc={i} />)
-              )}
-            </div>
+
+            {incFiltradas.length === 0 ? (
+              <div className="text-center py-12 text-slate-400">
+                <CheckCircle2 className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                <p className="text-xs font-black uppercase tracking-widest">Sin incidencias</p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {incFiltradas.map(i => (
+                  <TarjetaIncidencia key={i.id} inc={i} onEdit={() => { setEditIncidencia(i); setModalIncidencia(true); }} />
+                ))}
+              </div>
+            )}
           </>
         )}
       </main>
 
-      {modalRegistro   && <ModalRegistro   tipoBloque={modalRegistro} onClose={() => setModalRegistro(null)} />}
-      {modalIncidencia && <ModalIncidencia onClose={() => setModalIncidencia(false)} />}
+      {/* MODALES */}
+      {modalTrabajo && (
+        <ModalTrabajoPlan
+          fecha={fechaDia}
+          editData={editTrabajo}
+          onClose={() => { setModalTrabajo(false); setEditTrabajo(null); }}
+        />
+      )}
+      {modalCampana && (
+        <ModalCampana
+          editData={editCampana}
+          onClose={() => { setModalCampana(false); setEditCampana(null); }}
+        />
+      )}
+      {modalIncidencia && (
+        <ModalIncidencia
+          editData={editIncidencia}
+          onClose={() => { setModalIncidencia(false); setEditIncidencia(null); }}
+        />
+      )}
+      {cierreResultado && (
+        <ModalCierreResultado
+          resultado={cierreResultado}
+          onClose={() => setCierreResultado(null)}
+          onVerMañana={() => {
+            setCierreResultado(null);
+            setFechaDia(addDays(fechaDia, 1));
+            setTab('diaria');
+          }}
+        />
+      )}
     </div>
   );
 }
