@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { 
   Sun, Moon, Activity, Map as MapIcon, Tractor, AlertTriangle,
   CheckCircle2, Leaf, FileText, CloudRain, Wind,
-  Loader2, ClipboardList
+  Loader2, ClipboardList, ChevronDown
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -114,12 +114,22 @@ function useDashboardData() {
 
 // ── Hook de Meteorología (Open-Meteo) ───────────────────────────────────────
 
-function useWeather() {
+const FINCAS_COORDENADAS = [
+  { nombre: 'FINCA LA BARDA', lat: 38.10, lon: -0.90 },
+  { nombre: 'LA CONCEPCION', lat: 38.20, lon: -0.95 },
+  { nombre: 'LONSORDO', lat: 38.25, lon: -1.00 },
+  { nombre: 'FINCA COLLADOS', lat: 38.30, lon: -1.05 },
+  { nombre: 'FINCA BRAZO DE LA VIRGEN', lat: 38.35, lon: -1.10 },
+  { nombre: 'FINCA LA NUEVA', lat: 38.40, lon: -1.15 },
+  { nombre: 'FINCA MAYORAZGO', lat: 39.40, lon: -0.30 }, // Zona Valencia
+];
+
+function useWeather(lat: number, lon: number) {
   return useQuery({
-    queryKey: ['weather_murcia'],
+    queryKey: ['weather', lat, lon],
     queryFn: async (): Promise<any> => {
       try {
-        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=38.1&longitude=-0.9&current=temperature_2m,precipitation,windspeed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FMadrid');
+        const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,windspeed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FMadrid`);
         if (!res.ok) return null;
         return res.json();
       } catch (e) {
@@ -155,7 +165,8 @@ export default function Dashboard() {
 
   const { user } = useAuth();
   const { data, isLoading } = useDashboardData();
-  const { data: weather } = useWeather();
+  const [fincaClima, setFincaClima] = useState(FINCAS_COORDENADAS[0]);
+  const { data: weather } = useWeather(fincaClima.lat, fincaClima.lon);
   const [generatingPdf, setGeneratingPdf] = useState(false);
 
   useEffect(() => {
@@ -327,7 +338,21 @@ export default function Dashboard() {
               <div className="flex justify-between items-start mb-4">
                 <div>
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Meteorología</p>
-                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">La Barda</p>
+                  <div className="relative flex items-center">
+                    <select 
+                      value={fincaClima.nombre}
+                      onChange={(e) => {
+                        const selected = FINCAS_COORDENADAS.find(f => f.nombre === e.target.value);
+                        if (selected) setFincaClima(selected);
+                      }}
+                      className="appearance-none text-sm font-bold text-slate-700 dark:text-slate-200 bg-transparent border-none p-0 pr-4 focus:ring-0 cursor-pointer outline-none hover:text-[#38bdf8] transition-colors z-10"
+                    >
+                      {FINCAS_COORDENADAS.map(f => (
+                        <option key={f.nombre} value={f.nombre} className="text-slate-900">{f.nombre}</option>
+                      ))}
+                    </select>
+                    <ChevronDown className="w-3 h-3 text-slate-400 absolute right-0 pointer-events-none z-0" />
+                  </div>
                 </div>
                 <div className="text-right">
               <p className="text-3xl font-black text-[#38bdf8]">{Math.round(weather?.current?.temperature_2m || 0)}°</p>
