@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../integrations/supabase/client';
+import { logLiaEvento } from '@/utils/liaLogger';
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -139,7 +140,21 @@ export function useAddPersonal() {
       });
       if (error) throw error;
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['personal'] }),
+    onSuccess: (_, payload) => {
+      try {
+        logLiaEvento('personal', 'alta_personal', {
+          categoria: (payload as any).categoria ?? null,
+          nombre: (payload as any).nombre ?? null,
+          dni: (payload as any).dni ?? null,
+        });
+      } catch (e) {
+        // silent
+      }
+      qc.invalidateQueries({ queryKey: ['personal'] });
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   });
 }
 
@@ -151,6 +166,9 @@ export function useUpdatePersonal() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['personal'] }),
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   });
 }
 
@@ -162,6 +180,9 @@ export function useDeletePersonal() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['personal'] }),
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   });
 }
 
@@ -214,6 +235,9 @@ export function useAddPersonalExterno() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['personal_externo'] }),
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   });
 }
 
@@ -225,6 +249,9 @@ export function useUpdatePersonalExterno() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['personal_externo'] }),
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   });
 }
 
@@ -236,6 +263,9 @@ export function useDeletePersonalExterno() {
       if (error) throw error;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['personal_externo'] }),
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   });
 }
 
@@ -265,6 +295,9 @@ export function useAddTipoTrabajoPersonal() {
       if (error) throw error;
     },
     onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['personal_tipos_trabajo', vars.personal_id] }),
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   });
 }
 
@@ -280,6 +313,9 @@ export function useRemoveTipoTrabajoPersonal() {
       if (error) throw error;
     },
     onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['personal_tipos_trabajo', vars.personal_id] }),
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   });
 }
 
@@ -313,6 +349,9 @@ export function useAddTipoTrabajoCatalogo() {
       return data as TipoTrabajoCatalogo;
     },
     onSuccess: (_d, vars) => qc.invalidateQueries({ queryKey: ['catalogo_tipos_trabajo', vars.categoria] }),
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   });
 }
 

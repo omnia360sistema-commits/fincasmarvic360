@@ -50,7 +50,7 @@ function useAlertas() {
         supabase.from('camiones').select('id, matricula, marca, modelo, fecha_itv, fecha_proxima_itv, fecha_proxima_revision, kilometros_actuales, km_proximo_mantenimiento').eq('activo', true),
         supabase.from('trabajos_incidencias').select('id, titulo, urgente, estado, finca, fecha').in('estado', ['abierta', 'en_proceso']).order('fecha', { ascending: false }),
         supabase.from('certificaciones_parcela').select('id, parcel_id, estado, fecha_fin, entidad_certificadora').in('estado', ['en_tramite', 'vigente']),
-        supabase.from('lecturas_sensor_planta').select('parcel_id, created_at').order('created_at', { ascending: false }),
+        supabase.from('lecturas_sensor_planta').select('parcel_id, fecha').order('fecha', { ascending: false }),
       ])
 
       // ── Tractores: ITV y revisión ──
@@ -127,8 +127,8 @@ function useAlertas() {
       for (const s of sensoresRes.data ?? []) {
         if (seenParcels.has(s.parcel_id)) continue
         seenParcels.add(s.parcel_id)
-        if (new Date(s.created_at) < hace7) {
-          const dias = Math.round((HOY.getTime() - new Date(s.created_at).getTime()) / 86400000)
+        if (s.fecha && new Date(s.fecha) < hace7) {
+          const dias = Math.round((HOY.getTime() - new Date(s.fecha).getTime()) / 86400000)
           alertas.push({
             id:        `sensor-${s.parcel_id}`,
             severidad: dias > 21 ? 'urgente' : 'aviso',

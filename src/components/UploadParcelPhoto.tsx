@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from '@/hooks/use-toast'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, Camera, Image, Upload } from 'lucide-react'
+import { uploadImage } from '@/utils/uploadImage'
+import { ArrowLeft, Camera, Image, Upload, MapPin } from 'lucide-react'
 
 type Props = {
   parcelId: string
@@ -15,6 +16,29 @@ export default function UploadParcelPhoto({ parcelId, onClose }: Props) {
   const [preview, setPreview]         = useState<string | null>(null)
   const [description, setDescription] = useState('')
   const [uploading, setUploading]     = useState(false)
+  const [coords, setCoords]           = useState<{ lat: number; lng: number } | null>(null)
+  const [coordsLoading, setCoordsLoading] = useState(false)
+
+  // Obtener geolocalización automática al montar
+  useEffect(() => {
+    if (navigator.geolocation) {
+      setCoordsLoading(true)
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCoords({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          })
+          setCoordsLoading(false)
+        },
+        (error) => {
+          console.warn('Geolocalización no disponible:', error)
+          setCoordsLoading(false)
+        },
+        { enableHighAccuracy: false, timeout: 5000, maximumAge: 0 }
+      )
+    }
+  }, [])
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null
@@ -39,31 +63,25 @@ export default function UploadParcelPhoto({ parcelId, onClose }: Props) {
       const fileExt = file.name.split('.').pop()
       const fileName = `${parcelId}-${Date.now()}.${fileExt}`
 
-      // Subir a Supabase Storage
-      const { error: uploadError } = await supabase.storage
-        .from('parcel-images')
-        .upload(fileName, file)
+      // ✅ Subir a Storage mediante la función centralizada de utilidades
+      const imageUrl = await uploadImage(file, 'parcel-images', 'fotos-campo')
+      if (!imageUrl) throw new Error('Fallo al subir la imagen')
 
-      if (uploadError) throw uploadError
-
-      const { data } = supabase.storage
-        .from('parcel-images')
-        .getPublicUrl(fileName)
-
-      const imageUrl = data.publicUrl
-
-      // ✅ Insertar en fotos_campo (FK TEXT correcta)
+      // ✅ Insertar en fotos_campo con geolocalización
       const { error: insertError } = await supabase
         .from('fotos_campo')
         .insert({
           parcel_id:   parcelId,
           url_imagen:  imageUrl,
           descripcion: description || null,
+          latitud:     coords?.lat ?? null,
+          longitud:    coords?.lng ?? null,
+          tipo:        'general'
         })
 
       if (insertError) throw insertError
 
-      toast({ title: '✅ Foto subida', description: 'Imagen guardada correctamente.' })
+      toast({ title: '✅ Foto subida', description: `${coords ? 'Con geolocalización' : 'Sin GPS'}. Imagen guardada correctamente.` })
       if (onClose) onClose()
 
     } catch (err: any) {
@@ -140,6 +158,23 @@ export default function UploadParcelPhoto({ parcelId, onClose }: Props) {
             placeholder="Ej: Estado del cultivo, plaga detectada, vuelo dron..."
             rows={3}
           />
+        </div>
+
+        {/* GEOLOCALIZACIÓN */}
+        <div className="flex items-center gap-2 p-3 rounded-lg bg-slate-900/50 border border-slate-700/50">
+          <MapPin className="w-4 h-4 text-sky-400 shrink-0" />
+          <div className="text-xs">
+            {coordsLoading && (
+              <p className="text-slate-400">Obteniendo ubicación...</p>
+            )}
+            {coords ? (
+              <p className="text-slate-300">
+                <span className="font-semibold">GPS</span>: {coords.lat.toFixed(6)}, {coords.lng.toFixed(6)}
+              </p>
+            ) : (
+              <p className="text-slate-500">Sin geolocalización (no es requerida)</p>
+            )}
+          </div>
         </div>
 
         <Button

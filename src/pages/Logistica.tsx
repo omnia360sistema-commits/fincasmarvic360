@@ -102,7 +102,7 @@ function mismoDia(a: Date, b: Date): boolean {
 
 // ── Badge estado operativo ────────────────────────────────────
 
-function BadgeEstado({ estado }: { estado: string | null }) {
+const BadgeEstado = React.memo(function BadgeEstado({ estado }: { estado: string | null }) {
   if (!estado) return null;
   const cls = ESTADO_CLS[estado] ?? 'text-slate-400 border-slate-400/60';
   return (
@@ -110,11 +110,11 @@ function BadgeEstado({ estado }: { estado: string | null }) {
       {ESTADO_LABEL[estado] ?? estado}
     </span>
   );
-}
+});
 
 // ── Modal Camión ──────────────────────────────────────────────
 
-function ModalCamion({
+const ModalCamion = React.memo(function ModalCamion({
   initial, ubicaciones, onClose,
 }: {
   initial?: Camion;
@@ -301,11 +301,11 @@ function ModalCamion({
       </div>
     </div>
   );
-}
+});
 
 // ── Modal Vehículo de empresa ─────────────────────────────────
 
-function ModalVehiculo({
+const ModalVehiculo = React.memo(function ModalVehiculo({
   initial, ubicaciones, conductores, onClose,
 }: {
   initial?: VehiculoEmpresa;
@@ -480,11 +480,11 @@ function ModalVehiculo({
       </div>
     </div>
   );
-}
+});
 
 // ── Modal Viaje ───────────────────────────────────────────────
 
-function ModalViaje({
+const ModalViaje = React.memo(function ModalViaje({
   initial, camiones, vehiculos, conductores, tiposTrabajo, onAddTipoTrabajo, onClose,
 }: {
   initial?: Viaje;
@@ -657,11 +657,11 @@ function ModalViaje({
       </div>
     </div>
   );
-}
+});
 
 // ── Modal Mantenimiento ───────────────────────────────────────
 
-function ModalMantenimiento({
+const ModalMantenimiento = React.memo(function ModalMantenimiento({
   initial, camiones, vehiculos, tiposMant, onClose,
 }: {
   initial?: MantenimientoCamion;
@@ -805,11 +805,11 @@ function ModalMantenimiento({
       </div>
     </div>
   );
-}
+});
 
 // ── Modal Combustible ─────────────────────────────────────────
 
-function ModalCombustible({
+const ModalCombustible = React.memo(function ModalCombustible({
   initial, camiones, vehiculos, conductores, onClose,
 }: {
   initial?: Combustible;
@@ -957,7 +957,7 @@ function ModalCombustible({
       </div>
     </div>
   );
-}
+});
 
 // ── Componente principal ──────────────────────────────────────
 

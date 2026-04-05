@@ -7,12 +7,13 @@ import {
   Calendar, Layers, Leaf,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
 import {
   useRegistrosTrabajos, useAddTrabajoRegistro,
   useIncidencias, useAddIncidencia, useUpdateIncidencia, useDeleteIncidencia,
   useKPIsTrabajos,
   usePlanificacionDia, useAddTrabajoPlanificado, useUpdateTrabajoPlanificado,
-  useDeleteTrabajo, useUpdateEstadoPlanificacion,
+  useDeleteTrabajo, useUpdateEstadoTrabajo,
   usePlanificacionCampana, useAddPlanificacionCampana,
   useUpdatePlanificacionCampana, useDeletePlanificacionCampana,
   useCerrarJornada,
@@ -70,7 +71,7 @@ function fmtFecha(f: string): string {
 }
 
 // ── Badge Prioridad ───────────────────────────────────────────
-function BadgePrioridad({ p }: { p: Prioridad | null }) {
+const BadgePrioridad = React.memo(function BadgePrioridad({ p }: { p: Prioridad | null }) {
   if (!p) return null;
   const s = PRIORIDAD_STYLES[p];
   return (
@@ -78,10 +79,10 @@ function BadgePrioridad({ p }: { p: Prioridad | null }) {
       {s.label}
     </span>
   );
-}
+});
 
 // ── Badge Estado ──────────────────────────────────────────────
-function BadgeEstado({ e }: { e: EstadoPlanificacion | null }) {
+const BadgeEstado = React.memo(function BadgeEstado({ e }: { e: EstadoPlanificacion | null }) {
   if (!e) return null;
   const s = ESTADO_PLAN_STYLES[e];
   return (
@@ -89,7 +90,7 @@ function BadgeEstado({ e }: { e: EstadoPlanificacion | null }) {
       {e}
     </span>
   );
-}
+});
 
 // ── Panel Estado Día ──────────────────────────────────────────
 interface PanelDiaProps {
@@ -99,7 +100,7 @@ interface PanelDiaProps {
   onCerrar: () => void;
   isDark: boolean;
 }
-function PanelDia({ fecha, onPrev, onNext, onCerrar, isDark }: PanelDiaProps) {
+const PanelDia = React.memo(function PanelDia({ fecha, onPrev, onNext, onCerrar, isDark }: PanelDiaProps) {
   const { data: trabajos = [] } = usePlanificacionDia(fecha);
   const esHoy = fecha === hoy();
 
@@ -151,7 +152,7 @@ function PanelDia({ fecha, onPrev, onNext, onCerrar, isDark }: PanelDiaProps) {
       )}
     </div>
   );
-}
+});
 
 // ── Modal Trabajo Planificado ─────────────────────────────────
 interface ModalTrabajoPlanProps {
@@ -162,6 +163,8 @@ interface ModalTrabajoPlanProps {
 
 function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
   const isEdit = !!editData;
+  const { user } = useAuth();
+  const currentUser = user?.email || 'sistema';
 
   const [fechaPlan,    setFechaPlan]    = useState(editData?.fecha_planificada ?? fecha);
   const [finca,        setFinca]        = useState(editData?.finca ?? '');
@@ -172,7 +175,7 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
   const [tractorId,    setTractorId]    = useState(editData?.tractor_id ?? '');
   const [aperoId,      setAperoId]      = useState(editData?.apero_id ?? '');
   const [materiales,   setMateriales]   = useState<{ nombre: string; cantidad: string }[]>(
-    editData?.materiales_previstos ? (editData.materiales_previstos as { nombre: string; cantidad: string }[]) : []
+    editData?.materiales_previstos && Array.isArray(editData.materiales_previstos) ? (editData.materiales_previstos as { nombre: string; cantidad: string }[]) : []
   );
   const [prioridad,    setPrioridad]    = useState<Prioridad>(editData?.prioridad ?? 'media');
   const [estado,       setEstado]       = useState<EstadoPlanificacion>(editData?.estado_planificacion ?? 'borrador');
@@ -222,7 +225,7 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
         nombres_operarios:    personalSel.join(', ') || null,
         foto_url,
         notas:                notas || null,
-        created_by:           'JuanPe',
+        created_by:           currentUser,
         estado_planificacion: estado,
         prioridad,
         fecha_planificada:    fechaPlan,
@@ -234,9 +237,9 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
       };
 
       if (isEdit) {
-        await updateMut.mutateAsync({ id: editData!.id, ...payload });
+        await updateMut.mutateAsync({ id: editData!.id, ...(payload as unknown as Partial<TrabajoRegistro>) });
       } else {
-        await addMut.mutateAsync(payload);
+        await addMut.mutateAsync(payload as unknown as Omit<TrabajoRegistro, 'id' | 'created_at'>);
       }
       onClose();
     } finally {
@@ -270,6 +273,7 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
               value={finca}
               onChange={v => { setFinca(v); setParcelId(''); }}
               options={FINCAS}
+              onCreateNew={(newFinca) => setFinca(newFinca)}
               placeholder="Seleccionar finca…"
             />
           </div>
@@ -282,6 +286,7 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
                 value={parcelId}
                 onChange={setParcelId}
                 options={parcelas.map(p => p.parcel_id)}
+                onCreateNew={(newParcel) => setParcelId(newParcel)}
                 placeholder="Finca completa"
               />
             </div>
@@ -305,6 +310,7 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
               value={tipoTrabajo}
               onChange={setTipoTrabajo}
               options={tiposOpciones}
+              onCreateNew={(newTipo) => setTipoTrabajo(newTipo)}
               placeholder="Seleccionar tipo…"
             />
           </div>
@@ -318,6 +324,7 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
               value=""
               onChange={v => { if (v && !personalSel.includes(v)) setPersonalSel(p => [...p, v]); }}
               options={personalActivo.map(p => p.nombre)}
+              onCreateNew={(newPersonal) => { if (newPersonal && !personalSel.includes(newPersonal)) setPersonalSel(p => [...p, newPersonal]); }}
               placeholder="+ Añadir operario…"
             />
             {personalSel.length > 0 && (
@@ -339,7 +346,7 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
               value={tractorId}
               onChange={v => { setTractorId(v); setAperoId(''); }}
               options={tractores.filter(t => t.activo).map(t => t.id)}
-              optionLabels={Object.fromEntries(tractores.map(t => [t.id, `${t.matricula}${t.marca ? ' · ' + t.marca : ''}`]))}
+              onCreateNew={(newTractor) => setTractorId(newTractor)}
               placeholder="Sin tractor"
             />
           </div>
@@ -350,7 +357,7 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
                 value={aperoId}
                 onChange={setAperoId}
                 options={aperos.filter(a => a.activo).map(a => a.id)}
-                optionLabels={Object.fromEntries(aperos.map(a => [a.id, `${a.tipo}${a.descripcion ? ' · ' + a.descripcion : ''}`]))}
+                onCreateNew={(newApero) => setAperoId(newApero)}
                 placeholder="Sin apero"
               />
             </div>
@@ -421,7 +428,7 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
           {/* Foto */}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Foto (opcional)</label>
-            <PhotoAttachment value={foto} onChange={setFoto} existingUrl={editData?.foto_url} />
+            <PhotoAttachment value={foto ? URL.createObjectURL(foto) : editData?.foto_url} onChange={setFoto} />
           </div>
         </div>
 
@@ -441,7 +448,7 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
 }
 
 // ── Tarjeta Trabajo Planificado ───────────────────────────────
-function TarjetaTrabajoPlan({ t, onEdit }: { t: TrabajoRegistro; onEdit: () => void }) {
+const TarjetaTrabajoPlan = React.memo(function TarjetaTrabajoPlan({ t, onEdit }: { t: TrabajoRegistro; onEdit: (t: TrabajoRegistro) => void }) {
   const deleteMut = useDeleteTrabajo();
   const isDark = true;
 
@@ -453,9 +460,9 @@ function TarjetaTrabajoPlan({ t, onEdit }: { t: TrabajoRegistro; onEdit: () => v
           <BadgeEstado e={t.estado_planificacion} />
         </div>
         <RecordActions
-          onEdit={onEdit}
-          onDelete={() => deleteMut.mutate(t.id)}
-          deleteConfirmText="Eliminar este trabajo"
+          onEdit={() => onEdit(t)}
+          onDelete={() => deleteMut.mutate(t.id)} 
+          confirmMessage="Eliminar este trabajo"
         />
       </div>
       <p className="text-[11px] font-bold text-white leading-tight">{t.tipo_trabajo}</p>
@@ -465,10 +472,10 @@ function TarjetaTrabajoPlan({ t, onEdit }: { t: TrabajoRegistro; onEdit: () => v
             <MapPin className="w-2.5 h-2.5" />{t.finca}{t.parcel_id ? ` · ${t.parcel_id}` : ''}
           </span>
         )}
-        {(t.horaInicio || t.horaFin || t.hora_inicio || t.hora_fin) && (
+        {(t.hora_inicio || t.hora_fin) && (
           <span className="flex items-center gap-1 text-[9px] text-slate-400">
             <Clock className="w-2.5 h-2.5" />
-            {t.hora_inicio?.slice(0, 5) ?? ''}{t.hora_fin ? ` → ${t.hora_fin.slice(0, 5)}` : ''}
+            {t.hora_inicio?.slice(11, 16) ?? ''}{t.hora_fin ? ` → ${t.hora_fin.slice(11, 16)}` : ''}
           </span>
         )}
         {t.nombres_operarios && (
@@ -490,11 +497,13 @@ function TarjetaTrabajoPlan({ t, onEdit }: { t: TrabajoRegistro; onEdit: () => v
       )}
     </div>
   );
-}
+});
 
 // ── Modal Campaña ─────────────────────────────────────────────
 function ModalCampana({ editData, onClose }: { editData?: PlanificacionCampana | null; onClose: () => void }) {
   const isEdit = !!editData;
+  const { user } = useAuth();
+  const currentUser = user?.email || 'sistema';
   const [finca,      setFinca]      = useState(editData?.finca ?? '');
   const [parcelId,   setParcelId]   = useState(editData?.parcel_id ?? '');
   const [cultivo,    setCultivo]    = useState(editData?.cultivo ?? '');
@@ -534,7 +543,7 @@ function ModalCampana({ editData, onClose }: { editData?: PlanificacionCampana |
         recursos_estimados:       recursos || null,
         observaciones:            observaciones || null,
         estado,
-        created_by:               'JuanPe',
+        created_by:               currentUser,
       };
       if (isEdit) await updateMut.mutateAsync({ id: editData!.id, ...payload });
       else await addMut.mutateAsync(payload);
@@ -557,17 +566,17 @@ function ModalCampana({ editData, onClose }: { editData?: PlanificacionCampana |
         <div className="p-5 space-y-3 overflow-y-auto flex-1">
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Finca *</label>
-            <SelectWithOther value={finca} onChange={v => { setFinca(v); setParcelId(''); }} options={FINCAS} placeholder="Seleccionar finca…" />
+            <SelectWithOther value={finca} onChange={v => { setFinca(v); setParcelId(''); }} onCreateNew={setFinca} options={FINCAS} placeholder="Seleccionar finca…" />
           </div>
           {finca && parcelas.length > 0 && (
             <div>
               <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Parcela</label>
-              <SelectWithOther value={parcelId} onChange={setParcelId} options={parcelas.map(p => p.parcel_id)} placeholder="Finca completa" />
+              <SelectWithOther value={parcelId} onChange={setParcelId} onCreateNew={setParcelId} options={parcelas.map(p => p.parcel_id)} placeholder="Finca completa" />
             </div>
           )}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Cultivo *</label>
-            <SelectWithOther value={cultivo} onChange={setCultivo} options={cultivosOpciones} placeholder="Seleccionar cultivo…" />
+            <SelectWithOther value={cultivo} onChange={setCultivo} onCreateNew={setCultivo} options={cultivosOpciones} placeholder="Seleccionar cultivo…" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -609,7 +618,7 @@ function ModalCampana({ editData, onClose }: { editData?: PlanificacionCampana |
 }
 
 // ── Tarjeta Campaña ───────────────────────────────────────────
-function TarjetaCampana({ c, onEdit }: { c: PlanificacionCampana; onEdit: () => void }) {
+const TarjetaCampana = React.memo(function TarjetaCampana({ c, onEdit }: { c: PlanificacionCampana; onEdit: (c: PlanificacionCampana) => void }) {
   const deleteMut = useDeletePlanificacionCampana();
   const ESTADO_COLOR: Record<string, string> = {
     planificado: 'text-blue-400 border-blue-500',
@@ -628,7 +637,7 @@ function TarjetaCampana({ c, onEdit }: { c: PlanificacionCampana; onEdit: () => 
           <span className={`border rounded px-1.5 py-0.5 text-[8px] font-black uppercase tracking-widest ${ESTADO_COLOR[c.estado] ?? 'text-slate-400 border-slate-500'}`}>
             {c.estado.replace('_', ' ')}
           </span>
-          <RecordActions onEdit={onEdit} onDelete={() => deleteMut.mutate(c.id)} deleteConfirmText="Eliminar campaña" />
+          <RecordActions onEdit={() => onEdit(c)} onDelete={() => deleteMut.mutate(c.id)} confirmMessage="Eliminar campaña" />
         </div>
       </div>
       <div className="flex flex-wrap gap-3">
@@ -642,11 +651,13 @@ function TarjetaCampana({ c, onEdit }: { c: PlanificacionCampana; onEdit: () => 
       {c.observaciones && <p className="text-[9px] text-slate-500 italic">{c.observaciones}</p>}
     </div>
   );
-}
+});
 
 // ── Modal Incidencia completo ─────────────────────────────────
 function ModalIncidencia({ editData, onClose }: { editData?: TrabajoIncidencia | null; onClose: () => void }) {
   const isEdit = !!editData;
+  const { user } = useAuth();
+  const currentUser = user?.email || 'sistema';
   const [urgente,    setUrgente]    = useState(editData?.urgente ?? false);
   const [titulo,     setTitulo]     = useState(editData?.titulo ?? '');
   const [descripcion,setDescripcion] = useState(editData?.descripcion ?? '');
@@ -681,7 +692,7 @@ function ModalIncidencia({ editData, onClose }: { editData?: TrabajoIncidencia |
         fecha:       editData?.fecha ?? hoy(),
         fecha_resolucion: estado === 'resuelta' ? (fResolucion || hoy()) : null,
         notas_resolucion: estado === 'resuelta' ? (notasResol || null) : null,
-        created_by:  'JuanPe',
+        created_by:  currentUser,
       };
 
       if (isEdit) {
@@ -702,7 +713,7 @@ function ModalIncidencia({ editData, onClose }: { editData?: TrabajoIncidencia |
             nombres_operarios:    null,
             foto_url:             null,
             notas:                descripcion || null,
-            created_by:           'JuanPe',
+            created_by:           currentUser,
             estado_planificacion: 'borrador',
             prioridad:            'alta',
             fecha_planificada:    addDays(hoy(), 1),
@@ -752,17 +763,17 @@ function ModalIncidencia({ editData, onClose }: { editData?: TrabajoIncidencia |
           </div>
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Finca</label>
-            <SelectWithOther value={finca} onChange={v => { setFinca(v); setParcelId(''); }} options={FINCAS} placeholder="Sin finca específica" />
+            <SelectWithOther value={finca} onChange={v => { setFinca(v); setParcelId(''); }} onCreateNew={(newFinca) => setFinca(newFinca)} options={FINCAS} placeholder="Sin finca específica" />
           </div>
           {finca && parcelas.length > 0 && (
             <div>
               <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Parcela</label>
-              <SelectWithOther value={parcelId} onChange={setParcelId} options={parcelas.map(p => p.parcel_id)} placeholder="Finca completa" />
+              <SelectWithOther value={parcelId} onChange={setParcelId} onCreateNew={(newParcel) => setParcelId(newParcel)} options={parcelas.map(p => p.parcel_id)} placeholder="Finca completa" />
             </div>
           )}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Estado</label>
-            <select value={estado} onChange={e => setEstado(e.target.value)} className={INPUT}>
+            <select value={estado} onChange={e => setEstado(e.target.value as 'abierta' | 'en_proceso' | 'resuelta')} className={INPUT}>
               <option value="abierta">Abierta</option>
               <option value="en_proceso">En proceso</option>
               <option value="resuelta">Resuelta</option>
@@ -784,7 +795,7 @@ function ModalIncidencia({ editData, onClose }: { editData?: TrabajoIncidencia |
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">
               Foto {!isEdit && <span className="text-red-400">(obligatoria)</span>}
             </label>
-            <PhotoAttachment value={foto} onChange={setFoto} existingUrl={editData?.foto_url} />
+            <PhotoAttachment value={foto ? URL.createObjectURL(foto) : editData?.foto_url} onChange={setFoto} />
           </div>
         </div>
         <div className="px-5 py-3 border-t border-white/10 flex gap-2 shrink-0">
@@ -799,7 +810,7 @@ function ModalIncidencia({ editData, onClose }: { editData?: TrabajoIncidencia |
 }
 
 // ── Tarjeta Incidencia ────────────────────────────────────────
-function TarjetaIncidencia({ inc, onEdit }: { inc: TrabajoIncidencia; onEdit: () => void }) {
+const TarjetaIncidencia = React.memo(function TarjetaIncidencia({ inc, onEdit }: { inc: TrabajoIncidencia; onEdit: (i: TrabajoIncidencia) => void }) {
   const deleteMut = useDeleteIncidencia();
   const colorEstado = inc.estado === 'resuelta' ? '#34d399' : inc.urgente ? '#ef4444' : '#f59e0b';
   return (
@@ -814,7 +825,7 @@ function TarjetaIncidencia({ inc, onEdit }: { inc: TrabajoIncidencia; onEdit: ()
             style={{ color: colorEstado, borderColor: colorEstado + '60' }}>
             {inc.estado}
           </span>
-          <RecordActions onEdit={onEdit} onDelete={() => deleteMut.mutate(inc.id)} deleteConfirmText="Eliminar incidencia" />
+          <RecordActions onEdit={() => onEdit(inc)} onDelete={() => deleteMut.mutate(inc.id)} confirmMessage="Eliminar incidencia" />
         </div>
       </div>
       {inc.finca && <span className="flex items-center gap-1 text-[9px] text-slate-400"><MapPin className="w-2.5 h-2.5" />{inc.finca}</span>}
@@ -822,7 +833,7 @@ function TarjetaIncidencia({ inc, onEdit }: { inc: TrabajoIncidencia; onEdit: ()
       {inc.foto_url && <img src={inc.foto_url} alt="foto" className="w-full max-h-28 object-cover rounded-lg opacity-80" />}
     </div>
   );
-}
+});
 
 // ── Modal Cierre Resultado ────────────────────────────────────
 interface CierreResultado {
@@ -832,7 +843,7 @@ interface CierreResultado {
   pendientes: number;
   fechaMañana: string;
 }
-function ModalCierreResultado({ resultado, onClose, onVerMañana }: {
+const ModalCierreResultado = React.memo(function ModalCierreResultado({ resultado, onClose, onVerMañana }: {
   resultado: CierreResultado;
   onClose: () => void;
   onVerMañana: () => void;
@@ -865,7 +876,7 @@ function ModalCierreResultado({ resultado, onClose, onVerMañana }: {
       </div>
     </div>
   );
-}
+});
 
 // ── Componente principal ──────────────────────────────────────
 type TabPrincipal = 'diaria' | 'campana' | 'incidencias';
@@ -914,11 +925,30 @@ export default function Trabajos() {
     return () => document.removeEventListener('mousedown', onDown);
   }, [pdfMenuOpen]);
 
-  const handleCerrarJornada = async () => {
+  const handlePrevDia = useCallback(() => setFechaDia(d => addDays(d, -1)), []);
+  const handleNextDia = useCallback(() => setFechaDia(d => addDays(d, 1)), []);
+
+  const handleCerrarJornada = useCallback(async () => {
     if (!confirm(`¿Cerrar la jornada del ${fmtFecha(fechaDia)}?`)) return;
     const resultado = await cerrarJornada.mutateAsync(fechaDia);
     setCierreResultado(resultado);
-  };
+  }, [fechaDia, cerrarJornada]);
+
+  const handleEditTrabajo = useCallback((t: TrabajoRegistro) => { setEditTrabajo(t); setModalTrabajo(true); }, []);
+  const handleCloseTrabajo = useCallback(() => { setModalTrabajo(false); setEditTrabajo(null); }, []);
+
+  const handleEditCampana = useCallback((c: PlanificacionCampana) => { setEditCampana(c); setModalCampana(true); }, []);
+  const handleCloseCampana = useCallback(() => { setModalCampana(false); setEditCampana(null); }, []);
+
+  const handleEditIncidencia = useCallback((i: TrabajoIncidencia) => { setEditIncidencia(i); setModalIncidencia(true); }, []);
+  const handleCloseIncidencia = useCallback(() => { setModalIncidencia(false); setEditIncidencia(null); }, []);
+
+  const handleCloseCierre = useCallback(() => setCierreResultado(null), []);
+  const handleVerManana = useCallback(() => {
+    setCierreResultado(null);
+    setFechaDia(d => addDays(d, 1));
+    setTab('diaria');
+  }, []);
 
   // ── PDF ───────────────────────────────────────────────────
   async function generarPDF() {
@@ -1063,8 +1093,8 @@ export default function Trabajos() {
           <>
             <PanelDia
               fecha={fechaDia}
-              onPrev={() => setFechaDia(d => addDays(d, -1))}
-              onNext={() => setFechaDia(d => addDays(d, 1))}
+            onPrev={handlePrevDia}
+            onNext={handleNextDia}
               onCerrar={handleCerrarJornada}
               isDark={isDark}
             />
@@ -1076,7 +1106,7 @@ export default function Trabajos() {
                 {trabajosDia.length} trabajo{trabajosDia.length !== 1 ? 's' : ''} — {fmtFecha(fechaDia)}
               </p>
               <button
-                onClick={() => { setEditTrabajo(null); setModalTrabajo(true); }}
+              onClick={() => { setEditTrabajo(null); setModalTrabajo(true); }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#38bdf8]/10 border border-[#38bdf8]/30 text-[#38bdf8] text-[9px] font-black uppercase tracking-widest hover:bg-[#38bdf8]/20 transition-colors"
               >
                 <Plus className="w-3 h-3" />Nuevo trabajo
@@ -1095,7 +1125,7 @@ export default function Trabajos() {
                   <TarjetaTrabajoPlan
                     key={t.id}
                     t={t}
-                    onEdit={() => { setEditTrabajo(t); setModalTrabajo(true); }}
+                  onEdit={handleEditTrabajo}
                   />
                 ))}
               </div>
@@ -1109,7 +1139,7 @@ export default function Trabajos() {
             <div className="flex items-center justify-between mb-4">
               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{campanas.length} campañas</p>
               <button
-                onClick={() => { setEditCampana(null); setModalCampana(true); }}
+              onClick={() => { setEditCampana(null); setModalCampana(true); }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-green-500/10 border border-green-500/30 text-green-400 text-[9px] font-black uppercase tracking-widest hover:bg-green-500/20 transition-colors"
               >
                 <Plus className="w-3 h-3" />Nueva campaña
@@ -1123,7 +1153,7 @@ export default function Trabajos() {
             ) : (
               <div className="space-y-2">
                 {campanas.map(c => (
-                  <TarjetaCampana key={c.id} c={c} onEdit={() => { setEditCampana(c); setModalCampana(true); }} />
+                <TarjetaCampana key={c.id} c={c} onEdit={handleEditCampana} />
                 ))}
               </div>
             )}
@@ -1143,7 +1173,7 @@ export default function Trabajos() {
                 ))}
               </div>
               <button
-                onClick={() => { setEditIncidencia(null); setModalIncidencia(true); }}
+              onClick={() => { setEditIncidencia(null); setModalIncidencia(true); }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[9px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-colors"
               >
                 <Plus className="w-3 h-3" />Nueva
@@ -1158,7 +1188,7 @@ export default function Trabajos() {
             ) : (
               <div className="space-y-2">
                 {incFiltradas.map(i => (
-                  <TarjetaIncidencia key={i.id} inc={i} onEdit={() => { setEditIncidencia(i); setModalIncidencia(true); }} />
+                <TarjetaIncidencia key={i.id} inc={i} onEdit={handleEditIncidencia} />
                 ))}
               </div>
             )}
@@ -1171,30 +1201,26 @@ export default function Trabajos() {
         <ModalTrabajoPlan
           fecha={fechaDia}
           editData={editTrabajo}
-          onClose={() => { setModalTrabajo(false); setEditTrabajo(null); }}
+        onClose={handleCloseTrabajo}
         />
       )}
       {modalCampana && (
         <ModalCampana
           editData={editCampana}
-          onClose={() => { setModalCampana(false); setEditCampana(null); }}
+        onClose={handleCloseCampana}
         />
       )}
       {modalIncidencia && (
         <ModalIncidencia
           editData={editIncidencia}
-          onClose={() => { setModalIncidencia(false); setEditIncidencia(null); }}
+        onClose={handleCloseIncidencia}
         />
       )}
       {cierreResultado && (
         <ModalCierreResultado
           resultado={cierreResultado}
-          onClose={() => setCierreResultado(null)}
-          onVerMañana={() => {
-            setCierreResultado(null);
-            setFechaDia(addDays(fechaDia, 1));
-            setTab('diaria');
-          }}
+        onClose={handleCloseCierre}
+        onVerMañana={handleVerManana}
         />
       )}
     </div>

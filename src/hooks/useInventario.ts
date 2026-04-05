@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import type { TablesInsert } from '@/integrations/supabase/types'
+import { logLiaEvento } from '@/utils/liaLogger'
 
 /*
 ================================================
@@ -153,7 +154,10 @@ export function useAddRegistro() {
       qc.invalidateQueries({ queryKey: ['inventario_resumen_ubicacion', vars.ubicacion_id] })
       qc.invalidateQueries({ queryKey: ['inventario_total_registros'] })
       qc.invalidateQueries({ queryKey: ['inventario_conteos_ubicaciones'] })
-    }
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   })
 }
 
@@ -177,7 +181,10 @@ export function useAddInforme() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['inventario_informes'] })
-    }
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   })
 }
 
@@ -271,6 +278,9 @@ export function useAddProductoCatalogo() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['inventario_productos_catalogo', vars.categoria_id] })
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   })
 }
 
@@ -289,6 +299,9 @@ export function useUpdatePrecioProducto() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['inventario_productos_catalogo'] })
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   })
 }
@@ -339,6 +352,9 @@ export function useAddMovimiento() {
       qc.invalidateQueries({ queryKey: ['inventario_ultimo_registro',  vars.ubicacion_destino_id, vars.categoria_id] })
       qc.invalidateQueries({ queryKey: ['inventario_resumen_ubicacion', vars.ubicacion_origen_id]  })
       qc.invalidateQueries({ queryKey: ['inventario_resumen_ubicacion', vars.ubicacion_destino_id] })
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   })
 }
@@ -469,6 +485,9 @@ export function useAssignActivoUbicacion() {
       qc.invalidateQueries({ queryKey: ['v_maquinaria_aperos_en_inventario'] })
       qc.invalidateQueries({ queryKey: ['inventario_uact_maquinaria_apero', vars.ubicacion_id] })
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   })
 }
 
@@ -489,6 +508,9 @@ export function useRemoveActivoUbicacion() {
       qc.invalidateQueries({ queryKey: ['v_maquinaria_aperos_en_inventario'] })
       qc.invalidateQueries({ queryKey: ['inventario_uact_maquinaria_apero', vars.ubicacion_id] })
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   })
 }
 
@@ -503,7 +525,7 @@ export function useProveedores(tipo?: string | null) {
     queryKey: ['proveedores', tipo ?? null],
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let q = (supabase as any)
+      let q = (supabase as unknown as any)
         .from('proveedores')
         .select('*')
         .eq('activo', true)
@@ -523,7 +545,7 @@ export function useAddProveedor() {
     mutationFn: async (record: import('@/integrations/supabase/types').TablesInsert<'proveedores'>) => {
       // Generar código interno PR + correlativo 3 dígitos
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: existing } = await (supabase as any)
+      const { data: existing } = await (supabase as unknown as any)
         .from('proveedores')
         .select('codigo_interno')
         .like('codigo_interno', 'PR%')
@@ -533,7 +555,7 @@ export function useAddProveedor() {
       const num = parseInt(last.replace('PR', ''), 10)
       const codigo_interno = 'PR' + String(num + 1).padStart(3, '0')
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown as any)
         .from('proveedores')
         .insert({ ...record, codigo_interno })
         .select()
@@ -544,6 +566,9 @@ export function useAddProveedor() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['proveedores'] })
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   })
 }
 
@@ -552,7 +577,7 @@ export function useUpdateProveedor() {
   return useMutation({
     mutationFn: async ({ id, ...patch }: Partial<import('@/integrations/supabase/types').Tables<'proveedores'>> & { id: string }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown as any)
         .from('proveedores')
         .update(patch)
         .eq('id', id)
@@ -564,6 +589,9 @@ export function useUpdateProveedor() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['proveedores'] })
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   })
 }
 
@@ -572,11 +600,14 @@ export function useDeleteProveedor() {
   return useMutation({
     mutationFn: async (id: string) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any).from('proveedores').delete().eq('id', id)
+      const { error } = await (supabase as unknown as any).from('proveedores').delete().eq('id', id)
       if (error) throw error
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['proveedores'] })
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   })
 }
@@ -593,7 +624,7 @@ export function usePreciosProveedor(proveedorId: string | null) {
     queryFn: async () => {
       if (!proveedorId) return []
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown as any)
         .from('proveedores_precios')
         .select('*')
         .eq('proveedor_id', proveedorId)
@@ -612,7 +643,7 @@ export function useAddPrecioProveedor() {
   return useMutation({
     mutationFn: async (record: import('@/integrations/supabase/types').TablesInsert<'proveedores_precios'>) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown as any)
         .from('proveedores_precios')
         .insert(record)
         .select()
@@ -623,6 +654,9 @@ export function useAddPrecioProveedor() {
     onSuccess: (_, vars) => {
       qc.invalidateQueries({ queryKey: ['proveedores_precios', vars.proveedor_id] })
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   })
 }
 
@@ -631,7 +665,7 @@ export function useUpdatePrecioProveedor() {
   return useMutation({
     mutationFn: async ({ id, proveedor_id, ...patch }: Partial<import('@/integrations/supabase/types').Tables<'proveedores_precios'>> & { id: string; proveedor_id: string }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown as any)
         .from('proveedores_precios')
         .update(patch)
         .eq('id', id)
@@ -642,6 +676,9 @@ export function useUpdatePrecioProveedor() {
     },
     onSuccess: ({ proveedor_id }) => {
       qc.invalidateQueries({ queryKey: ['proveedores_precios', proveedor_id] })
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   })
 }
@@ -662,7 +699,7 @@ export function useEntradas(ubicacionId?: string | null, desde?: string, hasta?:
     queryKey: ['inventario_entradas', ubicacionId ?? null, desde ?? null, hasta ?? null],
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let q = (supabase as any)
+      let q = (supabase as unknown as any)
         .from('inventario_entradas')
         .select(`
           *,
@@ -694,7 +731,7 @@ export function useAddEntrada() {
   return useMutation({
     mutationFn: async (record: import('@/integrations/supabase/types').TablesInsert<'inventario_entradas'>) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown as any)
         .from('inventario_entradas')
         .insert(record)
         .select()
@@ -715,12 +752,21 @@ export function useAddEntrada() {
       return data
     },
     onSuccess: (_, vars) => {
+      logLiaEvento('inventario', 'entrada_stock', {
+        ubicacion_id: vars.ubicacion_id,
+        cantidad: vars.cantidad,
+        unidad: vars.unidad,
+        proveedor_id: vars.proveedor_id,
+      });
       qc.invalidateQueries({ queryKey: ['inventario_entradas'] })
       qc.invalidateQueries({ queryKey: ['inventario_registros',       vars.ubicacion_id, vars.categoria_id] })
       qc.invalidateQueries({ queryKey: ['inventario_ultimo_registro',  vars.ubicacion_id, vars.categoria_id] })
       qc.invalidateQueries({ queryKey: ['inventario_resumen_ubicacion', vars.ubicacion_id] })
       qc.invalidateQueries({ queryKey: ['inventario_total_registros'] })
       qc.invalidateQueries({ queryKey: ['inventario_conteos_ubicaciones'] })
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   })
 }
@@ -730,11 +776,14 @@ export function useDeleteEntrada() {
   return useMutation({
     mutationFn: async (id: string) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any).from('inventario_entradas').delete().eq('id', id)
+      const { error } = await (supabase as unknown as any).from('inventario_entradas').delete().eq('id', id)
       if (error) throw error
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['inventario_entradas'] })
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   })
 }

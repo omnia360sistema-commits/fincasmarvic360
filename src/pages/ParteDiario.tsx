@@ -31,6 +31,7 @@ import { uploadImage } from '@/utils/uploadImage'
 import { formatHora, formatFechaNav } from '@/utils/dateFormat'
 import { loadPdfImage, type PdfImage } from '@/utils/pdfUtils'
 import { useTheme } from '@/context/ThemeContext'
+import { ejecutarCosechaDiaria } from '@/utils/liaCosechadora'
 import jsPDF from 'jspdf'
 
 // ─── Constantes ──────────────────────────────────────────────────────────────
@@ -635,6 +636,8 @@ export default function ParteDiario() {
       const res = await cerrarJornada.mutateAsync({ fecha, parteId })
       setCierreResultado(res as { ejecutados: number; pendientes: number; arrastrados: number; incidenciasArrastradas: number })
       setShowCierre(true)
+      // Ejecutar cosechadora LIA sin bloquear
+      ejecutarCosechaDiaria(fecha)
     } catch (e) {
       alert('Error al cerrar jornada: ' + (e instanceof Error ? e.message : String(e)))
     }

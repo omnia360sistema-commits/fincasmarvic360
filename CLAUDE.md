@@ -1,10 +1,8 @@
 # AGRÍCOLA MARVIC 360 — CONTEXTO COMPLETO DEL PROYECTO
 
-# AGRÍCOLA MARVIC 360 — CONTEXTO COMPLETO DEL PROYECTO
+## ESTADO ACTUAL DEL SISTEMA (05/04/2026 — rev. 33 — Exportación PDF Completa)
 
-## ESTADO ACTUAL DEL SISTEMA (04/04/2026 — rev. 17)
-
-Sistema ERP agrícola funcional al ~98%. 13 módulos operativos + sidebar global + 3 páginas WIP pendientes de UI. **rev. 10–11 — PDF corporativo global + Logística + Maquinaria.** **rev. 12 — Módulo Trabajos adaptado a sistema PDF corporativo global con menú desplegable.** **rev. 13 — Módulo Maquinaria completado al 100%: tabla `maquinaria_aperos` creada en BD, código interno automático TR/AP (padStart 3), `estado_operativo` en tractores, `estado` en aperos, tabla `maquinaria_inventario_sync`, seed tipos trabajo maquinaria en `catalogo_tipos_trabajo`, SelectWithOther en marca/tipo/tipo_trabajo/tipo_mantenimiento/finca, AudioInput en notas/descripción/ficha técnica, PhotoAttachment en todas las fotos, RecordActions en tractores y aperos, badges de estado sin fondo (solo borde+texto), ITV en rojo si < 30 días, modal mantenimiento carga `catalogo_tipos_mantenimiento WHERE modulo='maquinaria'`, sincronización automática con `maquinaria_inventario_sync` al dar de alta.** **rev. 14 — Módulo Logística completado al 100%: tabla `vehiculos_empresa` (furgonetas/pick-up/turismos empresa), tabla `logistica_combustible`, tabla `logistica_inventario_sync`, campos `codigo_interno` y `estado_operativo` en `camiones`, código interno automático CM/VH (padStart 3), 6 tabs completos (Camiones/Vehículos/Conductores/Viajes/Mantenimiento/Combustible), Panel Estado Flota encima de tabs, SelectWithOther en marca/modelo/tipo/empresa/tipo_trabajo/finca/destino/gasolinera/taller, AudioInput en notas/descripción/ruta, PhotoAttachment en todas las fotos, RecordActions en todos los registros, badges estado sin fondo (solo borde+texto), ITV en rojo si < 30 días, mantenimiento soporta camión y vehículo empresa, GPS preparado para conexión futura, conductores tab solo lectura con enlace a Personal, sync inventario al dar de alta camión/vehículo, 9 hooks nuevos/modificados en useLogistica.ts.** **rev. 15 — Módulo Personal completado al 100%: campos nuevos en `personal` (codigo_interno, fecha_alta, carnet_tipo, carnet_caducidad, tacografo, finca_asignada, licencias) y en `personal_externo` (codigo_interno, persona_contacto, presupuesto, trabajos_realiza), tabla `personal_tipos_trabajo` con RLS anon, seed 13 tipos trabajo `operario_campo` en `catalogo_tipos_trabajo`, código interno automático OP/EN/CM/CC por categoría y EX para externos (padStart 3), panel resumen 5 columnas con contadores activos, alerta carnets caducados/próximos en rojo, 5 tabs (Operarios/Encargados/Maquinaria/Camión/Externa), SelectWithOther en finca_asignada/licencias/carnet_tipo, AudioInput en notas/trabajos_realiza/presupuesto, PhotoAttachment en foto personal, QR generado con `qrcode` npm (imagen 200px) + botón descargar PNG por ficha, RecordActions en todos los registros, tipos trabajo asignables/eliminables por operario desde ficha expandida, hooks nuevos: useDeletePersonal, useDeletePersonalExterno, useTiposTrabajoPersonal, useAddTipoTrabajoPersonal, useRemoveTipoTrabajoPersonal, useTiposTrabajoCatalogoPersonal, useAddTipoTrabajoCatalogo, CATEGORIA_PREFIJOS exportado.** **Parte Diario:** menú PDF ejecutivo (5 informes) y motor `generarPDFCorporativo()` en `ParteDiario.tsx`. **rev. 17 — Inventario + Parte Diario completados: tablas `proveedores`, `proveedores_precios`, `inventario_entradas`, `cierres_jornada` creadas en BD con RLS anon; `trabajos_registro` con campos nuevos (`estado_planificacion`, `prioridad`, `fecha_planificada`, `fecha_original`, `tractor_id`, `apero_id`); `types.ts` actualizado con 4 tablas nuevas + campos trabajos_registro; `Inventario.tsx` con 3 tabs (Ubicaciones/Entradas/Proveedores), modal Nueva Entrada crea registro automático en `inventario_registros`, tab Proveedores con lista de precios expandible; `InventarioUbicacion.tsx` con RecordActions en registros, sección Stock Actual visible, menú PDF 5 opciones; `ParteDiario.tsx` con RecordActions (editar+eliminar) en todos los bloques A/B/C/D, edición en modo update vía supabase directo, AudioInput en todos los campos de notas/texto/donde/notas_descarga, botón Cerrar Jornada visible solo si fecha=hoy con confirm() → useCerrarJornada() → modal resultado con 4 KPIs + botón Ver Planificación; hooks nuevos: useProveedores, useAddProveedor, useUpdateProveedor, useDeleteProveedor, usePreciosProveedor, useAddPrecioProveedor, useUpdatePrecioProveedor, useEntradas, useAddEntrada, useDeleteEntrada, useStockActual, useCierresJornada, useAddCierreJornada, useCerrarJornada, useUpdateEstadoTrabajo; sin romper funcionalidad PDF existente.**
+Sistema ERP agrícola funcional al ~99%. 14 módulos operativos + sidebar global + 3 páginas WIP pendientes de UI. **rev. 33 — Exportación PDF Completa: Implementada la recolección y exportación de datos de Personal (altas, externos) y Campo (estados, plantaciones, cosechas) en el PDF global. Se han añadido sus consultas de preview y secciones corporativas. Quick Wins de QA completados.**
 
 ---
 
@@ -34,6 +32,102 @@ Sistema ERP agrícola funcional al ~98%. 13 módulos operativos + sidebar global
 
 ---
 
+## 🏛️ PROTOCOLO DE ACTUACIÓN VERTICAL (PAV) — 04/04/2026
+
+**OBJETIVO:** El sistema actúa como un organismo vivo que se auto-documenta y nunca olvida su estructura interna.
+
+### INFRAESTRUCTURA DE AUDITORÍA — 4 PILARES FUNDACIONALES
+
+Estos archivos son la **Fuente Única de Verdad (SSoT)** del proyecto. Toda modificación de código debe validarse contra ellos:
+
+| Archivo | Responsabilidad | Actualización |
+|---------|---|---|
+| **AUDITORIA_TIPOS_OMNIA.ts** | Tipos/interfaces de todas las tablas BD + flujos | Con cada tabla nueva o campo agregado |
+| **ARQUITECTURA_TECNICA_OMNIA.md** | Patrones, decisiones técnicas, estrategias | Con cada cambio arquitectónico |
+| **DIAGRAMA_DEPENDENCIAS_OMNIA.md** | Grafo visual de módulos, hooks, componentes | Cuando dependencies cambian |
+| **AUDITORIA_DATABASE_OMNIA.sql** | Esquema relacional completo de Supabase | Cuando se crea tabla o ALTER TABLE |
+
+### FASE 1: INTERIORIZACIÓN (Lectura Obligatoria)
+
+**ANTES DE ESCRIBIR CUALQUIER LÍNEA DE CÓDIGO, incluso pequeños cambios:**
+
+1. Lee **CLAUDE.md** completo (este archivo)
+2. Lee **AUDITORIA_TIPOS_OMNIA.ts** — Verifica que los tipos existen
+3. Lee **ARQUITECTURA_TECNICA_OMNIA.md** — Entiende patrones aplicables
+4. Lee **DIAGRAMA_DEPENDENCIAS_OMNIA.md** — No romper el grafo de dependencias
+5. Lee **AUDITORIA_DATABASE_OMNIA.sql** — Esquema de BD es inviolable
+
+**⚠️ REGLA INQUEBRANTABLE:** No puedes escribir código que:
+- Cree campos sin tipo en AUDITORIA_TIPOS_OMNIA.ts
+- Rompa el grafo de dependencias (importa un círculo de referencias)
+- Cree tablas sin documentación en AUDITORIA_DATABASE_OMNIA.sql
+- Viole patrones arquitectónicos en ARQUITECTURA_TECNICA_OMNIA.md
+
+### FASE 2: EJECUCIÓN QUIRÚRGICA
+
+Una vez validado contra los 4 pilares:
+1. Haz el cambio solicitado
+2. Mantén coherencia técnica (tipos, patrones, dependencias)
+3. Completa la tarea sin ambigüedades
+
+### FASE 3: SINCRONIZACIÓN POST-CAMBIO (Cierre de Ciclo)
+
+**Ninguna tarea se considera finalizada hasta que:**
+
+- ✅ Si se **crea tabla** → actualiza AUDITORIA_DATABASE_OMNIA.sql + tipos en AUDITORIA_TIPOS_OMNIA.ts
+- ✅ Si se **agrega campo** → tipos en AUDITORIA_TIPOS_OMNIA.ts + SQL en AUDITORIA_DATABASE_OMNIA.sql
+- ✅ Si se **cambia flujo** → actualiza DIAGRAMA_DEPENDENCIAS_OMNIA.md + ARQUITECTURA_TECNICA_OMNIA.md
+- ✅ Si se **crea hook** → documenta en DIAGRAMA_DEPENDENCIAS_OMNIA.md + tipos usados en AUDITORIA_TIPOS_OMNIA.ts
+- ✅ Si se **rompe patrón** → propón actualización a ARQUITECTURA_TECNICA_OMNIA.md
+
+### REGLA DE "CRECIMIENTO VERTICAL" — Prohibición Stricta de Redundancia
+
+**Prohibido:**
+```typescript
+// ❌ NO HACER: duplicar tipos ya en AUDITORIA_TIPOS_OMNIA.ts
+export interface MiTabla { ... }  // Si ya existe, REUTILIZA
+
+// ❌ NO HACER: crear tabla sin documentación
+CREATE TABLE nueva_tabla (...)  // Debe estar en AUDITORIA_DATABASE_OMNIA.sql ANTES
+
+// ❌ NO HACER: cambiar flujo sin actualizar diagrama
+if (newFlow) { ... }  // Debe estar en DIAGRAMA_DEPENDENCIAS_OMNIA.md
+```
+
+**Obligatorio:**
+```typescript
+// ✅ HACER: reutilizar tipos existentes
+import { MiTabla } from '@/AUDITORIA_TIPOS_OMNIA';
+
+// ✅ HACER: documentar tabla primero
+-- AUDITORIA_DATABASE_OMNIA.sql
+CREATE TABLE nueva_tabla (...);  -- Luego código
+
+// ✅ HACER: actualizar diagrama
+-- DIAGRAMA_DEPENDENCIAS_OMNIA.md
+nueva_tabla → hook → componente
+```
+
+**MANTRA:** "Tipos primero, código después. Documentación antes de ejecución."
+
+---
+
+## UBICACIÓN DE LOS 4 PILARES
+
+```
+/home/pedro/Escritorio/PC/fincasmarvic-main/
+├─ AUDITORIA_TIPOS_OMNIA.ts           (1,500 líneas — Fuente de verdad tipos)
+├─ ARQUITECTURA_TECNICA_OMNIA.md       (808 líneas — Patrones + decisiones)
+├─ DIAGRAMA_DEPENDENCIAS_OMNIA.md      (265 líneas — Mapa visual)
+├─ AUDITORIA_DATABASE_OMNIA.sql        (2,218 líneas — Esquema relacional)
+├─ REPORTE_CALIDAD_OMNIA.md            (935 líneas — Auditoría QA + Quick Wins)
+└─ CLAUDE.md                            (Este archivo — Contexto + PAV)
+```
+
+---
+
+---
+
 ## ARQUITECTURA GENERAL
 
 ```
@@ -50,13 +144,32 @@ src/
   context/                   — ThemeContext + SidebarContext
   types/                     — farm.ts (tipos GeoJSON)
   integrations/supabase/     — client.ts + types.ts (generado)
+  AUDITORIA_TIPOS_OMNIA.ts   — ⭐ Fuente única de tipos de BD y flujos
 public/
   FINCAS_MARVIC_FINAL.geojson — 119 sectores reales WGS84
   MARVIC_logo.png             — Logo watermark
 doc/
   generar_seed_inventario.py  — Parser Excel → SQL
   seed_inventario_historico.sql — 177 productos + 431 registros históricos
+root/
+  ARQUITECTURA_TECNICA_OMNIA.md — ⭐ Patrones técnicos + decisiones arquitectónicas
+  DIAGRAMA_DEPENDENCIAS_OMNIA.md — ⭐ Grafo visual módulos + dependencias
+  AUDITORIA_DATABASE_OMNIA.sql — ⭐ Esquema relacional Supabase (SSoT)
+  REPORTE_CALIDAD_OMNIA.md — 📊 Auditoría QA + Health Score 73/100 + Quick Wins
+  CLAUDE.md — 📘 Este archivo (contexto + PAV)
 ```
+
+---
+
+## 🔒 ARCHIVOS CRÍTICOS — NO ROMPER NUNCA
+
+**Los 4 Pilares de Auditoría:**
+1. **`AUDITORIA_TIPOS_OMNIA.ts`** — Tipos/interfaces de BD — VERSIÓN 1.0
+2. **`ARQUITECTURA_TECNICA_OMNIA.md`** — Patrones técnicos — VERSIÓN 1.0
+3. **`DIAGRAMA_DEPENDENCIAS_OMNIA.md`** — Grafo dependencias — VERSIÓN 1.0
+4. **`AUDITORIA_DATABASE_OMNIA.sql`** — Esquema relacional — VERSIÓN 1.0
+
+Estos son la **Fuente Única de Verdad (SSoT)**. Cualquier desviación requiere actualizar TODOS ellos.
 
 ---
 
@@ -76,6 +189,7 @@ doc/
 | `/logistica` | Logistica | AppLayout | Camiones + viajes + menú PDF (5 informes corporativos) |
 | `/maquinaria` | Maquinaria | AppLayout | Tractores + aperos + menú PDF (5 informes corporativos) |
 | `/personal` | Personal | AppLayout | 5 tabs + PDF |
+| `/presencia` | PresenciaPanel | AppLayout | Monitor tiempo real cuadrillas activas |
 | `/estado-general` | EstadoGeneral | AppLayout | Alertas ITV, incidencias, certs, sensores |
 | `/historicos` | Historicos | AppLayout | Buscador global multi-módulo |
 | `/exportar-pdf` | ExportarPDF | AppLayout | PDF global multi-módulo |
@@ -91,26 +205,27 @@ doc/
 
 | Módulo | Ruta | Descripción real |
 |---|---|---|
-| Dashboard | `/` | Logo + reloj HH:MM (sin segundos, actualiza c/1s) + fecha. Botón tema `fixed top-3 right-4`. Sin grid ni KPIs. Versión: v4.0 |
+| Dashboard | `/` | Logo + reloj HH:MM + fecha. Módulo Metereología (Open-Meteo), 4 KPIs globales, listas detalladas de Trabajos Hoy, Maquinaria Activa (GPS/Parte) y Alertas Críticas. Integración panel LIA (observación IA). PDF Corporativo en 1 clic. |
 | FarmSelector | `/farm` | Grid 7 fincas reales |
-| FarmMap | `/farm/:farmName` | Mapa 119 sectores, 7 botones menú, formulario unificado, PDF. Clases hardcoded oscuras — sin variantes `dark:` |
+| FarmMap | `/farm/:farmName` | Mapa 119 sectores, menú de funciones, formulario unificado. Integración de marcadores de tractores en tiempo real y telemetría. Motor PDF refactorizado (vía `generarPDFCorporativoBase`). Variantes `dark:` implementadas. |
 | Inventario | `/inventario` | Grid 6 ubicaciones + KPIs dinámicos + PDF global |
 | InventarioUbicacion | `/inventario/:id` | 7 categorías, panel lateral, modales, Excel/PDF. Bridge table `inventario_ubicacion_activo` para tractores/aperos |
-| ParteDiario | `/parte-diario` | 4 bloques A/B/C/D + navegador fechas + menú PDF ejecutivo (5 variantes). Bloque C: foto opcional; D: foto. PDF corporativo vía `generarPDFCorporativo()` en `ParteDiario.tsx` (cabecera logo 45mm, tablas, pie firmado + «Página X de Y») |
-| Trabajos | `/trabajos` | 4 sub-bloques + incidencias + selector cascada finca→parcela. PDF vía `generarPDFCorporativoBase` + menú (completo, registros, incidencias, abiertas, resumen) |
+| ParteDiario | `/parte-diario` | 4 bloques A/B/C/D + navegador fechas + menú PDF ejecutivo (5 variantes). Bloque C: foto opcional; D: foto. PDF corporativo vía `generarPDFCorporativo()` en `ParteDiario.tsx` (cabecera logo 45mm, tablas, pie firmado + «Página X de Y»). Botón "Cerrar jornada" en cabecera (solo si fecha=hoy): confirm() → lógica completa de arrastre en useCerrarJornada() → modal resultado con 4 KPIs + botón "Ver planificación" → /trabajos. Trabajos pendientes arrastrados a mañana con prioridad ALTA; incidencias urgentes no resueltas del día → nuevas tareas. cierres_jornada registra resumen |
+| Trabajos | `/trabajos` | 4 sub-bloques + incidencias + selector cascada finca→parcela. Fix de validación TS en `Partial<TrabajoRegistro>` resuelto. Formularios robustecidos. |
 | Logistica | `/logistica` | Camiones+vehículos empresa+viajes+mantenimiento+combustible. 6 tabs. Conductor desde `personal (categoria=conductor_camion)`. Código interno CM/VH automático. `estado_operativo` en camiones y vehículos. Panel Estado Flota. Sync `logistica_inventario_sync` al dar de alta. PDF vía `generarPDFCorporativoBase()` + menú (completo, viajes hoy, estado flota, mantenimientos, resumen) |
-| Maquinaria | `/maquinaria` | Tractores+aperos+uso+mantenimiento. Tractorista desde `personal (categoria=conductor_maquinaria)`. `tractorista TEXT NULL` es legacy. PDF vía `generarPDFCorporativoBase` + menú (completo, tractores, aperos activos, uso, mantenimientos) |
+| Maquinaria | `/maquinaria` | Tractores+aperos+uso+mantenimiento. + Tab de GPS / Recorridos (Polyline de ruta y detección de paradas >5min). Tractorista vía `personal_id`. |
 | Personal | `/personal` | 5 tabs (Operarios/Encargados/Maquinaria/Camión/Externa) + QR auto + PDF |
 | QRCuadrilla | `/qr/:cuadrilla_id` | Pantalla fullscreen móvil, sin login, sin sidebar |
+| PresenciaPanel | `/presencia` | Monitor en tiempo real de cuadrillas activas + tabla resumen horas. Tabla (cuadrilla/parcela/hora_entrada/tiempo_acumulado en HH:MM:SS), contador de activas, refetch automático cada 30s. Filtros (cuadrilla/rango fechas), tabla resumen (cuadrilla/total horas/parcelas/tipo trabajo), botón PDF corporativo 2 secciones, botón Excel 2 hojas, lógica calcularResumen() con agregación de horas desde presencia_tiempo_real |
 | EstadoGeneral | `/estado-general` | Alertas: ITV tractores/camiones (<0d crítica, ≤30d urgente), revisión tractores (≤14d), mantenimiento km/horas, incidencias abiertas, certificaciones (≤60d), sensores sin lectura >7d |
 | Historicos | `/historicos` | Busca en: trabajos_registro, maquinaria_uso, logistica_viajes, partes_diarios, parte_estado_finca, parte_trabajo. Filtros: rango fechas (defecto últimos 30d), módulo, finca, texto. Límite 200 por tabla |
-| ExportarPDF | `/exportar-pdf` | PDF global seleccionable: Parte Diario, Trabajos, Maquinaria, Logística (con datos). Personal y Campo: sin datos en el generador actual |
+| ExportarPDF | `/exportar-pdf` | PDF global seleccionable: Parte Diario, Trabajos, Maquinaria, Logística, Personal, Campo (todas implementadas 100%). |
+| Trazabilidad | `/trazabilidad` | Página con tabs de Palots, Cámaras y Escáner QR de lote; captura de geolocalización y ciclo de vida en progreso. |
 
 ### 🔴 NO IMPLEMENTADOS (rutas en navItems pero sin página)
 
 | Módulo | navItems activo | Ruta | Estado |
 |---|---|---|---|
-| Trazabilidad | `false` | `/trazabilidad` | Sin página, sin ruta en App.tsx |
 | Materiales | `false` | `/materiales` | Sin página, sin ruta en App.tsx |
 | Auditoría | `false` | `/auditoria` | Sin página, sin ruta en App.tsx |
 
@@ -345,6 +460,11 @@ doc/
 | `useAddTipoTrabajoCatalogo()` | Añadir tipo trabajo al catálogo (devuelve el registro creado) |
 | `useKPIsPersonal()` | total, activos, externos, porCategoria |
 
+### `src/hooks/useGPS.ts`
+- `usePosicionesActuales(vehicleTipo?)` — Obtiene la última posición reportada de los vehículos en tiempo real
+- `useRecorridoDia(vehicleId, fecha)` — Obtiene historial de tracking (polyline) y localiza paradas prolongadas
+- `useAddPosicion()` — Inserta una nueva coordenada GPS
+
 ### `src/hooks/useGeoJSON.ts`
 - `useGeoJSON` — carga GeoJSON + upsert parcelas (singleton: una sola vez por sesión)
 
@@ -362,10 +482,11 @@ doc/
 | `base/index.ts` | Barrel export de los 4 componentes base |
 | `GlobalSidebar.tsx` | Sidebar overlay con accordion (CAMPO/INVENTARIO expandibles), auto-open por ruta, scroll al activo, cierre con Escape |
 | `ParcelDetailPanel.tsx` | Modal datos básicos sector (sin formularios) |
-| `ParcelHistory.tsx` | Panel historial 6 tabs |
+| `ParcelHistory.tsx` | Panel historial 7 tabs (incluye Galería visual con geolocalización) |
 | `RegisterWorkForm.tsx` | Formulario registro trabajo desde FarmMap |
 | `RegisterEstadoUnificadoForm.tsx` | Formulario unificado (estado+plantación+cosecha+análisis+foto) |
-| `UploadParcelPhoto.tsx` | Captura foto + subida Storage (spinner CSS, **NO** Loader2) |
+| `UploadParcelPhoto.tsx` | Captura foto + subida Storage con API Geolocation (spinner CSS, **NO** Loader2) |
+| `InspeccionForm.tsx` | Formulario estructurado para inspecciones de campo con foto geolocalizada obligatoria |
 | `ui/` | Librería shadcn/ui completa (≥47 componentes) |
 
 ---
@@ -446,7 +567,12 @@ aperos                       — id UUID PK, codigo, denominacion, marca, estado
 -- TRABAJOS (2 tablas)
 trabajos_registro            — id UUID PK, tipo_bloque ENUM(logistica|maquinaria_agricola|mano_obra_interna|mano_obra_externa),
                                fecha, hora_inicio, hora_fin, finca, parcel_id TEXT, tipo_trabajo,
-                               num_operarios, nombres_operarios, foto_url, notas, created_by
+                               num_operarios, nombres_operarios, foto_url, notas, created_by,
+                               estado_planificacion TEXT CHECK(borrador|confirmado|ejecutado|pendiente|cancelado) DEFAULT 'borrador',
+                               prioridad TEXT CHECK(alta|media|baja) DEFAULT 'media',
+                               fecha_planificada DATE, fecha_original DATE,
+                               tractor_id UUID FK→maquinaria_tractores ON DELETE SET NULL,
+                               apero_id UUID FK→maquinaria_aperos ON DELETE SET NULL
 trabajos_incidencias         — id UUID PK, urgente BOOL, titulo, descripcion, finca, parcel_id TEXT,
                                estado ENUM(abierta|en_proceso|resuelta), foto_url, fecha,
                                fecha_resolucion, notas_resolucion, created_by
@@ -516,6 +642,37 @@ parte_residuos_vegetales     — id UUID PK, parte_id UUID FK, nombre_conductor,
                                hora_salida_nave, nombre_ganadero, ganadero_id UUID FK→ganaderos,
                                hora_llegada_ganadero, hora_regreso_nave, foto_url, notas_descarga
 
+-- PROVEEDORES (rev. 17)
+proveedores                  — id UUID PK, codigo_interno TEXT UNIQUE (PR001+), nombre TEXT NOT NULL,
+                               nif, telefono, email, direccion,
+                               tipo TEXT CHECK(proveedor_materiales|ganadero|gestor_residuos_plasticos|otro),
+                               persona_contacto, activo BOOL, notas, foto_url, created_at, created_by
+                               RLS: anon full access
+proveedores_precios          — id UUID PK, proveedor_id UUID FK→proveedores ON DELETE CASCADE,
+                               producto TEXT NOT NULL, unidad, precio_unitario NUMERIC, fecha_vigencia DATE,
+                               activo BOOL, created_at
+                               RLS: anon full access
+inventario_entradas          — id UUID PK, proveedor_id UUID FK→proveedores ON DELETE SET NULL,
+                               ubicacion_id UUID FK→inventario_ubicaciones,
+                               categoria_id UUID FK→inventario_categorias,
+                               producto_id UUID FK→inventario_productos_catalogo ON DELETE SET NULL,
+                               cantidad NUMERIC NOT NULL, unidad TEXT NOT NULL,
+                               precio_unitario NUMERIC, importe_total NUMERIC,
+                               receptor TEXT, fecha DATE, foto_albaran TEXT, notas, created_at, created_by
+                               RLS: anon full access
+                               NOTA: al crear entrada → se crea automáticamente registro en inventario_registros
+cierres_jornada              — id UUID PK, fecha DATE NOT NULL UNIQUE,
+                               parte_diario_id UUID FK→partes_diarios ON DELETE SET NULL,
+                               trabajos_ejecutados INT, trabajos_pendientes INT, trabajos_arrastrados INT,
+                               notas, cerrado_at TIMESTAMPTZ, cerrado_by TEXT DEFAULT 'JuanPe'
+                               RLS: anon full access
+planificacion_campana        — id UUID PK, finca TEXT NOT NULL, parcela TEXT,
+                               cultivo TEXT NOT NULL, variedad TEXT,
+                               fecha_siembra DATE, fecha_cosecha_estimada DATE,
+                               produccion_estimada_kg NUMERIC, precio_venta_estimado NUMERIC,
+                               notas TEXT, created_at TIMESTAMPTZ, created_by TEXT DEFAULT 'JuanPe'
+                               RLS: anon full access
+
 -- GANADEROS
 ganaderos                    — id UUID PK, nombre TEXT NOT NULL, telefono, direccion,
                                activo BOOL DEFAULT true, notas
@@ -537,19 +694,18 @@ ganaderos                    — id UUID PK, nombre TEXT NOT NULL, telefono, dir
 
 | Archivo | Descripción real |
 |---|---|
-| `Dashboard.tsx` | Logo + reloj HH:MM + fecha. Sin grid. Sin KPIs. Botón tema fijo |
+| `Dashboard.tsx` | Completo con clima, KPIs globales, panel LIA de observación IA, maquinaria en tiempo real. |
 | `FarmSelector.tsx` | Grid 7 fincas reales |
-| `FarmMap.tsx` | Mapa 119 sectores, 7 botones, formulario unificado, PDF. Hardcoded oscuro |
+| `FarmMap.tsx` | Mapa 119 sectores, soporte de marcadores vivos (tractores), PDF, inspecciones en campo. |
 | `Inventario.tsx` | Grid 6 ubicaciones + KPIs + PDF global |
 | `InventarioUbicacion.tsx` | 7 categorías + bridge table activos + panel lateral + modales + Excel/PDF |
 | `Trabajos.tsx` | 4 sub-bloques + incidencias + selector cascada + menú PDF ejecutivo (`generarPDFCorporativoBase`, 5 variantes; datos globales con `useRegistrosTrabajos()` sin filtro) |
-| `Logistica.tsx` | Camiones+viajes+mant, conductor desde Personal, menú PDF ejecutivo (`generarPDFCorporativoBase`, 5 variantes) |
-| `Maquinaria.tsx` | Tractores+aperos+uso+mant, tractorista desde Personal, menú PDF ejecutivo (`generarPDFCorporativoBase`, 5 variantes) |
+| `Maquinaria.tsx` | Tractores+aperos+uso+mant+**Tab GPS** (telemetría con paradas >5min), tractorista desde Personal |
 | `Personal.tsx` | 5 tabs, fichas expandibles, QR auto, PDF |
-| `ParteDiario.tsx` | 4 bloques A/B/C/D + navegador fechas + desplegable PDF (tema claro/oscuro en panel). **5 PDFs:** `Parte_Diario_YYYY-MM-DD.pdf` (A+B+C+D + resumen), `Incidencias_*.pdf` (bloque C con palabra «incidencia» + `trabajos_incidencias.fecha` = día), `Residuos_*.pdf` (solo D), `Parte_Personal_*.pdf` (tabla HORA/ACTIVIDAD/ESTADO), `Planning_YYYY-MM-DD.pdf` (mañana: `parte_trabajo` del parte de esa fecha; si vacío: «Sin tareas planificadas para mañana»). Prioridad planning: ALTA si notas contienen urgente/crítico/prioridad alta |
+| `PresenciaPanel.tsx` | Modelo completo: filtros cuadrilla/finca/rango fechas, tabla en tiempo real presencia activa (cuadrilla/parcela/entrada/tiempo acumulado HH:MM:SS), tabla resumen horas (cuadrilla/total horas/parcelas/tipo trabajo), PDF corporativo 2 secciones, Excel 2 hojas, lógica calcularResumen() con agregación desde presencia_tiempo_real |
 | `EstadoGeneral.tsx` | useAlertas() inline — consulta 5 tablas — no usa hooks externos |
 | `Historicos.tsx` | useHistoricos() inline — consulta 6 tablas — no usa hooks externos |
-| `ExportarPDF.tsx` | cargarDatosPartes/Trabajos/Maquinaria/Logistica() inline — no usa hooks externos |
+| `ExportarPDF.tsx` | PDF global multi-módulo (Exportación completa de los 6 módulos) + 5 Reportes Agronómicos Específicos (Suelo con sparklines, Cosecha, Certificación, Residuos, Hídrica) |
 | `QRCuadrilla.tsx` | Pantalla fullscreen móvil — sin sidebar — usa useInsertWorkRecordQR |
 
 ---
@@ -651,6 +807,18 @@ ALTER TABLE maquinaria_uso ALTER COLUMN tractorista DROP NOT NULL;
 - `maquinaria_uso.Row.foto_url: string | null` ✅
 - `maquinaria_uso.Row.tractorista: string | null` ✅
 
+-- ✅ rev.31 (Sesión actual)
+-- Creadas tablas de Telemetría GPS: vehicle_positions
+-- Creadas tablas de Riego Inteligente: sistema_riego_zonas, registros_riego
+-- Creadas tablas de Trazabilidad Palots: camaras_almacen, palots, movimientos_palot
+-- Creadas tablas de Inteligencia LIA: ai_proposals, ai_proposal_validations
+-- Creada tabla vuelos_dron
+-- Modificada tabla fotos_campo agregando latitud, longitud (NUMERIC), tipo (TEXT)
+
+-- ✅ rev.32 (Sesión actual)
+-- Creada función RPC transaccional cerrar_jornada_atomica para garantizar integridad al cerrar el día
+-- (Se encarga de marcar ejecutados, copiar pendientes y arrastrar incidencias urgentes al día siguiente)
+
 ---
 
 ## TABLA PERSONAL — FUENTE ÚNICA
@@ -666,10 +834,10 @@ categoria = 'encargado'             → Administración de personal
 
 ---
 
-## ESTADO DEL SISTEMA — RESUMEN EJECUTIVO (01/04/2026)
+## ESTADO DEL SISTEMA — RESUMEN EJECUTIVO (05/04/2026)
 
 ```
-Sistema funcional al ~95%
+Sistema funcional al ~99%
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ✅ 13 módulos operativos + sidebar global
 ✅ Dashboard limpio (logo + reloj + fecha)
@@ -684,15 +852,21 @@ Sistema funcional al ~95%
 ✅ Foto en Bloque C Parte Diario (foto opcional)
 ✅ Foto obligatoria en uso de maquinaria
 ✅ tractorista nullable — personal_id es fuente real
+✅ SQL planificación ejecutado (planificacion_campana, cierres_jornada)
+✅ Cierre de jornada automático completamente funcional
+✅ Inventario: Proveedores + Entradas de Stock con tabs, modales, filtros, precios
+✅ Fotos de campo con geolocalización automática, galería visual en historial de parcela y formulario de inspección (InspeccionForm).
+✅ Overlay agronómico en mapa (pH, EC, N, P, K, MO), gráficos Recharts de evolución en ParcelHistory y alertas agronómicas automáticas en EstadoGeneral.
+✅ Módulo Riego: tablas de zonas y registros creadas, integración de bloque "Riego del día" en formulario de Estado Unificado.
+✅ Variantes dark mode en FarmMap.tsx y pestaña de Riegos en ParcelHistory.tsx implementadas.
+✅ Módulo Trazabilidad: Página con tabs de Palots, Cámaras y Escáner QR de lote; captura de geolocalización y ciclo de vida (en campo, en transporte, en almacén, expedido) integrado.
 
 ⚠️ PENDIENTES:
   - FarmMap sin variantes dark: (P1.1)
-  - Tab ANÁLISIS en ParcelHistory (P2.7)
   - ExportarPDF: Personal y Campo sin datos en generador
   - QRCuadrilla UI: funcional pero puede necesitar refinamiento UX
 
 🔴 NO IMPLEMENTADOS:
-  - Trazabilidad (/trazabilidad) — sin página
   - Materiales (/materiales) — sin página
   - Auditoría (/auditoria) — sin página
 ```
@@ -702,8 +876,6 @@ Sistema funcional al ~95%
 ## PENDIENTES REALES (por prioridad)
 
 ### PRIORIDAD 1
-- **FarmMap dark mode**: añadir variantes `dark:` a todas las clases hardcoded oscuras
-- **Tab ANÁLISIS en ParcelHistory**: datos de `analisis_suelo` y `lecturas_sensor_planta`
 
 ### PRIORIDAD 2
 - **ExportarPDF Personal**: implementar carga y sección Personal en generador PDF

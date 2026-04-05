@@ -1,5 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../integrations/supabase/client';
+import { logLiaEvento } from '@/utils/liaLogger';
+import { toast } from '@/hooks/use-toast';
+
+// ── Utilidades ──────────────────────────────────────────────
+
+function addDays(fecha: string, n: number): string {
+  const d = new Date(fecha + 'T12:00:00');
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
 
 // ── Tipos locales ────────────────────────────────────────────
 export type TipoBloque =
@@ -113,8 +123,18 @@ export function useAddTrabajoRegistro() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data, payload) => {
+      logLiaEvento('planificacion', 'trabajo_creado', {
+        tipo_bloque: payload.tipo_bloque,
+        finca: payload.finca,
+        tipo_trabajo: payload.tipo_trabajo,
+        num_operarios: payload.num_operarios,
+      });
       qc.invalidateQueries({ queryKey: ['trabajos_registro'] });
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -154,6 +174,10 @@ export function useAddIncidencia() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trabajos_incidencias'] });
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
   });
 }
 
@@ -183,6 +207,10 @@ export function useUpdateIncidencia() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trabajos_incidencias'] });
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
   });
 }
 
@@ -196,6 +224,10 @@ export function useDeleteIncidencia() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trabajos_incidencias'] });
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -261,6 +293,10 @@ export function useAddTrabajoPlanificado() {
       qc.invalidateQueries({ queryKey: ['trabajos_registro'] });
       qc.invalidateQueries({ queryKey: ['planificacion_dia'] });
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
   });
 }
 
@@ -279,6 +315,10 @@ export function useUpdateTrabajoPlanificado() {
       qc.invalidateQueries({ queryKey: ['trabajos_registro'] });
       qc.invalidateQueries({ queryKey: ['planificacion_dia'] });
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
   });
 }
 
@@ -293,6 +333,10 @@ export function useDeleteTrabajo() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trabajos_registro'] });
       qc.invalidateQueries({ queryKey: ['planificacion_dia'] });
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -312,6 +356,10 @@ export function useUpdateEstadoPlanificacion() {
       qc.invalidateQueries({ queryKey: ['trabajos_registro'] });
       qc.invalidateQueries({ queryKey: ['planificacion_dia'] });
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
   });
 }
 
@@ -321,7 +369,7 @@ export function usePlanificacionCampana() {
     queryKey: ['planificacion_campana'],
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown as any)
         .from('planificacion_campana')
         .select('*')
         .order('fecha_prevista_plantacion', { ascending: true, nullsFirst: false });
@@ -338,7 +386,7 @@ export function useAddPlanificacionCampana() {
   return useMutation({
     mutationFn: async (payload: Omit<PlanificacionCampana, 'id' | 'created_at'>) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown as any)
         .from('planificacion_campana')
         .insert([{ ...payload, created_at: new Date().toISOString() }])
         .select()
@@ -349,6 +397,10 @@ export function useAddPlanificacionCampana() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['planificacion_campana'] });
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
   });
 }
 
@@ -358,7 +410,7 @@ export function useUpdatePlanificacionCampana() {
   return useMutation({
     mutationFn: async ({ id, ...patch }: Partial<PlanificacionCampana> & { id: string }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown as any)
         .from('planificacion_campana')
         .update(patch)
         .eq('id', id);
@@ -366,6 +418,10 @@ export function useUpdatePlanificacionCampana() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['planificacion_campana'] });
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -376,7 +432,7 @@ export function useDeletePlanificacionCampana() {
   return useMutation({
     mutationFn: async (id: string) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
+      const { error } = await (supabase as unknown as any)
         .from('planificacion_campana')
         .delete()
         .eq('id', id);
@@ -384,6 +440,10 @@ export function useDeletePlanificacionCampana() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['planificacion_campana'] });
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -394,7 +454,7 @@ export function useCierresJornada() {
     queryKey: ['cierres_jornada'],
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown as any)
         .from('cierres_jornada')
         .select('*')
         .order('fecha', { ascending: false });
@@ -411,7 +471,7 @@ export function useAddCierreJornada() {
   return useMutation({
     mutationFn: async (payload: Omit<CierreJornada, 'id' | 'cerrado_at'>) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown as any)
         .from('cierres_jornada')
         .insert([{ ...payload, cerrado_at: new Date().toISOString() }])
         .select()
@@ -422,21 +482,48 @@ export function useAddCierreJornada() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cierres_jornada'] });
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
   });
 }
 
-// ── useCerrarJornada ──────────────────────────────────────────
-// Lógica completa de cierre:
-// 1. Busca parte_diario del día
-// 2. Marca ejecutados los trabajos planificados que aparecen en parte_trabajo
-// 3. Marca pendientes los que no aparecen
-// 4. Crea copias de pendientes para mañana con prioridad=alta
-// 5. Crea trabajos desde incidencias urgentes abiertas del día
-// 6. Inserta resumen en cierres_jornada
+// ── useUpdateEstadoTrabajo ──────────────────────────────────
+export function useUpdateEstadoTrabajo() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, estado_planificacion, prioridad }: { id: string; estado_planificacion: EstadoPlanificacion; prioridad: Prioridad }) => {
+      const { error } = await supabase
+        .from('trabajos_registro')
+        .update({ estado_planificacion, prioridad })
+        .eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trabajos_registro'] });
+      qc.invalidateQueries({ queryKey: ['planificacion_dia'] });
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
+/*
+================================================
+29. CERRAR JORNADA — lógica completa de arrastre
+================================================
+*/
+
 export function useCerrarJornada() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (fecha: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentUser = user?.email || 'sistema';
+
       // 1 — Buscar parte_diario del día
       const { data: parteData } = await supabase
         .from('partes_diarios')
@@ -508,7 +595,7 @@ export function useCerrarJornada() {
           nombres_operarios:    t.nombres_operarios,
           foto_url:             null,
           notas:                t.notas,
-          created_by:           'JuanPe',
+          created_by:           currentUser,
           estado_planificacion: 'borrador' as EstadoPlanificacion,
           prioridad:            'alta' as Prioridad,
           fecha_planificada:    fechaMañana,
@@ -547,7 +634,7 @@ export function useCerrarJornada() {
           nombres_operarios:    null,
           foto_url:             null,
           notas:                inc.descripcion,
-          created_by:           'JuanPe',
+          created_by:           currentUser,
           estado_planificacion: 'borrador' as EstadoPlanificacion,
           prioridad:            'alta' as Prioridad,
           fecha_planificada:    fechaMañana,
@@ -558,7 +645,7 @@ export function useCerrarJornada() {
 
       // 9 — Insertar cierre
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: cierre } = await (supabase as any)
+      const { data: cierre } = await (supabase as unknown as any)
         .from('cierres_jornada')
         .insert([{
           fecha,
@@ -566,7 +653,7 @@ export function useCerrarJornada() {
           trabajos_ejecutados: ejecutados.length,
           trabajos_pendientes: pendientes.length,
           trabajos_arrastrados: arrastrados,
-          cerrado_by:          'JuanPe',
+          cerrado_by:          currentUser,
           cerrado_at:          new Date().toISOString(),
         }])
         .select()
@@ -580,12 +667,31 @@ export function useCerrarJornada() {
         fechaMañana,
         cierre,
       };
+      // Llamada a la función RPC atómica en la base de datos
+      const { data, error } = await supabase.rpc('cerrar_jornada_atomica', {
+        p_fecha: fecha,
+        p_usuario: currentUser,
+      });
+
+      if (error) {
+        throw error;
+      }
+      
+      // La función RPC debe devolver un objeto con la misma estructura que el anterior
+      return data;
     },
     onSuccess: () => {
+      // Invalidar las queries relevantes para que la UI se actualice
       qc.invalidateQueries({ queryKey: ['planificacion_dia'] });
-      qc.invalidateQueries({ queryKey: ['trabajos_registro'] });
       qc.invalidateQueries({ queryKey: ['cierres_jornada'] });
+      qc.invalidateQueries({ queryKey: ['trabajos_registro'] });
+      qc.invalidateQueries({ queryKey: ['trabajos_kpis'] });
       qc.invalidateQueries({ queryKey: ['trabajos_incidencias'] });
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+      console.error('[Hook Error]: Cierre de jornada fallido', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }

@@ -29,10 +29,14 @@ import {
 import { FINCAS_NOMBRES as FINCAS } from '../constants/farms';
 import { SelectWithOther, AudioInput, PhotoAttachment, RecordActions } from '../components/base';
 import { supabase } from '../integrations/supabase/client';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { useRecorridoDia, useAddPosicion } from '../hooks/useGPS';
+import { toast } from '../hooks/use-toast';
 
 // ── Constantes ────────────────────────────────────────────────
 
-type TabType = 'tractores' | 'aperos' | 'uso';
+type TabType = 'tractores' | 'aperos' | 'uso' | 'gps';
 
 const ESTADOS_OPERATIVO = ['disponible', 'en_uso', 'mantenimiento', 'baja'] as const;
 const ESTADOS_APERO     = ['disponible', 'asignado', 'en_reparacion', 'baja'] as const;
@@ -1220,6 +1224,16 @@ export default function Maquinaria() {
   const { data: mants = [] }                 = useMantenimientoTractor();
   const { data: personalTractoristas = [] }  = usePersonal('conductor_maquinaria');
 
+  // ── GPS State ──
+  const [gpsTractorId, setGpsTractorId] = useState<string>('');
+  const [gpsFecha, setGpsFecha] = useState<string>(new Date().toISOString().slice(0, 10));
+  const { data: gpsRecorrido = [], isLoading: isLoadingGps } = useRecorridoDia(gpsTractorId, gpsFecha);
+  const mutAddPosicion = useAddPosicion();
+  const gpsMapRef = useRef<L.Map | null>(null);
+  const gpsMapContainerRef = useRef<HTMLDivElement>(null);
+  const polylineRef = useRef<L.Polyline | null>(null);
+  const stopsLayerRef = useRef<L.LayerGroup | null>(null);
+
   const deleteTractorMut = useDeleteTractor();
   const deleteAperoMut   = useDeleteApero();
 
@@ -1428,6 +1442,66 @@ export default function Maquinaria() {
     }
   }
 
+  // ── Lógica Mapa GPS ───────────────────────────────────────────
+  useEffect(() => {
+    if (tab !== 'gps' || !gpsMapContainerRef.current) return;
+    
+    if (!gpsMapRef.current) {
+      gpsMapRef.current = L.map(gpsMapContainerRef.current).setView([38.2, -0.9], 12);
+      L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}').addTo(gpsMapRef.current);
+      stopsLayerRef.current = L.layerGroup().addTo(gpsMapRef.current);
+    }
+    
+    const map = gpsMapRef.current;
+    
+    if (polylineRef.current) map.removeLayer(polylineRef.current);
+    if (stopsLayerRef.current) stopsLayerRef.current.clearLayers();
+
+    if (gpsRecorrido.length > 0) {
+      const latlngs = gpsRecorrido.map(p => [p.latitud, p.longitud] as [number, number]);
+      polylineRef.current = L.polyline(latlngs, { color: '#fb923c', weight: 4 }).addTo(map);
+      
+      // Calcular paradas (>5 min quietos)
+      let currentStop: any = null;
+      for (let i = 1; i < gpsRecorrido.length; i++) {
+        const prev = gpsRecorrido[i-1];
+        const curr = gpsRecorrido[i];
+        const isStopped = (curr.velocidad_kmh || 0) < 1;
+        
+        if (isStopped) {
+          if (!currentStop) {
+            currentStop = { start: prev.timestamp, lat: curr.latitud, lng: curr.longitud, duration: 0 };
+          }
+          currentStop.duration += new Date(curr.timestamp).getTime() - new Date(prev.timestamp).getTime();
+        } else {
+          if (currentStop && currentStop.duration > 5 * 60 * 1000) { // 5 min
+            L.circleMarker([currentStop.lat, currentStop.lng], {
+              radius: 6, fillColor: '#ef4444', color: '#fff', weight: 2, fillOpacity: 1
+            })
+            .bindTooltip(`Parada: ${Math.round(currentStop.duration / 60000)} min<br/>Hora: ${new Date(currentStop.start).toLocaleTimeString()}`)
+            .addTo(stopsLayerRef.current!);
+          }
+          currentStop = null;
+        }
+      }
+      
+      // Añadir marcador de inicio y fin
+      const start = gpsRecorrido[0];
+      const end = gpsRecorrido[gpsRecorrido.length - 1];
+      
+      const htmlStart = `<div style="background:#22c55e;width:12px;height:12px;border-radius:50%;border:2px solid white"></div>`;
+      const htmlEnd = `<div style="background:#fb923c;width:12px;height:12px;border-radius:50%;border:2px solid white"></div>`;
+      
+      L.marker([start.latitud, start.longitud], { icon: L.divIcon({ html: htmlStart, className: '' }) })
+        .bindTooltip('Inicio ' + new Date(start.timestamp).toLocaleTimeString()).addTo(stopsLayerRef.current!);
+        
+      L.marker([end.latitud, end.longitud], { icon: L.divIcon({ html: htmlEnd, className: '' }) })
+        .bindTooltip('Fin ' + new Date(end.timestamp).toLocaleTimeString()).addTo(stopsLayerRef.current!);
+
+      map.fitBounds(polylineRef.current.getBounds(), { padding: [30, 30] });
+    }
+  }, [tab, gpsRecorrido]);
+
   // ── Render ──────────────────────────────────────────────────
 
   return (
@@ -1511,6 +1585,7 @@ export default function Maquinaria() {
             { id: 'tractores' as TabType, label: 'Tractores',    icon: Tractor  },
             { id: 'aperos'    as TabType, label: 'Aperos',       icon: Wrench   },
             { id: 'uso'       as TabType, label: 'Registros uso', icon: Activity },
+            { id: 'gps'       as TabType, label: 'GPS / Recorridos', icon: Navigation },
           ]).map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={`flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-colors ${
@@ -1687,6 +1762,85 @@ export default function Maquinaria() {
               )}
             </div>
           </>
+        )}
+
+        {/* TAB GPS / RECORRIDOS */}
+        {tab === 'gps' && (
+          <div className="space-y-4">
+            <div className="bg-slate-900/60 border border-white/5 rounded-xl p-4 flex flex-col sm:flex-row gap-4 relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-1 h-full bg-[#fb923c]" />
+              <div className="flex-1">
+                <FieldLabel>Tractor a monitorear</FieldLabel>
+                <BaseSelect value={gpsTractorId} onChange={e => setGpsTractorId(e.target.value)}>
+                  <option value="">— Seleccionar tractor —</option>
+                  {tractores.map(t => <option key={t.id} value={t.id}>{t.matricula} {t.marca ? `(${t.marca})` : ''}</option>)}
+                </BaseSelect>
+              </div>
+              <div className="w-full sm:w-48">
+                <FieldLabel>Fecha</FieldLabel>
+                <BaseInput type="date" value={gpsFecha} onChange={e => setGpsFecha(e.target.value)} />
+              </div>
+            </div>
+            
+            <div className="bg-orange-500/10 border border-orange-500/30 rounded-lg p-3 flex items-start gap-3">
+              <Activity className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs font-bold text-orange-400">Infraestructura Telemetría GPS</p>
+                <p className="text-[10px] text-orange-300/80 mt-1">
+                  Hardware Teltonika FMC920 pendiente de instalación física. 
+                  Los recorridos mostrados pueden alimentarse manualmente o vía Edge Function API desde el proveedor.
+                </p>
+              </div>
+              {gpsTractorId && gpsFecha === new Date().toISOString().slice(0, 10) && (
+                <button
+                  onClick={() => mutAddPosicion.mutate({
+                    vehicle_id: gpsTractorId,
+                    vehicle_tipo: 'tractor',
+                    latitud: 38.2 + (Math.random() * 0.05),
+                    longitud: -0.9 + (Math.random() * 0.05),
+                    velocidad_kmh: Math.floor(Math.random() * 25)
+                  })}
+                  className="ml-auto shrink-0 bg-orange-500 hover:bg-orange-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg transition-colors"
+                >
+                  Simular Ping
+                </button>
+              )}
+            </div>
+
+            {isLoadingGps ? (
+              <div className="h-[500px] bg-slate-900/50 rounded-xl border border-white/5 flex items-center justify-center">
+                <span className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            ) : !gpsTractorId ? (
+              <div className="h-[500px] bg-slate-900/50 rounded-xl border border-white/5 flex flex-col items-center justify-center text-slate-500">
+                <Navigation className="w-12 h-12 mb-3 opacity-20" />
+                <p className="text-sm font-bold">Selecciona un tractor para ver su recorrido</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4 h-[500px]">
+                <div className="lg:col-span-3 rounded-xl overflow-hidden border border-white/10 z-0 bg-slate-900">
+                  <div ref={gpsMapContainerRef} className="w-full h-full" />
+                </div>
+                <div className="bg-slate-900/60 border border-white/5 rounded-xl p-4 flex flex-col">
+                  <h3 className="text-[11px] font-black text-[#fb923c] uppercase tracking-widest mb-4">Resumen del Día</h3>
+                  <div className="space-y-4 flex-1">
+                    <div>
+                      <p className="text-[10px] text-slate-500 uppercase tracking-widest">Puntos Registrados</p>
+                      <p className="text-lg font-black text-white">{gpsRecorrido.length}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-500 uppercase tracking-widest">Primera Lectura</p>
+                      <p className="text-sm font-bold text-slate-300">{gpsRecorrido.length > 0 ? new Date(gpsRecorrido[0].timestamp).toLocaleTimeString() : '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-slate-500 uppercase tracking-widest">Última Lectura</p>
+                      <p className="text-sm font-bold text-slate-300">{gpsRecorrido.length > 0 ? new Date(gpsRecorrido[gpsRecorrido.length - 1].timestamp).toLocaleTimeString() : '—'}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </main>
 

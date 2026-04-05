@@ -9,10 +9,13 @@ import {
   useInsertLecturaSensor,
   useInsertAnalisisAgua,
 } from '@/hooks/useParcelData'
+import { useZonasRiego, useAddZonaRiego, useAddRegistroRiego } from '@/hooks/useRiego'
 import { toast } from '@/hooks/use-toast'
-import { Camera, ChevronDown, ChevronUp } from 'lucide-react'
+import { Camera, ChevronDown, ChevronUp, Droplet } from 'lucide-react'
 import { FINCAS_NOMBRES as FINCAS } from '@/constants/farms'
 import { ESTADOS_PARCELA as ESTADOS } from '@/constants/estadosParcela'
+import SelectWithOther from '@/components/base/SelectWithOther'
+import AudioInput from '@/components/base/AudioInput'
 
 const TEXTURAS = [
   'Arcilloso', 'Franco arcilloso', 'Franco', 'Franco arenoso', 'Arenoso', 'Limoso',
@@ -90,6 +93,17 @@ export default function RegisterEstadoUnificadoForm({
   const [cosechaKg,      setCosechaKg]      = useState('')
   const [cosechaFecha,   setCosechaFecha]   = useState(new Date().toISOString().slice(0, 10))
 
+  // ── Riego (toggle) ────────────────────────────────
+  const [showRiego,        setShowRiego]        = useState(false)
+  const [riegoZona,        setRiegoZona]        = useState('')
+  const [riegoFechaInicio, setRiegoFechaInicio] = useState('')
+  const [riegoFechaFin,    setRiegoFechaFin]    = useState('')
+  const [riegoLitros,      setRiegoLitros]      = useState('')
+  const [riegoPresion,     setRiegoPresion]     = useState('')
+  const [riegoOrigen,      setRiegoOrigen]      = useState('')
+  const [riegoNotas,       setRiegoNotas]       = useState('')
+  const { data: zonasRiego = [] }               = useZonasRiego(activeParcelId)
+
   // ── Análisis suelo (toggle) ───────────────────────
   const [showSuelo, setShowSuelo] = useState(false)
   const [suelo, setSuelo] = useState({
@@ -124,6 +138,8 @@ export default function RegisterEstadoUnificadoForm({
   const mutSuelo    = useInsertAnalisisSuelo()
   const mutSensor   = useInsertLecturaSensor()
   const mutAgua     = useInsertAnalisisAgua()
+  const mutAddZona  = useAddZonaRiego()
+  const mutAddRiego = useAddRegistroRiego()
 
   // ── Submit ────────────────────────────────────────
   async function handleSubmit() {
@@ -220,6 +236,35 @@ export default function RegisterEstadoUnificadoForm({
             salinidad_ppm:    num(agua.salinidad_ppm),
           })
         } catch { warnings.push('análisis agua') }
+      }
+
+      // 8. Riego del día
+      if (showRiego && riegoZona && riegoFechaInicio) {
+        try {
+          let zonaId = null;
+          const existingZona = zonasRiego.find(z => z.nombre_zona === riegoZona);
+          if (existingZona) {
+            zonaId = existingZona.id;
+          } else {
+            const newZona = await mutAddZona.mutateAsync({
+              parcel_id: activeParcelId,
+              nombre_zona: riegoZona,
+            });
+            zonaId = newZona.id;
+          }
+          
+          await mutAddRiego.mutateAsync({
+            parcel_id: activeParcelId,
+            zona_id: zonaId,
+            fecha_inicio: new Date(riegoFechaInicio).toISOString(),
+            fecha_fin: riegoFechaFin ? new Date(riegoFechaFin).toISOString() : null,
+            litros_aplicados: num(riegoLitros),
+            presion_bar: num(riegoPresion),
+            origen_agua: riegoOrigen || null,
+            notas: riegoNotas || null,
+            operador: null
+          })
+        } catch { warnings.push('riego') }
       }
 
       // 7. Sensor NDVI/SPAD
@@ -382,6 +427,49 @@ export default function RegisterEstadoUnificadoForm({
           placeholder="Estado visual, incidencias..."
           className={`${inCls} resize-none`}
         />
+      </div>
+
+      {/* ── RIEGO DEL DÍA (toggle) ── */}
+      <div className="rounded-xl border border-white/10 overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowRiego(p => !p)}
+          className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-800/40 hover:bg-slate-800/60 transition-colors"
+        >
+          <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.25em] flex items-center gap-2"><Droplet className="w-3.5 h-3.5" /> Riego del día</span>
+          {showRiego ? <ChevronUp className="w-3.5 h-3.5 text-slate-500" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-500" />}
+        </button>
+        {showRiego && (
+          <div className="p-4 space-y-4 bg-slate-900/50">
+            <SelectWithOther
+              label="Zona de riego *"
+              options={zonasRiego.map(z => z.nombre_zona)}
+              value={riegoZona}
+              onChange={setRiegoZona}
+              placeholder="Ej: Sector Norte"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <div><p className="text-[9px] text-slate-500 uppercase tracking-wide mb-1">Inicio *</p><input type="datetime-local" value={riegoFechaInicio} onChange={e => setRiegoFechaInicio(e.target.value)} className={inCls} /></div>
+              <div><p className="text-[9px] text-slate-500 uppercase tracking-wide mb-1">Fin</p><input type="datetime-local" value={riegoFechaFin} onChange={e => setRiegoFechaFin(e.target.value)} className={inCls} /></div>
+              <div><p className="text-[9px] text-slate-500 uppercase tracking-wide mb-1">Litros</p><input type="number" placeholder="0" value={riegoLitros} onChange={e => setRiegoLitros(e.target.value)} className={inCls} /></div>
+              <div><p className="text-[9px] text-slate-500 uppercase tracking-wide mb-1">Presión (bar)</p><input type="number" step="0.1" placeholder="0.0" value={riegoPresion} onChange={e => setRiegoPresion(e.target.value)} className={inCls} /></div>
+            </div>
+            <SelectWithOther
+              label="Origen del agua"
+              options={['Pozo', 'Balsa', 'Red municipal', 'Río', 'Otro']}
+              value={riegoOrigen}
+              onChange={setRiegoOrigen}
+              placeholder="Seleccionar..."
+            />
+            <div className="pt-2">
+              <AudioInput
+                label="Notas de riego"
+                value={riegoNotas}
+                onChange={setRiegoNotas}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── ANÁLISIS SUELO (toggle) ── */}

@@ -14,6 +14,7 @@ import {
   ShieldCheck,
   Tractor,
   LayoutGrid,
+  Eye,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -60,10 +61,11 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'maquinaria',     label: 'MAQUINARIA',     ruta: '/maquinaria',     icono: Tractor,     color: '#fb923c', activo: true  },
   { id: 'personal',       label: 'PERSONAL',       ruta: '/personal',       icono: Users,       color: '#e879f9', activo: true  },
   { id: 'parte-diario',   label: 'PARTE DIARIO',   ruta: '/parte-diario',   icono: FileText,    color: '#4ade80', activo: true  },
+  { id: 'presencia',      label: 'PRESENCIA',      ruta: '/presencia',      icono: Eye,         color: '#06b6d4', activo: true  },
   { id: 'estado-general', label: 'ESTADO GENERAL', ruta: '/estado-general', icono: Activity,    color: '#94a3b8', activo: true  },
   { id: 'historicos',     label: 'HISTÓRICOS',     ruta: '/historicos',     icono: History,     color: '#94a3b8', activo: true  },
   { id: 'exportar-pdf',   label: 'EXPORTAR PDF',   ruta: '/exportar-pdf',   icono: Download,    color: '#94a3b8', activo: true  },
-  { id: 'trazabilidad',   label: 'TRAZABILIDAD',   ruta: '/trazabilidad',   icono: GitBranch,   color: '#475569', activo: false },
+  { id: 'trazabilidad',   label: 'TRAZABILIDAD',   ruta: '/trazabilidad',   icono: GitBranch,   color: '#475569', activo: true  },
   { id: 'materiales',     label: 'MATERIALES',     ruta: '/materiales',     icono: Layers,      color: '#475569', activo: false },
   { id: 'auditoria',      label: 'AUDITORÍA',      ruta: '/auditoria',      icono: ShieldCheck, color: '#475569', activo: false },
 ];

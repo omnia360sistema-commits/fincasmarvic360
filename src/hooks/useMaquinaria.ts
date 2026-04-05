@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../integrations/supabase/client';
+import { logLiaEvento } from '@/utils/liaLogger';
 
 // ── Tipos locales ────────────────────────────────────────────
 export interface Tractor {
@@ -165,6 +166,9 @@ export function useAddTractor() {
       qc.invalidateQueries({ queryKey: ['v_tractores_en_inventario'] });
       qc.invalidateQueries({ queryKey: ['maquinaria_inventario_sync'] });
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   });
 }
 
@@ -179,6 +183,9 @@ export function useDeleteTractor() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['maquinaria_tractores'] });
       qc.invalidateQueries({ queryKey: ['maquinaria_kpis'] });
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   });
 }
@@ -197,6 +204,9 @@ export function useUpdateTractor() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['maquinaria_tractores'] });
       qc.invalidateQueries({ queryKey: ['v_tractores_en_inventario'] });
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   });
 }
@@ -255,6 +265,9 @@ export function useAddApero() {
       qc.invalidateQueries({ queryKey: ['v_maquinaria_aperos_en_inventario'] });
       qc.invalidateQueries({ queryKey: ['maquinaria_inventario_sync'] });
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   });
 }
 
@@ -269,6 +282,9 @@ export function useDeleteApero() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['maquinaria_aperos'] });
       qc.invalidateQueries({ queryKey: ['maquinaria_kpis'] });
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   });
 }
@@ -304,8 +320,17 @@ export function useAddUsoMaquinaria() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (data, payload) => {
+      logLiaEvento('maquinaria', 'uso_registrado', {
+        tipo_trabajo: payload.tipo_trabajo,
+        finca: payload.finca,
+        horas_trabajadas: payload.horas_trabajadas,
+        gasolina_litros: payload.gasolina_litros,
+      });
       qc.invalidateQueries({ queryKey: ['maquinaria_uso'] });
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   });
 }
@@ -342,6 +367,9 @@ export function useAddMantenimientoTractor() {
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['maquinaria_mantenimiento'] }),
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   });
 }
 
@@ -376,6 +404,9 @@ export function useAddTipoTrabajoMaquinaria() {
       return data;
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['catalogo_tipos_trabajo', 'maquinaria'] }),
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   });
 }
 
@@ -410,6 +441,9 @@ export function useAddSyncMaquinaria() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['maquinaria_inventario_sync'] });
       qc.invalidateQueries({ queryKey: ['inventario_ubicacion_activo'] });
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   });
 }

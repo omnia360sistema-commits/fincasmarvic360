@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import type { TablesInsert } from '@/integrations/supabase/types'
+import { logLiaEvento } from '@/utils/liaLogger'
 
 /*
 ================================================
@@ -53,6 +54,9 @@ export function useEnsureParteHoy() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['partes_diarios', data.fecha] })
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   })
 }
 
@@ -98,8 +102,17 @@ export function useAddEstadoFinca() {
       if (error) throw error
       return data
     },
-    onSuccess: (data) => {
+    onSuccess: (data, record) => {
+      logLiaEvento('campo', 'estado_parcela', {
+        finca: record.finca,
+        parcel_id: record.parcel_id,
+        estado: record.estado,
+        num_operarios: record.num_operarios,
+      });
       qc.invalidateQueries({ queryKey: ['parte_estado_finca', data.parte_id] })
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   })
 }
@@ -149,6 +162,9 @@ export function useAddTrabajo() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['parte_trabajo', data.parte_id] })
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   })
 }
 
@@ -197,6 +213,9 @@ export function useAddPersonal() {
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['parte_personal', data.parte_id] })
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   })
 }
 
@@ -242,8 +261,16 @@ export function useAddResiduos() {
       if (error) throw error
       return data
     },
-    onSuccess: (data) => {
+    onSuccess: (data, record) => {
+      logLiaEvento('parte_diario', 'residuos_vegetales', {
+        personal_id: record.personal_id,
+        ganadero_id: record.ganadero_id,
+        hora_salida_nave: record.hora_salida_nave,
+      });
       qc.invalidateQueries({ queryKey: ['parte_residuos_vegetales', data.parte_id] })
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   })
 }
@@ -278,6 +305,9 @@ export function useUpdateParteDiario() {
     onSuccess: ({ fecha }) => {
       qc.invalidateQueries({ queryKey: ['partes_diarios', fecha] })
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   })
 }
 
@@ -300,12 +330,15 @@ export function useDeleteEntradaParte() {
       parteId: string
     }) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any).from(tabla).delete().eq('id', id)
+      const { error } = await (supabase as unknown as any).from(tabla).delete().eq('id', id)
       if (error) throw error
       return { tabla, parteId }
     },
     onSuccess: ({ tabla, parteId }) => {
       qc.invalidateQueries({ queryKey: [tabla, parteId] })
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   })
 }
@@ -357,6 +390,9 @@ export function useAddGanadero() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['ganaderos'] })
     },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+    },
   })
 }
 
@@ -371,7 +407,7 @@ export function useCierresJornada() {
     queryKey: ['cierres_jornada'],
     queryFn: async () => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown as any)
         .from('cierres_jornada')
         .select('*')
         .order('fecha', { ascending: false })
@@ -387,7 +423,7 @@ export function useAddCierreJornada() {
   return useMutation({
     mutationFn: async (record: import('@/integrations/supabase/types').TablesInsert<'cierres_jornada'>) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown as any)
         .from('cierres_jornada')
         .insert(record)
         .select()
@@ -397,6 +433,9 @@ export function useAddCierreJornada() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cierres_jornada'] })
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   })
 }
@@ -413,7 +452,7 @@ export function useCerrarJornada() {
     mutationFn: async ({ fecha, parteId }: { fecha: string; parteId: string }) => {
       // 1. Trabajos planificados del día
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: planificados } = await (supabase as any)
+      const { data: planificados } = await (supabase as unknown as any)
         .from('trabajos_registro')
         .select('*')
         .eq('fecha_planificada', fecha)
@@ -438,7 +477,7 @@ export function useCerrarJornada() {
         if (coincide) {
           // Marcar como ejecutado
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (supabase as any)
+          await (supabase as unknown as any)
             .from('trabajos_registro')
             .update({ estado_planificacion: 'ejecutado' })
             .eq('id', trabajo.id)
@@ -446,7 +485,7 @@ export function useCerrarJornada() {
         } else {
           // Marcar como pendiente
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (supabase as any)
+          await (supabase as unknown as any)
             .from('trabajos_registro')
             .update({ estado_planificacion: 'pendiente' })
             .eq('id', trabajo.id)
@@ -462,7 +501,7 @@ export function useCerrarJornada() {
 
       for (const trabajo of arrastrados) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any).from('trabajos_registro').insert({
+        await (supabase as unknown as any).from('trabajos_registro').insert({
           tipo_bloque: trabajo.tipo_bloque,
           tipo_trabajo: trabajo.tipo_trabajo,
           finca: trabajo.finca ?? null,
@@ -493,7 +532,7 @@ export function useCerrarJornada() {
       let incidenciasArrastradas = 0
       for (const inc of incidencias ?? []) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any).from('trabajos_registro').insert({
+        await (supabase as unknown as any).from('trabajos_registro').insert({
           tipo_bloque: 'mano_obra_interna',
           tipo_trabajo: 'Incidencia urgente',
           finca: inc.finca ?? null,
@@ -510,7 +549,7 @@ export function useCerrarJornada() {
 
       // 5. Registrar cierre
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as any).from('cierres_jornada').insert({
+      await (supabase as unknown as any).from('cierres_jornada').insert({
         fecha,
         parte_diario_id: parteId,
         trabajos_ejecutados: ejecutados,
@@ -524,6 +563,9 @@ export function useCerrarJornada() {
       qc.invalidateQueries({ queryKey: ['cierres_jornada'] })
       qc.invalidateQueries({ queryKey: ['trabajos_registro'] })
       qc.invalidateQueries({ queryKey: ['trabajos_incidencias'] })
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   })
 }
@@ -549,7 +591,7 @@ export function useUpdateEstadoTrabajo() {
       const patch: Record<string, string> = { estado_planificacion }
       if (prioridad) patch.prioridad = prioridad
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const { data, error } = await (supabase as unknown as any)
         .from('trabajos_registro')
         .update(patch)
         .eq('id', id)
@@ -560,6 +602,9 @@ export function useUpdateEstadoTrabajo() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['trabajos_registro'] })
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
     },
   })
 }
