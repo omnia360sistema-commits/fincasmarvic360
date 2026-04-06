@@ -1,10 +1,11 @@
+
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft, X, Clock, History, Plus, Package, AlertCircle,
   FlaskConical, Droplets, Layers, Wind, Wrench, Tractor, FileText, MoveRight,
-  Trash2, Cog,
+  Trash2, Cog, ChevronDown,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import jsPDF from 'jspdf'
@@ -211,15 +212,15 @@ export default function InventarioUbicacion() {
   }
 
   const tractoresLibres = tractores.filter(t => {
-    const a = todasAsign.find(x => x.maquinaria_tractor_id === t.id)
+    const a = todasAsign.find((x: any) => x.maquinaria_tractor_id === t.id)
     return !a
   })
   const aperosLibres = aperosInv.filter(ap => {
-    const x = todasAsign.find(y => y.apero_id === ap.id)
+    const x = todasAsign.find((y: any) => y.apero_id === ap.id)
     return !x
   })
   const maquinariaAperosLibres = maqAperosCat.filter(a => {
-    const x = todasAsign.find(y => y.maquinaria_apero_id === a.id)
+    const x = todasAsign.find((y: any) => y.maquinaria_apero_id === a.id)
     return !x
   })
 
@@ -246,7 +247,7 @@ export default function InventarioUbicacion() {
         maquinaria_tractor_id: activoTab === 'tractor' ? selTractorId : null,
         apero_id: activoTab === 'apero' ? selAperoId : null,
         maquinaria_apero_id: activoTab === 'maquinaria_apero' ? selMaquinariaAperoId : null,
-      })
+      } as any)
       setShowActivoModal(false)
     } catch (err: unknown) {
       const raw = err instanceof Error ? err.message : String(err)
@@ -927,6 +928,7 @@ export default function InventarioUbicacion() {
                       )}
                       <div className="flex justify-end mt-1">
                         <RecordActions
+                          onEdit={() => {}}
                           onDelete={async () => {
                             if (!confirm('¿Eliminar este registro?')) return
                             await supabase.from('inventario_registros').delete().eq('id', r.id)

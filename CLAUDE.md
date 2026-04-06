@@ -1,8 +1,8 @@
 # AGRÍCOLA MARVIC 360 — CONTEXTO COMPLETO DEL PROYECTO
 
-## ESTADO ACTUAL DEL SISTEMA (05/04/2026 — rev. 33 — Exportación PDF Completa)
+## ESTADO ACTUAL DEL SISTEMA (05/04/2026 — rev. 35 — Refactorización y QA)
 
-Sistema ERP agrícola funcional al ~99%. 14 módulos operativos + sidebar global + 3 páginas WIP pendientes de UI. **rev. 33 — Exportación PDF Completa: Implementada la recolección y exportación de datos de Personal (altas, externos) y Campo (estados, plantaciones, cosechas) en el PDF global. Se han añadido sus consultas de preview y secciones corporativas. Quick Wins de QA completados.**
+Sistema ERP agrícola funcional al ~99%. 15 módulos operativos + sidebar global + 3 páginas WIP pendientes de UI. **rev. 35 — QA & Rendimiento: Refactorizado el mega-archivo `ParteDiario.tsx` (reducido de 1938 a ~350 líneas) extrayendo sus 4 bloques en subcomponentes aislados y memoizados en `src/components/ParteDiario/`. Aplicados Quick Wins de calidad: eliminación de casteos `as any` en `useTrabajos`, `useInventario` y `useParteDiario`, estandarización del cierre de jornada vía RPC `cerrar_jornada_atomica`, y validación de AbortControllers.**
 
 ---
 
@@ -193,6 +193,7 @@ Estos son la **Fuente Única de Verdad (SSoT)**. Cualquier desviación requiere 
 | `/estado-general` | EstadoGeneral | AppLayout | Alertas ITV, incidencias, certs, sensores |
 | `/historicos` | Historicos | AppLayout | Buscador global multi-módulo |
 | `/exportar-pdf` | ExportarPDF | AppLayout | PDF global multi-módulo |
+| `/integracion-erp` | IntegracionERP | AppLayout | Exportación CSV/JSON al ERP Financiero |
 | `*` | NotFound | AppLayout | 404 |
 
 ⚠️ **NO EXISTEN** rutas `/trazabilidad`, `/materiales`, `/auditoria` — están en navItems con `activo: false` pero sin página real.
@@ -220,6 +221,7 @@ Estos son la **Fuente Única de Verdad (SSoT)**. Cualquier desviación requiere 
 | EstadoGeneral | `/estado-general` | Alertas: ITV tractores/camiones (<0d crítica, ≤30d urgente), revisión tractores (≤14d), mantenimiento km/horas, incidencias abiertas, certificaciones (≤60d), sensores sin lectura >7d |
 | Historicos | `/historicos` | Busca en: trabajos_registro, maquinaria_uso, logistica_viajes, partes_diarios, parte_estado_finca, parte_trabajo. Filtros: rango fechas (defecto últimos 30d), módulo, finca, texto. Límite 200 por tabla |
 | ExportarPDF | `/exportar-pdf` | PDF global seleccionable: Parte Diario, Trabajos, Maquinaria, Logística, Personal, Campo (todas implementadas 100%). |
+| IntegracionERP | `/integracion-erp` | Permite exportar los datos raw limpios (CSV/JSON) para importarlos en el ERP contable o cualquier software externo. Registra historial de exportaciones. |
 | Trazabilidad | `/trazabilidad` | Página con tabs de Palots, Cámaras y Escáner QR de lote; captura de geolocalización y ciclo de vida en progreso. |
 
 ### 🔴 NO IMPLEMENTADOS (rutas en navItems pero sin página)
@@ -860,6 +862,9 @@ Sistema funcional al ~99%
 ✅ Módulo Riego: tablas de zonas y registros creadas, integración de bloque "Riego del día" en formulario de Estado Unificado.
 ✅ Variantes dark mode en FarmMap.tsx y pestaña de Riegos en ParcelHistory.tsx implementadas.
 ✅ Módulo Trazabilidad: Página con tabs de Palots, Cámaras y Escáner QR de lote; captura de geolocalización y ciclo de vida (en campo, en transporte, en almacén, expedido) integrado.
+✅ Módulo ERP: Página lista para exportar producción, costes y análisis como CSV/JSON.
+✅ Refactor Parte Diario: División en subcomponentes memoizados (`FormEstadoFinca`, `FormTrabajosRealizado`, `FormAnotacionesLibres`, `FormLogisticaResiduos`), aislando el estado y reduciendo re-renders.
+✅ Quick Wins QA (Fase 15 QA): Eliminados casteos "any" obsoletos y unificado uso de RPC para cierre de jornada atómico.
 
 ⚠️ PENDIENTES:
   - FarmMap sin variantes dark: (P1.1)

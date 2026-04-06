@@ -368,8 +368,7 @@ export function usePlanificacionCampana() {
   return useQuery<PlanificacionCampana[]>({
     queryKey: ['planificacion_campana'],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as unknown as any)
+      const { data, error } = await supabase
         .from('planificacion_campana')
         .select('*')
         .order('fecha_prevista_plantacion', { ascending: true, nullsFirst: false });
@@ -385,8 +384,7 @@ export function useAddPlanificacionCampana() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Omit<PlanificacionCampana, 'id' | 'created_at'>) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as unknown as any)
+      const { data, error } = await supabase
         .from('planificacion_campana')
         .insert([{ ...payload, created_at: new Date().toISOString() }])
         .select()
@@ -409,8 +407,7 @@ export function useUpdatePlanificacionCampana() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async ({ id, ...patch }: Partial<PlanificacionCampana> & { id: string }) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as unknown as any)
+      const { error } = await supabase
         .from('planificacion_campana')
         .update(patch)
         .eq('id', id);
@@ -431,8 +428,7 @@ export function useDeletePlanificacionCampana() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as unknown as any)
+      const { error } = await supabase
         .from('planificacion_campana')
         .delete()
         .eq('id', id);
@@ -453,8 +449,7 @@ export function useCierresJornada() {
   return useQuery<CierreJornada[]>({
     queryKey: ['cierres_jornada'],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as unknown as any)
+      const { data, error } = await supabase
         .from('cierres_jornada')
         .select('*')
         .order('fecha', { ascending: false });
@@ -470,8 +465,7 @@ export function useAddCierreJornada() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Omit<CierreJornada, 'id' | 'cerrado_at'>) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as unknown as any)
+      const { data, error } = await supabase
         .from('cierres_jornada')
         .insert([{ ...payload, cerrado_at: new Date().toISOString() }])
         .select()
@@ -524,149 +518,6 @@ export function useCerrarJornada() {
       const { data: { user } } = await supabase.auth.getUser();
       const currentUser = user?.email || 'sistema';
 
-      // 1 — Buscar parte_diario del día
-      const { data: parteData } = await supabase
-        .from('partes_diarios')
-        .select('id')
-        .eq('fecha', fecha)
-        .maybeSingle();
-      const parteId = parteData?.id ?? null;
-
-      // 2 — Trabajos planificados para este día
-      const { data: planificados } = await supabase
-        .from('trabajos_registro')
-        .select('*')
-        .eq('fecha_planificada', fecha)
-        .neq('estado_planificacion', 'cancelado');
-      const listaPlanificados = (planificados ?? []) as TrabajoRegistro[];
-
-      // 3 — Trabajos del parte (ejecutados realmente)
-      let idsEjecutados = new Set<string>();
-      if (parteId) {
-        const { data: parteTrabajo } = await supabase
-          .from('parte_trabajo')
-          .select('tipo_trabajo, finca')
-          .eq('parte_id', parteId);
-        // Match por tipo_trabajo + finca (aproximación sin FK directa)
-        const tiposEnParte = new Set((parteTrabajo ?? []).map(pt => `${pt.tipo_trabajo}|${pt.finca ?? ''}`));
-        idsEjecutados = new Set(
-          listaPlanificados
-            .filter(t => tiposEnParte.has(`${t.tipo_trabajo}|${t.finca ?? ''}`))
-            .map(t => t.id)
-        );
-      }
-
-      const pendientes = listaPlanificados.filter(t => !idsEjecutados.has(t.id));
-      const ejecutados = listaPlanificados.filter(t => idsEjecutados.has(t.id));
-
-      // 4 — Marcar ejecutados
-      if (ejecutados.length > 0) {
-        await supabase
-          .from('trabajos_registro')
-          .update({ estado_planificacion: 'ejecutado' })
-          .in('id', ejecutados.map(t => t.id));
-      }
-
-      // 5 — Marcar pendientes
-      if (pendientes.length > 0) {
-        await supabase
-          .from('trabajos_registro')
-          .update({ estado_planificacion: 'pendiente' })
-          .in('id', pendientes.map(t => t.id));
-      }
-
-      // 6 — Calcular fecha mañana
-      const mañana = new Date(fecha + 'T12:00:00');
-      mañana.setDate(mañana.getDate() + 1);
-      const fechaMañana = mañana.toISOString().slice(0, 10);
-
-      // 7 — Crear copias de pendientes para mañana
-      let arrastrados = 0;
-      if (pendientes.length > 0) {
-        const copias = pendientes.map(t => ({
-          tipo_bloque:          t.tipo_bloque,
-          fecha:                fechaMañana,
-          hora_inicio:          null,
-          hora_fin:             null,
-          finca:                t.finca,
-          parcel_id:            t.parcel_id,
-          tipo_trabajo:         t.tipo_trabajo,
-          num_operarios:        t.num_operarios,
-          nombres_operarios:    t.nombres_operarios,
-          foto_url:             null,
-          notas:                t.notas,
-          created_by:           currentUser,
-          estado_planificacion: 'borrador' as EstadoPlanificacion,
-          prioridad:            'alta' as Prioridad,
-          fecha_planificada:    fechaMañana,
-          fecha_original:       t.fecha_original ?? fecha,
-          recursos_personal:    t.recursos_personal,
-          tractor_id:           t.tractor_id,
-          apero_id:             t.apero_id,
-          materiales_previstos: t.materiales_previstos,
-        }));
-        const { data: insertadas } = await supabase
-          .from('trabajos_registro')
-          .insert(copias)
-          .select();
-        arrastrados = insertadas?.length ?? 0;
-      }
-
-      // 8 — Incidencias urgentes abiertas del día → crear trabajo para mañana
-      const { data: incUrgentes } = await supabase
-        .from('trabajos_incidencias')
-        .select('*')
-        .eq('urgente', true)
-        .eq('fecha', fecha)
-        .neq('estado', 'resuelta');
-      const listaInc = (incUrgentes ?? []) as TrabajoIncidencia[];
-
-      if (listaInc.length > 0) {
-        const trabajosInc = listaInc.map(inc => ({
-          tipo_bloque:          'mano_obra_interna' as TipoBloque,
-          fecha:                fechaMañana,
-          hora_inicio:          null,
-          hora_fin:             null,
-          finca:                inc.finca,
-          parcel_id:            inc.parcel_id,
-          tipo_trabajo:         `Incidencia: ${inc.titulo}`,
-          num_operarios:        null,
-          nombres_operarios:    null,
-          foto_url:             null,
-          notas:                inc.descripcion,
-          created_by:           currentUser,
-          estado_planificacion: 'borrador' as EstadoPlanificacion,
-          prioridad:            'alta' as Prioridad,
-          fecha_planificada:    fechaMañana,
-          fecha_original:       null,
-        }));
-        await supabase.from('trabajos_registro').insert(trabajosInc);
-      }
-
-      // 9 — Insertar cierre
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: cierre } = await (supabase as unknown as any)
-        .from('cierres_jornada')
-        .insert([{
-          fecha,
-          parte_diario_id:     parteId,
-          trabajos_ejecutados: ejecutados.length,
-          trabajos_pendientes: pendientes.length,
-          trabajos_arrastrados: arrastrados,
-          cerrado_by:          currentUser,
-          cerrado_at:          new Date().toISOString(),
-        }])
-        .select()
-        .single();
-
-      return {
-        ejecutados:      ejecutados.length,
-        arrastrados,
-        incidenciasNuevasTrabajo: listaInc.length,
-        pendientes:      pendientes.length,
-        fechaMañana,
-        cierre,
-      };
       // Llamada a la función RPC atómica en la base de datos
       const { data, error } = await supabase.rpc('cerrar_jornada_atomica', {
         p_fecha: fecha,

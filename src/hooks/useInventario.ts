@@ -411,7 +411,7 @@ export function useInventarioUbicacionActivosAll() {
   return useQuery({
     queryKey: ['inventario_ubicacion_activo', 'all'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('inventario_ubicacion_activo')
         .select('id, ubicacion_id, maquinaria_tractor_id, apero_id, maquinaria_apero_id')
       if (error) throw error
@@ -437,13 +437,13 @@ export function useMaquinariaAperosAsignadosUbicacion(ubicacionId: string | null
     queryKey: ['inventario_uact_maquinaria_apero', ubicacionId],
     queryFn: async () => {
       if (!ubicacionId) return [] as FilaMapero[]
-      const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
         .from('inventario_ubicacion_activo')
         .select('id, maquinaria_apero_id, maquinaria_aperos(tipo, descripcion, tractor_id)')
         .eq('ubicacion_id', ubicacionId)
         .not('maquinaria_apero_id', 'is', null)
       if (error) throw error
-      return (data ?? []) as FilaMapero[]
+        return (data ?? []) as unknown as FilaMapero[]
     },
     enabled: !!ubicacionId,
     staleTime: 30000,
@@ -524,8 +524,7 @@ export function useProveedores(tipo?: string | null) {
   return useQuery({
     queryKey: ['proveedores', tipo ?? null],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let q = (supabase as unknown as any)
+      let q = supabase
         .from('proveedores')
         .select('*')
         .eq('activo', true)
@@ -544,8 +543,7 @@ export function useAddProveedor() {
   return useMutation({
     mutationFn: async (record: import('@/integrations/supabase/types').TablesInsert<'proveedores'>) => {
       // Generar código interno PR + correlativo 3 dígitos
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: existing } = await (supabase as unknown as any)
+      const { data: existing } = await supabase
         .from('proveedores')
         .select('codigo_interno')
         .like('codigo_interno', 'PR%')
@@ -554,8 +552,7 @@ export function useAddProveedor() {
       const last = existing?.[0]?.codigo_interno ?? 'PR000'
       const num = parseInt(last.replace('PR', ''), 10)
       const codigo_interno = 'PR' + String(num + 1).padStart(3, '0')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as unknown as any)
+      const { data, error } = await supabase
         .from('proveedores')
         .insert({ ...record, codigo_interno })
         .select()
@@ -576,8 +573,7 @@ export function useUpdateProveedor() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, ...patch }: Partial<import('@/integrations/supabase/types').Tables<'proveedores'>> & { id: string }) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as unknown as any)
+      const { data, error } = await supabase
         .from('proveedores')
         .update(patch)
         .eq('id', id)
@@ -599,8 +595,7 @@ export function useDeleteProveedor() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as unknown as any).from('proveedores').delete().eq('id', id)
+      const { error } = await supabase.from('proveedores').delete().eq('id', id)
       if (error) throw error
     },
     onSuccess: () => {
@@ -623,8 +618,7 @@ export function usePreciosProveedor(proveedorId: string | null) {
     queryKey: ['proveedores_precios', proveedorId],
     queryFn: async () => {
       if (!proveedorId) return []
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as unknown as any)
+      const { data, error } = await supabase
         .from('proveedores_precios')
         .select('*')
         .eq('proveedor_id', proveedorId)
@@ -642,8 +636,7 @@ export function useAddPrecioProveedor() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (record: import('@/integrations/supabase/types').TablesInsert<'proveedores_precios'>) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as unknown as any)
+      const { data, error } = await supabase
         .from('proveedores_precios')
         .insert(record)
         .select()
@@ -664,8 +657,7 @@ export function useUpdatePrecioProveedor() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ id, proveedor_id, ...patch }: Partial<import('@/integrations/supabase/types').Tables<'proveedores_precios'>> & { id: string; proveedor_id: string }) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as unknown as any)
+      const { data, error } = await supabase
         .from('proveedores_precios')
         .update(patch)
         .eq('id', id)
@@ -698,8 +690,7 @@ export function useEntradas(ubicacionId?: string | null, desde?: string, hasta?:
   return useQuery({
     queryKey: ['inventario_entradas', ubicacionId ?? null, desde ?? null, hasta ?? null],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      let q = (supabase as unknown as any)
+      let q = supabase
         .from('inventario_entradas')
         .select(`
           *,
@@ -730,8 +721,7 @@ export function useAddEntrada() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (record: import('@/integrations/supabase/types').TablesInsert<'inventario_entradas'>) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as unknown as any)
+      const { data, error } = await supabase
         .from('inventario_entradas')
         .insert(record)
         .select()
@@ -775,8 +765,7 @@ export function useDeleteEntrada() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (id: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as unknown as any).from('inventario_entradas').delete().eq('id', id)
+      const { error } = await supabase.from('inventario_entradas').delete().eq('id', id)
       if (error) throw error
     },
     onSuccess: () => {

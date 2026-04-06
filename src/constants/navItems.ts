@@ -15,6 +15,7 @@ import {
   Tractor,
   LayoutGrid,
   Eye,
+  Database,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -65,6 +66,7 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'estado-general', label: 'ESTADO GENERAL', ruta: '/estado-general', icono: Activity,    color: '#94a3b8', activo: true  },
   { id: 'historicos',     label: 'HISTÓRICOS',     ruta: '/historicos',     icono: History,     color: '#94a3b8', activo: true  },
   { id: 'exportar-pdf',   label: 'EXPORTAR PDF',   ruta: '/exportar-pdf',   icono: Download,    color: '#94a3b8', activo: true  },
+  { id: 'integracion-erp',label: 'INTEGRACIÓN ERP',ruta: '/integracion-erp',icono: Database,    color: '#6366f1', activo: true  },
   { id: 'trazabilidad',   label: 'TRAZABILIDAD',   ruta: '/trazabilidad',   icono: GitBranch,   color: '#475569', activo: true  },
   { id: 'materiales',     label: 'MATERIALES',     ruta: '/materiales',     icono: Layers,      color: '#475569', activo: false },
   { id: 'auditoria',      label: 'AUDITORÍA',      ruta: '/auditoria',      icono: ShieldCheck, color: '#475569', activo: false },

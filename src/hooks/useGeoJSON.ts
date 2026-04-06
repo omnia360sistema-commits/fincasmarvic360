@@ -11,7 +11,8 @@ export function useGeoJSON() {
   const [error, setError]     = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('/FINCAS_MARVIC_FINAL.geojson')
+    const controller = new AbortController();
+    fetch('/FINCAS_MARVIC_FINAL.geojson', { signal: controller.signal })
       .then(res => {
         if (!res.ok) throw new Error('Error cargando mapa de fincas');
         return res.json();
@@ -42,9 +43,11 @@ export function useGeoJSON() {
         }
       })
       .catch(err => {
+        if (err.name === 'AbortError') return;
         setError(err.message);
         setLoading(false);
       });
+    return () => controller.abort();
   }, []);
 
   const getFarmParcels = (farmName: string): ParcelFeature[] => {

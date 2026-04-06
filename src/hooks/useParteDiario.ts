@@ -329,8 +329,7 @@ export function useDeleteEntradaParte() {
       id: string
       parteId: string
     }) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as unknown as any).from(tabla).delete().eq('id', id)
+      const { error } = await supabase.from(tabla as any).delete().eq('id', id)
       if (error) throw error
       return { tabla, parteId }
     },
@@ -406,8 +405,7 @@ export function useCierresJornada() {
   return useQuery({
     queryKey: ['cierres_jornada'],
     queryFn: async () => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as unknown as any)
+      const { data, error } = await supabase
         .from('cierres_jornada')
         .select('*')
         .order('fecha', { ascending: false })
@@ -422,8 +420,7 @@ export function useAddCierreJornada() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (record: import('@/integrations/supabase/types').TablesInsert<'cierres_jornada'>) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as unknown as any)
+      const { data, error } = await supabase
         .from('cierres_jornada')
         .insert(record)
         .select()
@@ -450,114 +447,20 @@ export function useCerrarJornada() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async ({ fecha, parteId }: { fecha: string; parteId: string }) => {
-      // 1. Trabajos planificados del día
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentUser = user?.email || 'sistema';
+      const { data, error } = await supabase.rpc('cerrar_jornada_atomica', {
+        p_fecha: fecha,
+        p_usuario: currentUser,
+      });
+      if (error) throw error;
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: planificados } = await (supabase as unknown as any)
-        .from('trabajos_registro')
-        .select('*')
-        .eq('fecha_planificada', fecha)
-        .neq('estado_planificacion', 'cancelado')
-
-      // 2. Trabajos ejecutados hoy en parte_trabajo
-      const { data: parteTrabajo } = await supabase
-        .from('parte_trabajo')
-        .select('tipo_trabajo')
-        .eq('parte_id', parteId)
-
-      const tiposEjecutados = new Set(
-        (parteTrabajo ?? []).map((t: { tipo_trabajo: string }) => t.tipo_trabajo.toLowerCase().trim())
-      )
-
-      let ejecutados = 0
-      let pendientes = 0
-      const arrastrados: typeof planificados = []
-
-      for (const trabajo of planificados ?? []) {
-        const coincide = tiposEjecutados.has((trabajo.tipo_trabajo ?? '').toLowerCase().trim())
-        if (coincide) {
-          // Marcar como ejecutado
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (supabase as unknown as any)
-            .from('trabajos_registro')
-            .update({ estado_planificacion: 'ejecutado' })
-            .eq('id', trabajo.id)
-          ejecutados++
-        } else {
-          // Marcar como pendiente
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          await (supabase as unknown as any)
-            .from('trabajos_registro')
-            .update({ estado_planificacion: 'pendiente' })
-            .eq('id', trabajo.id)
-          pendientes++
-          arrastrados.push(trabajo)
-        }
-      }
-
-      // 3. Arrastrar pendientes a mañana
-      const manana = new Date(fecha + 'T12:00:00')
-      manana.setDate(manana.getDate() + 1)
-      const fechaManana = manana.toISOString().split('T')[0]
-
-      for (const trabajo of arrastrados) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as unknown as any).from('trabajos_registro').insert({
-          tipo_bloque: trabajo.tipo_bloque,
-          tipo_trabajo: trabajo.tipo_trabajo,
-          finca: trabajo.finca ?? null,
-          parcel_id: trabajo.parcel_id ?? null,
-          num_operarios: trabajo.num_operarios ?? null,
-          nombres_operarios: trabajo.nombres_operarios ?? null,
-          hora_inicio: null,
-          hora_fin: null,
-          notas: trabajo.notas ?? null,
-          fecha: fechaManana,
-          fecha_planificada: fechaManana,
-          fecha_original: trabajo.fecha_original ?? trabajo.fecha_planificada ?? trabajo.fecha,
-          estado_planificacion: 'borrador',
-          prioridad: 'alta',
-          tractor_id: trabajo.tractor_id ?? null,
-          apero_id: trabajo.apero_id ?? null,
-        })
-      }
-
-      // 4. Incidencias urgentes no resueltas → tarea nueva para mañana
-      const { data: incidencias } = await supabase
-        .from('trabajos_incidencias')
-        .select('*')
-        .eq('fecha', fecha)
-        .eq('urgente', true)
-        .neq('estado', 'resuelta')
-
-      let incidenciasArrastradas = 0
-      for (const inc of incidencias ?? []) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as unknown as any).from('trabajos_registro').insert({
-          tipo_bloque: 'mano_obra_interna',
-          tipo_trabajo: 'Incidencia urgente',
-          finca: inc.finca ?? null,
-          parcel_id: inc.parcel_id ?? null,
-          notas: inc.descripcion ?? null,
-          fecha: fechaManana,
-          fecha_planificada: fechaManana,
-          fecha_original: fecha,
-          estado_planificacion: 'borrador',
-          prioridad: 'alta',
-        })
-        incidenciasArrastradas++
-      }
-
-      // 5. Registrar cierre
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      await (supabase as unknown as any).from('cierres_jornada').insert({
-        fecha,
-        parte_diario_id: parteId,
-        trabajos_ejecutados: ejecutados,
-        trabajos_pendientes: pendientes,
-        trabajos_arrastrados: arrastrados.length + incidenciasArrastradas,
-      })
-
-      return { ejecutados, pendientes, arrastrados: arrastrados.length, incidenciasArrastradas }
+      return {
+        ejecutados: (data as any).ejecutados,
+        pendientes: (data as any).pendientes,
+        arrastrados: (data as any).arrastrados,
+        incidenciasArrastradas: (data as any).incidenciasNuevasTrabajo
+      };
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['cierres_jornada'] })
@@ -590,8 +493,7 @@ export function useUpdateEstadoTrabajo() {
     }) => {
       const patch: Record<string, string> = { estado_planificacion }
       if (prioridad) patch.prioridad = prioridad
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as unknown as any)
+      const { data, error } = await supabase
         .from('trabajos_registro')
         .update(patch)
         .eq('id', id)

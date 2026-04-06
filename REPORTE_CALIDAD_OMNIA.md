@@ -8,7 +8,7 @@
 
 ---
 
-## 📊 HEALTH SCORE: 73/100
+## 📊 HEALTH SCORE: 82/100
 
 ```
 Cumplimiento:

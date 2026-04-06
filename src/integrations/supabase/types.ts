@@ -626,6 +626,36 @@ export type Database = {
         }
         Relationships: []
       }
+      erp_exportaciones: {
+        Row: {
+          created_at: string | null
+          fecha: string
+          formato: string | null
+          id: string
+          notas: string | null
+          registros_exportados: number | null
+          tipo: string
+        }
+        Insert: {
+          created_at?: string | null
+          fecha?: string
+          formato?: string | null
+          id?: string
+          notas?: string | null
+          registros_exportados?: number | null
+          tipo: string
+        }
+        Update: {
+          created_at?: string | null
+          fecha?: string
+          formato?: string | null
+          id?: string
+          notas?: string | null
+          registros_exportados?: number | null
+          tipo?: string
+        }
+        Relationships: []
+      }
       fotos_campo: {
         Row: {
           descripcion: string | null

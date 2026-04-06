@@ -22,16 +22,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Obtener sesión inicial
     const initializeAuth = async () => {
       try {
-        const { data } = await supabase.auth.getSession();
-        if (data?.session?.user) {
-          setUser(data.session.user);
-          await obtenerRolUsuario(data.session.user.id);
-        } else {
+        // Usamos getUser() en lugar de getSession() para forzar la validación
+        // del token contra el servidor real (evita sesiones fantasma locales)
+        const { data, error } = await supabase.auth.getUser();
+        
+        if (error || !data?.user) {
+          // Si hay error de red, token caducado o BD limpia, forzamos cierre
+          await supabase.auth.signOut().catch(() => {});
           setUser(null);
           setRol(null);
+        } else {
+          setUser(data.user);
+          await obtenerRolUsuario(data.user.id);
         }
       } catch (error) {
         console.error('Error al inicializar autenticación:', error);
+        await supabase.auth.signOut().catch(() => {});
         setUser(null);
         setRol(null);
       } finally {
@@ -45,6 +51,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setRol(null);
+        setLoading(false);
+        return;
+      }
+      
       if (session?.user) {
         setUser(session.user);
         await obtenerRolUsuario(session.user.id);

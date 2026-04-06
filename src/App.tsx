@@ -22,10 +22,13 @@ import PresenciaPanel from "./pages/PresenciaPanel";
 import EstadoGeneral from "./pages/EstadoGeneral";
 import Historicos from "./pages/Historicos";
 import ExportarPDF from "./pages/ExportarPDF";
+import IntegracionERP from "./pages/IntegracionERP";
 import NotFound from "./pages/NotFound";
 import Trazabilidad from "./pages/Trazabilidad";
+import Materiales from "./pages/Materiales";
+import Auditoria from "./pages/Auditoria";
 import Login from "./pages/Login";
-import { ErrorBoundary } from "./components/ErrorBoundary";
+import { ErrorBoundary } from "./pages/ErrorBoundary";
 
 const queryClient = new QueryClient();
 
@@ -63,7 +66,10 @@ const AppRoutes = () => {
         <Route path="/estado-general" element={<EstadoGeneral />} />
         <Route path="/historicos" element={<Historicos />} />
         <Route path="/exportar-pdf" element={<ExportarPDF />} />
+        <Route path="/integracion-erp" element={<IntegracionERP />} />
         <Route path="/trazabilidad" element={<Trazabilidad />} />
+        <Route path="/materiales" element={<Materiales />} />
+        <Route path="/auditoria" element={<Auditoria />} />
         <Route path="*" element={<NotFound />} />
       </Route>
     </Routes>
@@ -79,7 +85,9 @@ const App = () => (
           <Sonner />
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AuthProvider>
-              <AppRoutes />
+              <ErrorBoundary>
+                <AppRoutes />
+              </ErrorBoundary>
             </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>

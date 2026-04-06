@@ -36,6 +36,10 @@ import { FINCAS_NOMBRES as FINCAS } from '../constants/farms';
 import { TIPOS_TRABAJO } from '../constants/tiposTrabajo';
 import { uploadImage, buildStoragePath } from '../utils/uploadImage';
 import { formatFechaCorta } from '../utils/dateFormat';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import { FormError } from '@/components/base/FormError';
 
 // ── Constantes ───────────────────────────────────────────────
 
@@ -54,6 +58,32 @@ const ESTADO_PLAN_STYLES: Record<EstadoPlanificacion, { border: string; text: st
   pendiente:  { border: 'border-red-500',    text: 'text-red-400' },
   cancelado:  { border: 'border-slate-600',  text: 'text-slate-500' },
 };
+
+// ── Esquemas Zod ─────────────────────────────────────────────
+const trabajoSchema = z.object({
+  fecha_planificada: z.string().min(1, 'La fecha es obligatoria'),
+  finca: z.string().optional().nullable(),
+  parcel_id: z.string().optional().nullable(),
+  tipo_bloque: z.enum(['logistica', 'maquinaria_agricola', 'mano_obra_interna', 'mano_obra_externa']),
+  tipo_trabajo: z.string().min(1, 'El tipo de trabajo es obligatorio'),
+  recursos_personal: z.array(z.string()).default([]),
+  tractor_id: z.string().optional().nullable(),
+  apero_id: z.string().optional().nullable(),
+  prioridad: z.enum(['alta', 'media', 'baja']),
+  estado_planificacion: z.enum(['borrador', 'confirmado', 'ejecutado', 'pendiente', 'cancelado']),
+  hora_inicio: z.string().optional().nullable(),
+  hora_fin: z.string().optional().nullable(),
+  notas: z.string().optional().nullable(),
+}).refine(data => {
+  if (data.hora_fin && !data.hora_inicio) return false;
+  if (data.hora_inicio && data.hora_fin) return data.hora_inicio <= data.hora_fin;
+  return true;
+}, {
+  message: "La hora de fin no puede ser anterior a la hora de inicio",
+  path: ["hora_fin"]
+});
+
+type TrabajoFormValues = z.infer<typeof trabajoSchema>;
 
 function hoy(): string {
   return new Date().toISOString().slice(0, 10);
@@ -166,23 +196,37 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
   const { user } = useAuth();
   const currentUser = user?.email || 'sistema';
 
-  const [fechaPlan,    setFechaPlan]    = useState(editData?.fecha_planificada ?? fecha);
-  const [finca,        setFinca]        = useState(editData?.finca ?? '');
-  const [parcelId,     setParcelId]     = useState(editData?.parcel_id ?? '');
-  const [tipoBloque,   setTipoBloque]   = useState<TipoBloque>(editData?.tipo_bloque ?? 'mano_obra_interna');
-  const [tipoTrabajo,  setTipoTrabajo]  = useState(editData?.tipo_trabajo ?? '');
-  const [personalSel,  setPersonalSel]  = useState<string[]>(editData?.recursos_personal ?? []);
-  const [tractorId,    setTractorId]    = useState(editData?.tractor_id ?? '');
-  const [aperoId,      setAperoId]      = useState(editData?.apero_id ?? '');
+  const { register, handleSubmit, watch, setValue, formState: { errors } } = useForm<TrabajoFormValues>({
+    resolver: zodResolver(trabajoSchema),
+    defaultValues: {
+      fecha_planificada: editData?.fecha_planificada ?? fecha,
+      finca: editData?.finca ?? '',
+      parcel_id: editData?.parcel_id ?? '',
+      tipo_bloque: editData?.tipo_bloque ?? 'mano_obra_interna',
+      tipo_trabajo: editData?.tipo_trabajo ?? '',
+      recursos_personal: editData?.recursos_personal ?? [],
+      tractor_id: editData?.tractor_id ?? '',
+      apero_id: editData?.apero_id ?? '',
+      prioridad: editData?.prioridad ?? 'media',
+      estado_planificacion: editData?.estado_planificacion ?? 'borrador',
+      hora_inicio: editData?.hora_inicio?.slice(0, 5) ?? '',
+      hora_fin: editData?.hora_fin?.slice(0, 5) ?? '',
+      notas: editData?.notas ?? '',
+    }
+  });
+
+  const finca = watch('finca');
+  const parcelId = watch('parcel_id');
+  const tipoTrabajo = watch('tipo_trabajo');
+  const personalSel = watch('recursos_personal');
+  const tractorId = watch('tractor_id');
+  const aperoId = watch('apero_id');
+  const notas = watch('notas');
+
   const [materiales,   setMateriales]   = useState<{ nombre: string; cantidad: string }[]>(
     editData?.materiales_previstos && Array.isArray(editData.materiales_previstos) ? (editData.materiales_previstos as { nombre: string; cantidad: string }[]) : []
   );
-  const [prioridad,    setPrioridad]    = useState<Prioridad>(editData?.prioridad ?? 'media');
-  const [estado,       setEstado]       = useState<EstadoPlanificacion>(editData?.estado_planificacion ?? 'borrador');
-  const [notas,        setNotas]        = useState(editData?.notas ?? '');
   const [foto,         setFoto]         = useState<File | null>(null);
-  const [horaInicio,   setHoraInicio]   = useState(editData?.hora_inicio?.slice(0, 5) ?? '');
-  const [horaFin,      setHoraFin]      = useState(editData?.hora_fin?.slice(0, 5) ?? '');
   const [matNombre,    setMatNombre]    = useState('');
   const [matCantidad,  setMatCantidad]  = useState('');
   const [saving,       setSaving]       = useState(false);
@@ -206,40 +250,39 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!tipoTrabajo.trim()) return;
+  const onSubmit = async (data: TrabajoFormValues) => {
     setSaving(true);
     try {
       let foto_url = editData?.foto_url ?? null;
       if (foto) foto_url = await uploadImage(foto, 'parcel-images', buildStoragePath('planificacion', foto));
 
       const payload = {
-        tipo_bloque:          tipoBloque,
-        fecha:                fechaPlan,
-        hora_inicio:          horaInicio || null,
-        hora_fin:             horaFin || null,
-        finca:                finca || null,
-        parcel_id:            parcelId || null,
-        tipo_trabajo:         tipoTrabajo,
-        num_operarios:        personalSel.length || null,
-        nombres_operarios:    personalSel.join(', ') || null,
+        tipo_bloque:          data.tipo_bloque,
+        fecha:                data.fecha_planificada,
+        hora_inicio:          data.hora_inicio || null,
+        hora_fin:             data.hora_fin || null,
+        finca:                data.finca || null,
+        parcel_id:            data.parcel_id || null,
+        tipo_trabajo:         data.tipo_trabajo,
+        num_operarios:        data.recursos_personal.length || null,
+        nombres_operarios:    data.recursos_personal.join(', ') || null,
         foto_url,
-        notas:                notas || null,
+        notas:                data.notas || null,
         created_by:           currentUser,
-        estado_planificacion: estado,
-        prioridad,
-        fecha_planificada:    fechaPlan,
+        estado_planificacion: data.estado_planificacion,
+        prioridad:            data.prioridad,
+        fecha_planificada:    data.fecha_planificada,
         fecha_original:       editData?.fecha_original ?? null,
-        recursos_personal:    personalSel.length > 0 ? personalSel : null,
-        tractor_id:           tractorId || null,
-        apero_id:             aperoId || null,
+        recursos_personal:    data.recursos_personal.length > 0 ? data.recursos_personal : null,
+        tractor_id:           data.tractor_id || null,
+        apero_id:             data.apero_id || null,
         materiales_previstos: materiales.length > 0 ? materiales : null,
       };
 
       if (isEdit) {
-        await updateMut.mutateAsync({ id: editData!.id, ...(payload as unknown as Partial<TrabajoRegistro>) });
+        await updateMut.mutateAsync({ id: editData!.id, ...(payload as any) });
       } else {
-        await addMut.mutateAsync(payload as unknown as Omit<TrabajoRegistro, 'id' | 'created_at'>);
+        await addMut.mutateAsync(payload as any);
       }
       onClose();
     } finally {
@@ -263,19 +306,21 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
           {/* Fecha planificada */}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Fecha planificada</label>
-            <input type="date" value={fechaPlan} onChange={e => setFechaPlan(e.target.value)} className={INPUT} />
+            <input type="date" {...register('fecha_planificada')} className={INPUT} />
+            <FormError message={errors.fecha_planificada?.message} />
           </div>
 
           {/* Finca */}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Finca</label>
             <SelectWithOther
-              value={finca}
-              onChange={v => { setFinca(v); setParcelId(''); }}
+              value={finca || ''}
+              onChange={v => { setValue('finca', v, { shouldValidate: true }); setValue('parcel_id', '', { shouldValidate: true }); }}
               options={FINCAS}
-              onCreateNew={(newFinca) => setFinca(newFinca)}
+              onCreateNew={(newFinca) => setValue('finca', newFinca, { shouldValidate: true })}
               placeholder="Seleccionar finca…"
             />
+            <FormError message={errors.finca?.message} />
           </div>
 
           {/* Parcela cascada */}
@@ -283,36 +328,39 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
             <div>
               <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Parcela</label>
               <SelectWithOther
-                value={parcelId}
-                onChange={setParcelId}
+                value={parcelId || ''}
+                onChange={v => setValue('parcel_id', v, { shouldValidate: true })}
                 options={parcelas.map(p => p.parcel_id)}
-                onCreateNew={(newParcel) => setParcelId(newParcel)}
+                onCreateNew={(newParcel) => setValue('parcel_id', newParcel, { shouldValidate: true })}
                 placeholder="Finca completa"
               />
+              <FormError message={errors.parcel_id?.message} />
             </div>
           )}
 
           {/* Tipo bloque */}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tipo bloque</label>
-            <select value={tipoBloque} onChange={e => setTipoBloque(e.target.value as TipoBloque)} className={INPUT}>
+            <select {...register('tipo_bloque')} className={INPUT}>
               <option value="mano_obra_interna">Mano Obra Interna</option>
               <option value="mano_obra_externa">Mano Obra Externa</option>
               <option value="maquinaria_agricola">Maquinaria Agrícola</option>
               <option value="logistica">Logística</option>
             </select>
+            <FormError message={errors.tipo_bloque?.message} />
           </div>
 
           {/* Tipo trabajo */}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tipo de trabajo *</label>
             <SelectWithOther
-              value={tipoTrabajo}
-              onChange={setTipoTrabajo}
+              value={tipoTrabajo || ''}
+              onChange={v => setValue('tipo_trabajo', v, { shouldValidate: true })}
               options={tiposOpciones}
-              onCreateNew={(newTipo) => setTipoTrabajo(newTipo)}
+              onCreateNew={(newTipo) => setValue('tipo_trabajo', newTipo, { shouldValidate: true })}
               placeholder="Seleccionar tipo…"
             />
+            <FormError message={errors.tipo_trabajo?.message} />
           </div>
 
           {/* Personal */}
@@ -322,9 +370,9 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
             </label>
             <SelectWithOther
               value=""
-              onChange={v => { if (v && !personalSel.includes(v)) setPersonalSel(p => [...p, v]); }}
+              onChange={v => { if (v && !personalSel.includes(v)) setValue('recursos_personal', [...personalSel, v], { shouldValidate: true }); }}
               options={personalActivo.map(p => p.nombre)}
-              onCreateNew={(newPersonal) => { if (newPersonal && !personalSel.includes(newPersonal)) setPersonalSel(p => [...p, newPersonal]); }}
+              onCreateNew={(newPersonal) => { if (newPersonal && !personalSel.includes(newPersonal)) setValue('recursos_personal', [...personalSel, newPersonal], { shouldValidate: true }); }}
               placeholder="+ Añadir operario…"
             />
             {personalSel.length > 0 && (
@@ -332,34 +380,37 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
                 {personalSel.map(n => (
                   <span key={n} className="flex items-center gap-1 px-2 py-1 bg-slate-700 rounded-full text-[10px] text-white">
                     {n}
-                    <button onClick={() => setPersonalSel(p => p.filter(x => x !== n))} className="text-slate-400 hover:text-red-400">×</button>
+                    <button type="button" onClick={() => setValue('recursos_personal', personalSel.filter(x => x !== n), { shouldValidate: true })} className="text-slate-400 hover:text-red-400">×</button>
                   </span>
                 ))}
               </div>
             )}
+            <FormError message={errors.recursos_personal?.message} />
           </div>
 
           {/* Tractor / Apero */}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tractor</label>
             <SelectWithOther
-              value={tractorId}
-              onChange={v => { setTractorId(v); setAperoId(''); }}
+              value={tractorId || ''}
+              onChange={v => { setValue('tractor_id', v, { shouldValidate: true }); setValue('apero_id', '', { shouldValidate: true }); }}
               options={tractores.filter(t => t.activo).map(t => t.id)}
-              onCreateNew={(newTractor) => setTractorId(newTractor)}
+              onCreateNew={(newTractor) => setValue('tractor_id', newTractor, { shouldValidate: true })}
               placeholder="Sin tractor"
             />
+            <FormError message={errors.tractor_id?.message} />
           </div>
           {tractorId && (
             <div>
               <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Apero</label>
               <SelectWithOther
-                value={aperoId}
-                onChange={setAperoId}
+                value={aperoId || ''}
+                onChange={v => setValue('apero_id', v, { shouldValidate: true })}
                 options={aperos.filter(a => a.activo).map(a => a.id)}
-                onCreateNew={(newApero) => setAperoId(newApero)}
+                onCreateNew={(newApero) => setValue('apero_id', newApero, { shouldValidate: true })}
                 placeholder="Sin apero"
               />
+              <FormError message={errors.apero_id?.message} />
             </div>
           )}
 
@@ -371,14 +422,14 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
                 placeholder="Producto…" className="flex-1 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none" />
               <input type="text" value={matCantidad} onChange={e => setMatCantidad(e.target.value)}
                 placeholder="Cant." className="w-20 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none" />
-              <button onClick={addMaterial} className="px-3 py-2 rounded-lg bg-slate-700 text-white text-[10px] font-black hover:bg-slate-600 transition-colors">+</button>
+              <button type="button" onClick={addMaterial} className="px-3 py-2 rounded-lg bg-slate-700 text-white text-[10px] font-black hover:bg-slate-600 transition-colors">+</button>
             </div>
             {materiales.length > 0 && (
               <div className="mt-2 space-y-1">
                 {materiales.map((m, i) => (
                   <div key={i} className="flex items-center justify-between px-2 py-1.5 bg-slate-800 rounded-lg border border-white/10">
                     <span className="text-[10px] text-white">{m.nombre} {m.cantidad && `· ${m.cantidad}`}</span>
-                    <button onClick={() => setMateriales(p => p.filter((_, j) => j !== i))} className="text-slate-500 hover:text-red-400 text-xs">×</button>
+                    <button type="button" onClick={() => setMateriales(p => p.filter((_, j) => j !== i))} className="text-slate-500 hover:text-red-400 text-xs">×</button>
                   </div>
                 ))}
               </div>
@@ -388,41 +439,46 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
           {/* Prioridad */}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Prioridad</label>
-            <select value={prioridad} onChange={e => setPrioridad(e.target.value as Prioridad)} className={INPUT}>
+            <select {...register('prioridad')} className={INPUT}>
               <option value="alta">Alta</option>
               <option value="media">Media</option>
               <option value="baja">Baja</option>
             </select>
+            <FormError message={errors.prioridad?.message} />
           </div>
 
           {/* Estado planificación */}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Estado</label>
-            <select value={estado} onChange={e => setEstado(e.target.value as EstadoPlanificacion)} className={INPUT}>
+            <select {...register('estado_planificacion')} className={INPUT}>
               <option value="borrador">Borrador</option>
               <option value="confirmado">Confirmado</option>
               <option value="ejecutado">Ejecutado</option>
               <option value="pendiente">Pendiente</option>
               <option value="cancelado">Cancelado</option>
             </select>
+            <FormError message={errors.estado_planificacion?.message} />
           </div>
 
           {/* Horas */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Hora inicio</label>
-              <input type="time" value={horaInicio} onChange={e => setHoraInicio(e.target.value)} className={INPUT} />
+              <input type="time" {...register('hora_inicio')} className={INPUT} />
+              <FormError message={errors.hora_inicio?.message} />
             </div>
             <div>
               <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Hora fin</label>
-              <input type="time" value={horaFin} onChange={e => setHoraFin(e.target.value)} className={INPUT} />
+              <input type="time" {...register('hora_fin')} className={INPUT} />
+              <FormError message={errors.hora_fin?.message} />
             </div>
           </div>
 
           {/* Notas */}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Notas</label>
-            <AudioInput value={notas} onChange={setNotas} rows={3} placeholder="Observaciones…" />
+            <AudioInput value={notas || ''} onChange={v => setValue('notas', v, { shouldValidate: true })} rows={3} placeholder="Observaciones…" />
+            <FormError message={errors.notas?.message} />
           </div>
 
           {/* Foto */}
@@ -433,10 +489,10 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
         </div>
 
         <div className="px-5 py-3 border-t border-white/10 flex gap-2 shrink-0">
-          <button onClick={onClose}
+          <button type="button" onClick={onClose}
             className="flex-1 py-2 rounded-lg border border-white/10 text-[10px] font-black text-slate-400 hover:text-white transition-colors uppercase tracking-widest"
           >Cancelar</button>
-          <button onClick={handleSubmit} disabled={!tipoTrabajo.trim() || saving}
+          <button type="button" onClick={handleSubmit(onSubmit)} disabled={saving}
             className="flex-1 py-2 rounded-lg bg-[#38bdf8] text-[10px] font-black uppercase tracking-widest text-black transition-colors disabled:opacity-40"
           >
             {saving ? 'Guardando…' : isEdit ? 'Actualizar' : 'Guardar'}
@@ -931,7 +987,7 @@ export default function Trabajos() {
   const handleCerrarJornada = useCallback(async () => {
     if (!confirm(`¿Cerrar la jornada del ${fmtFecha(fechaDia)}?`)) return;
     const resultado = await cerrarJornada.mutateAsync(fechaDia);
-    setCierreResultado(resultado);
+    setCierreResultado(resultado as unknown as CierreResultado);
   }, [fechaDia, cerrarJornada]);
 
   const handleEditTrabajo = useCallback((t: TrabajoRegistro) => { setEditTrabajo(t); setModalTrabajo(true); }, []);
