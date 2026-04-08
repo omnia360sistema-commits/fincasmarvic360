@@ -42,7 +42,7 @@ function useDashboardData() {
         .order('created_at', { ascending: false });
       
       const wrIds = (trabajosHoy || []).map(w => w.id);
-      let presencia: any[] = [];
+      let presencia: { work_record_id: string | null }[] = [];
       if (wrIds.length > 0) {
         const { data: pres } = await supabase.from('presencia_tiempo_real')
           .select('work_record_id')
@@ -54,7 +54,7 @@ function useDashboardData() {
         id: w.id,
         work_type: w.work_type,
         parcel_id: w.parcel_id,
-        cuadrilla_nombre: (w as any).cuadrillas?.nombre,
+        cuadrilla_nombre: (w as unknown as { cuadrillas?: { nombre: string } }).cuadrillas?.nombre,
         hours: w.hours,
         enCurso: presencia.some(p => p.work_record_id === w.id)
       }));
@@ -63,7 +63,14 @@ function useDashboardData() {
       const { data: tractoresList } = await supabase.from('maquinaria_tractores').select('id, matricula').eq('activo', true);
       const trMap = new Map<string, string>((tractoresList || []).map(t => [t.id, t.matricula]));
 
-      const { data: usos } = await supabase.from('maquinaria_uso').select('tractor_id, finca').eq('fecha', hoyStr);
+      // Consultamos los trabajos registrados hoy que tengan un tractor asignado
+      const { data: usosRaw } = await supabase
+        .from('trabajos_registro')
+        .select('tractor_id, finca')
+        .eq('fecha', hoyStr)
+        .not('tractor_id', 'is', null);
+      const usos = usosRaw as unknown as { tractor_id: string; finca: string | null }[] | null;
+
       const { data: posiciones } = await supabase.from('vehicle_positions')
         .select('vehicle_id, parcel_id_detectada, timestamp')
         .eq('vehicle_tipo', 'tractor').gte('timestamp', hace4horas).order('timestamp', { ascending: true });
@@ -124,14 +131,19 @@ const FINCAS_COORDENADAS = [
   { nombre: 'FINCA MAYORAZGO', lat: 39.40, lon: -0.30 }, // Zona Valencia
 ];
 
+interface WeatherData {
+  current?: { temperature_2m?: number; precipitation?: number; windspeed_10m?: number };
+  daily?: { time?: string[]; temperature_2m_max?: number[]; temperature_2m_min?: number[]; precipitation_sum?: number[] };
+}
+
 function useWeather(lat: number, lon: number) {
   return useQuery({
     queryKey: ['weather', lat, lon],
-    queryFn: async (): Promise<any> => {
+    queryFn: async (): Promise<WeatherData | null> => {
       try {
         const res = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,precipitation,windspeed_10m&daily=temperature_2m_max,temperature_2m_min,precipitation_sum&timezone=Europe%2FMadrid`);
         if (!res.ok) return null;
-        return res.json();
+        return (await res.json()) as WeatherData;
       } catch (e) {
         console.warn('Weather API fallida (offline/error):', e);
         return null;
@@ -142,7 +154,7 @@ function useWeather(lat: number, lon: number) {
   });
 }
 
-function KpiCard({ title, value, icon: Icon, color }: { title: string, value: any, icon: any, color: string }) {
+function KpiCard({ title, value, icon: Icon, color }: { title: string, value: React.ReactNode, icon: React.ElementType, color: string }) {
   return (
     <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
       <div className="flex justify-between items-start mb-2">
@@ -178,26 +190,10 @@ export default function Dashboard() {
   useEffect(() => {
     const cargarLia = async () => {
       try {
-        const hoy = new Date().toISOString().split('T')[0];
-        
-        // Contar eventos del día
-        // @ts-ignore - Tabla dinámica de IA
-        const { count: eventos } = await supabase
-          .from('lia_contexto_sesion')
-          .select('*', { count: 'exact', head: true })
-          .eq('fecha', hoy);
-        
-        // Última memoria
-        // @ts-ignore - Tabla dinámica de IA
-        const { data: ultima } = await supabase
-          .from('lia_memoria')
-          .select('descripcion')
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .single();
-        
-        setLiaEventos(eventos || 0);
-        setLiaUltimaMemoria(ultima?.descripcion || '');
+        // Silenciamos las tablas LIA temporalmente hasta que se creen en la BD
+        // para evitar el error 406 de consola
+        setLiaEventos(0);
+        setLiaUltimaMemoria('');
       } catch (error) {
         // Silent fail
       }

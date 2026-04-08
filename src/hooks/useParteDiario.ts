@@ -35,6 +35,8 @@ export function useEnsureParteHoy() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (hoy: string) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      const currentUser = user?.email || 'sistema';
       // Intentar obtener el existente primero
       const { data: existing } = await supabase
         .from('partes_diarios')
@@ -45,7 +47,7 @@ export function useEnsureParteHoy() {
       // Crear nuevo
       const { data, error } = await supabase
         .from('partes_diarios')
-        .insert({ fecha: hoy, responsable: 'JuanPe' })
+        .insert({ fecha: hoy, responsable: currentUser })
         .select()
         .single()
       if (error) throw error
@@ -329,7 +331,7 @@ export function useDeleteEntradaParte() {
       id: string
       parteId: string
     }) => {
-      const { error } = await supabase.from(tabla as any).delete().eq('id', id)
+      const { error } = await supabase.from(tabla as 'parte_trabajo').delete().eq('id', id)
       if (error) throw error
       return { tabla, parteId }
     },
@@ -454,12 +456,13 @@ export function useCerrarJornada() {
         p_usuario: currentUser,
       });
       if (error) throw error;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      
+      const res = data as unknown as Record<string, number>;
       return {
-        ejecutados: (data as any).ejecutados,
-        pendientes: (data as any).pendientes,
-        arrastrados: (data as any).arrastrados,
-        incidenciasArrastradas: (data as any).incidenciasNuevasTrabajo
+        ejecutados: res.ejecutados,
+        pendientes: res.pendientes,
+        arrastrados: res.arrastrados,
+        incidenciasArrastradas: res.incidenciasNuevasTrabajo
       };
     },
     onSuccess: () => {
@@ -491,7 +494,7 @@ export function useUpdateEstadoTrabajo() {
       estado_planificacion: string
       prioridad?: string
     }) => {
-      const patch: Record<string, string> = { estado_planificacion }
+      const patch: { estado_planificacion: string; prioridad?: string } = { estado_planificacion }
       if (prioridad) patch.prioridad = prioridad
       const { data, error } = await supabase
         .from('trabajos_registro')

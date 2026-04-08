@@ -33,6 +33,8 @@ src/
 │   ├── Dashboard.tsx       # Inicio del sistema
 │   ├── Historicos.tsx      # Buscador histórico global
 │   ├── QRCuadrilla.tsx     # Pantalla de fichaje QR
+│   ├── Materiales.tsx      # Gestión de inventario descentralizado
+│   ├── Auditoria.tsx       # Trazabilidad global de acciones
 │   └── NotFound.tsx        # Página 404
 │
 ├── hooks/                  # Lógica de negocio (React Hooks)
@@ -43,6 +45,8 @@ src/
 │   ├── useParteDiario.ts   # Parte diario, estados, residuos (564 líneas)
 │   ├── useLogistica.ts     # Camiones, viajes, combustible (613 líneas)
 │   ├── useParcelData.ts    # Parcelas, cultivos, cosechas (786 líneas) 🔴
+│   ├── useMateriales.ts    # Filtros de stock por categoría real
+│   ├── useAuditoria.ts     # Unificación de 4 tablas en un solo timeline
 │   ├── useGeoJSON.ts       # Mapeo geoespacial (70 líneas)
 │   └── use-toast.ts        # Notificaciones toast
 │
@@ -776,8 +780,8 @@ npm run capacitor build   # Compilar para iOS/Android
 |---------|-------|
 | **Líneas de código (hooks)** | ~4,300 |
 | **Líneas de código (tipos BD)** | 3,047 |
-| **Páginas principales** | 13 |
-| **Módulos de negocio** | 8 (funcionales) + 3 (WIP) |
+| **Páginas principales** | 15 |
+| **Módulos de negocio** | 11 (100% funcionales, 0 WIP) |
 | **Componentes base reutilizables** | 4 |
 | **Tablas en BD** | 50+ |
 | **Fincas gestoras** | 7 (211.94 ha, 119 sectores) |

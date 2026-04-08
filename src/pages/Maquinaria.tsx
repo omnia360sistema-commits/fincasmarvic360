@@ -150,7 +150,7 @@ function SWO({
 }
 
 // ── Modal Tractor ─────────────────────────────────────────────
-function ModalTractor({
+const ModalTractor = React.memo(function ModalTractor({
   tractor,
   onClose,
 }: {
@@ -408,10 +408,10 @@ function ModalTractor({
       </div>
     </div>
   );
-}
+});
 
 // ── Modal Apero ───────────────────────────────────────────────
-function ModalApero({
+const ModalApero = React.memo(function ModalApero({
   apero,
   tractores,
   onClose,
@@ -576,10 +576,10 @@ function ModalApero({
       </div>
     </div>
   );
-}
+});
 
 // ── Modal Registro Uso ────────────────────────────────────────
-function ModalUso({
+const ModalUso = React.memo(function ModalUso({
   tractores,
   aperos,
   personal,
@@ -806,10 +806,10 @@ function ModalUso({
       </div>
     </div>
   );
-}
+});
 
 // ── Modal Mantenimiento ───────────────────────────────────────
-function ModalMantenimiento({
+const ModalMantenimiento = React.memo(function ModalMantenimiento({
   tractorId,
   horasActuales,
   tractores,
@@ -994,10 +994,10 @@ function ModalMantenimiento({
       </div>
     </div>
   );
-}
+});
 
 // ── Tarjeta Tractor ───────────────────────────────────────────
-function TarjetaTractor({
+const TarjetaTractor = React.memo(function TarjetaTractor({
   tractor,
   aperos,
   usos,
@@ -1198,7 +1198,7 @@ function TarjetaTractor({
       )}
     </div>
   );
-}
+});
 
 // ── Componente principal ──────────────────────────────────────
 export default function Maquinaria() {
@@ -1462,7 +1462,7 @@ export default function Maquinaria() {
       polylineRef.current = L.polyline(latlngs, { color: '#fb923c', weight: 4 }).addTo(map);
       
       // Calcular paradas (>5 min quietos)
-      let currentStop: any = null;
+      let currentStop: { start: string; lat: number; lng: number; duration: number } | null = null;
       for (let i = 1; i < gpsRecorrido.length; i++) {
         const prev = gpsRecorrido[i-1];
         const curr = gpsRecorrido[i];

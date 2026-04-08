@@ -42,8 +42,9 @@ function useHistoricos(fechaDesde: string, fechaHasta: string) {
           .order('fecha', { ascending: false })
           .limit(200),
         supabase
-          .from('maquinaria_uso')
-          .select('id, fecha, hora_inicio, tipo_trabajo, finca, tractorista, horas_trabajadas, tractor_id')
+          .from('trabajos_registro')
+          .select('id, fecha, hora_inicio, tipo_trabajo, finca, nombres_operarios, horas_reales, tractor_id')
+          .not('tractor_id', 'is', null)
           .gte('fecha', fechaDesde)
           .lte('fecha', fechaHasta)
           .order('fecha', { ascending: false })
@@ -97,7 +98,7 @@ function useHistoricos(fechaDesde: string, fechaHasta: string) {
       }
 
       // Maquinaria uso
-      for (const u of usoRes.data ?? []) {
+      for (const u of (usoRes.data as any[]) ?? []) {
         entradas.push({
           id:        `maq-${u.id}`,
           modulo:    'maquinaria',
@@ -105,7 +106,7 @@ function useHistoricos(fechaDesde: string, fechaHasta: string) {
           hora:      u.hora_inicio ? u.hora_inicio.slice(11, 16) : undefined,
           tipo:      'Uso maquinaria',
           titulo:    u.tipo_trabajo ?? 'Uso',
-          subtitulo: [u.tractorista, u.horas_trabajadas ? `${u.horas_trabajadas}h` : null].filter(Boolean).join(' · ') || undefined,
+          subtitulo: [u.nombres_operarios, u.horas_reales ? `${u.horas_reales}h` : null].filter(Boolean).join(' · ') || undefined,
           finca:     u.finca ?? undefined,
           url:       '/maquinaria',
         })

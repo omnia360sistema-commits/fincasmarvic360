@@ -3,12 +3,16 @@ import { supabase } from '@/integrations/supabase/client'
 import {
   useParcelas,
   useCropCatalog,
+} from '@/hooks/useParcelData'
+import {
   useInsertPlanting,
   useInsertHarvest,
+} from '@/hooks/useOperaciones'
+import {
   useInsertAnalisisSuelo,
   useInsertLecturaSensor,
   useInsertAnalisisAgua,
-} from '@/hooks/useParcelData'
+} from '@/hooks/useAnalisis'
 import { useZonasRiego, useAddZonaRiego, useAddRegistroRiego } from '@/hooks/useRiego'
 import { toast } from '@/hooks/use-toast'
 import { Camera, ChevronDown, ChevronUp, Droplet } from 'lucide-react'
@@ -287,8 +291,8 @@ export default function RegisterEstadoUnificadoForm({
       }
       onClose()
 
-    } catch (e: any) {
-      toast({ title: 'Error', description: e.message, variant: 'destructive' })
+    } catch (e: unknown) {
+      toast({ title: 'Error', description: e instanceof Error ? e.message : 'Error desconocido', variant: 'destructive' })
     } finally {
       setSaving(false)
     }
@@ -446,6 +450,7 @@ export default function RegisterEstadoUnificadoForm({
               options={zonasRiego.map(z => z.nombre_zona)}
               value={riegoZona}
               onChange={setRiegoZona}
+              onCreateNew={setRiegoZona}
               placeholder="Ej: Sector Norte"
             />
             <div className="grid grid-cols-2 gap-3">
@@ -459,6 +464,7 @@ export default function RegisterEstadoUnificadoForm({
               options={['Pozo', 'Balsa', 'Red municipal', 'Río', 'Otro']}
               value={riegoOrigen}
               onChange={setRiegoOrigen}
+              onCreateNew={setRiegoOrigen}
               placeholder="Seleccionar..."
             />
             <div className="pt-2">

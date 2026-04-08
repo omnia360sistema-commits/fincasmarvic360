@@ -1,5 +1,4 @@
-import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import React, { Component, ErrorInfo, ReactNode } from "react";
 
 interface Props {
   children?: ReactNode;
@@ -7,13 +6,12 @@ interface Props {
 
 interface State {
   hasError: boolean;
-  error: Error | null;
+  error?: Error;
 }
 
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
-    hasError: false,
-    error: null
+    hasError: false
   };
 
   public static getDerivedStateFromError(error: Error): State {
@@ -21,27 +19,16 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error, errorInfo);
+    console.error("Uncaught error:", error, errorInfo);
   }
 
   public render() {
     if (this.state.hasError) {
       return (
-        <div className="flex flex-col items-center justify-center min-h-[400px] p-6 text-center w-full h-full">
-          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mb-4">
-            <AlertTriangle className="w-8 h-8 text-red-500" />
-          </div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Algo ha fallado</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 max-w-md">
-            {this.state.error?.message || 'Ha ocurrido un error inesperado en la aplicación.'}
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-lg text-sm font-medium hover:opacity-90 transition-opacity"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Recargar aplicación
-          </button>
+        <div className="min-h-screen bg-[#020617] flex items-center justify-center flex-col gap-4 text-center px-8">
+          <span className="text-red-400 text-sm font-black tracking-widest uppercase">Error Inesperado</span>
+          <span className="text-slate-400 text-xs">{this.state.error?.message || 'Ha ocurrido un error en la aplicación.'}</span>
+          <button onClick={() => window.location.href = '/'} className="px-4 py-2 mt-4 bg-sky-500 text-slate-900 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-sky-400 transition-colors">Volver al Inicio</button>
         </div>
       );
     }

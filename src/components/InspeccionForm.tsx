@@ -89,8 +89,8 @@ export default function InspeccionForm({ parcelId, onClose }: Props) {
       toast({ title: 'Inspección guardada', description: `${tipo} — ${resultado}` })
       if (onClose) onClose()
 
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' })
+    } catch (err: unknown) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Error desconocido', variant: 'destructive' })
     } finally {
       setSaving(false)
     }
@@ -117,6 +117,7 @@ export default function InspeccionForm({ parcelId, onClose }: Props) {
           options={TIPOS_INSPECCION}
           value={tipo}
           onChange={setTipo}
+          onCreateNew={setTipo}
           placeholder="Seleccionar tipo..."
         />
 

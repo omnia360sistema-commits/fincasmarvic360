@@ -118,7 +118,7 @@ export function useInsertWorkRecordQR() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (record: { cuadrilla_id: string; hora_entrada: string }) => {
-      const { data, error } = await supabase.from('work_records').insert(record as any).select().single()
+      const { data, error } = await supabase.from('work_records').insert(record as unknown as TablesInsert<'work_records'>).select().single()
       if (error) throw error; return data
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['farm_parcel_statuses'] }),

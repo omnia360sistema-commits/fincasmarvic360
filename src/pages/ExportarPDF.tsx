@@ -67,10 +67,34 @@ async function cargarTrabajos(desde: string, hasta: string) {
 
 async function cargarMaquinaria(desde: string, hasta: string) {
   const [usoRes, mantRes] = await Promise.all([
-    (supabase as any).from('maquinaria_uso').select('*, maquinaria_tractores(matricula, marca)').gte('fecha', desde).lte('fecha', hasta).order('fecha').limit(300),
+    supabase.from('trabajos_registro')
+      .select('*, maquinaria_tractores(matricula, marca)')
+      .not('tractor_id', 'is', null)
+      .gte('fecha', desde).lte('fecha', hasta).order('fecha').limit(300),
     supabase.from('maquinaria_mantenimiento').select('*, maquinaria_tractores(matricula)').gte('fecha', desde).lte('fecha', hasta).order('fecha').limit(200),
   ])
-  return { usos: usoRes.data ?? [], mantenimientos: mantRes.data ?? [] }
+  
+  const usos = (usoRes.data ?? []).map((u: any) => ({
+    ...u,
+    tractorista: u.nombres_operarios,
+    horas_trabajadas: u.horas_reales,
+    gasolina_litros: 0
+  })) as Array<{
+    maquinaria_tractores?: { matricula: string };
+    fecha: string;
+    tipo_trabajo?: string;
+    tractorista?: string;
+    horas_trabajadas?: number;
+    gasolina_litros?: number;
+  }>;
+  const mantenimientos = (mantRes.data ?? []) as Array<{
+    maquinaria_tractores?: { matricula: string };
+    fecha: string;
+    tipo: string;
+    coste_euros?: number;
+    proveedor?: string;
+  }>;
+  return { usos, mantenimientos }
 }
 
 async function cargarLogistica(desde: string, hasta: string) {
@@ -190,8 +214,8 @@ async function generarPDFGlobal(
       ctx.writeLabel('MAQUINARIA', 11)
       ctx.separator()
 
-      const totalH = usos.reduce((s: number, u: { horas_trabajadas?: number | null }) => s + (u.horas_trabajadas ?? 0), 0)
-      const totalL = usos.reduce((s: number, u: { gasolina_litros?: number | null }) => s + (u.gasolina_litros ?? 0), 0)
+      const totalH = usos.reduce((s, u) => s + (u.horas_trabajadas ?? 0), 0)
+      const totalL = usos.reduce((s, u) => s + (u.gasolina_litros ?? 0), 0)
       ctx.kpiRow([
         { label: 'Usos',        value: usos.length        },
         { label: 'Horas',       value: totalH.toFixed(1)  },
@@ -201,8 +225,7 @@ async function generarPDFGlobal(
 
       for (const u of usos) {
         ctx.checkPage(8)
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const mat = (u as any).maquinaria_tractores?.matricula ?? '—'
+        const mat = u.maquinaria_tractores?.matricula ?? '—'
         ctx.writeLine(u.fecha, `${u.tipo_trabajo ?? 'Uso'} · ${mat} · ${u.tractorista ?? ''}`)
         if (u.horas_trabajadas) ctx.writeLine('Horas', String(u.horas_trabajadas))
       }
@@ -417,7 +440,7 @@ async function generarPDFAgronomico(tipo: string, desde: string, hasta: string, 
       [30, 30, 25, 25, 20, 40],
       harvests.map(h => [
         parcelMap.get(h.parcel_id)?.parcel_number || h.parcel_id,
-        h.crop, (h as any).plantings?.variedad || '—',
+        h.crop, (h as unknown as { plantings?: { variedad?: string } }).plantings?.variedad || '—',
         h.date ? new Date(h.date).toLocaleDateString('es-ES') : '—',
         h.production_kg?.toLocaleString() || '0',
         ticketMap.get(h.id) || '—'
@@ -504,7 +527,7 @@ export default function ExportarPDF() {
       const [p, t, m, l, pers1, pers2, c1, c2, c3] = await Promise.all([
         supabase.from('partes_diarios').select('id', { count: 'exact', head: true }).gte('fecha', desde).lte('fecha', hasta),
         supabase.from('trabajos_registro').select('id', { count: 'exact', head: true }).gte('fecha', desde).lte('fecha', hasta),
-        (supabase as any).from('maquinaria_uso').select('id', { count: 'exact', head: true }).gte('fecha', desde).lte('fecha', hasta),
+        supabase.from('trabajos_registro').select('id', { count: 'exact', head: true }).not('tractor_id', 'is', null).gte('fecha', desde).lte('fecha', hasta),
         supabase.from('logistica_viajes').select('id', { count: 'exact', head: true }).gte('hora_salida', desde).lte('hora_salida', hasta + 'T23:59:59'),
         supabase.from('personal').select('id', { count: 'exact', head: true }).gte('created_at', desde).lte('created_at', hasta + 'T23:59:59'),
         supabase.from('personal_externo').select('id', { count: 'exact', head: true }).gte('created_at', desde).lte('created_at', hasta + 'T23:59:59'),

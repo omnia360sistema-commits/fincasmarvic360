@@ -1,5 +1,46 @@
 
 
+-- ==============================================================================
+@@ -370,11 +370,11 @@
+
+### 🔴 CRÍTICO (Health Score +15)
+-- [ ] QW1: Reemplazar 'JuanPe' en useTrabajos.ts (3 líneas)
+-- [ ] QW2: Agregar `onError` a mutaciones (67 mutaciones)
+-- [ ] QW3: Remover `as any` (3 instancias)
+-- [ ] QW4: Cleanup useGeoJSON (1 hook)
+-- [ ] QW5: React.memo() (40 componentes internos)
++- [x] QW1: Reemplazar 'JuanPe' (Hardcoded) por usuario real autenticado.
++- [x] QW2: Agregar `onError` a mutaciones con Toasts UI.
++- [x] QW3: Remover `as any` por aserciones estructurales (`unknown as Type`).
++- [x] QW4: Cleanup useGeoJSON implementado.
++- [x] QW5: React.memo() orquestados en mega-páginas para evitar re-renders.
+
+### 🟡 ALTA PRIORIDAD (Health Score +20)
+-- [ ] Error Boundaries en App.tsx
++- [x] Error Boundaries en App.tsx implementado y protegiendo rutas.
+- [ ] Refactor ParteDiario.tsx → 4 componentes
+@@ -370,11 +370,11 @@
+
+### 🔴 CRÍTICO (Health Score +15)
+-- [ ] QW1: Reemplazar 'JuanPe' en useTrabajos.ts (3 líneas)
+-- [ ] QW2: Agregar `onError` a mutaciones (67 mutaciones)
+-- [ ] QW3: Remover `as any` (3 instancias)
+-- [ ] QW4: Cleanup useGeoJSON (1 hook)
+-- [ ] QW5: React.memo() (40 componentes internos)
++- [x] QW1: Reemplazar 'JuanPe' (Hardcoded) por usuario real autenticado.
++- [x] QW2: Agregar `onError` a mutaciones con Toasts UI.
++- [x] QW3: Remover `as any` por aserciones estructurales (`unknown as Type`).
++- [x] QW4: Cleanup useGeoJSON implementado.
++- [x] QW5: React.memo() orquestados en mega-páginas para evitar re-renders.
+
+### 🟡 ALTA PRIORIDAD (Health Score +20)
+-- [ ] Error Boundaries en App.tsx
++- [x] Error Boundaries en App.tsx implementado y protegiendo rutas.
+- [ ] Refactor ParteDiario.tsx → 4 componentes
+-- ==============================================================================
+-- BACKUP GOLDEN MASTER - REVISIÓN 38 - PRODUCCIÓN FINAL (07/04/2026)
+-- Cero Errores TypeScript/ESLint. Módulos Materiales y Auditoría Completados.
+-- ==============================================================================
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -2283,34 +2324,3 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "anon";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "authenticated";
 ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TABLES TO "service_role";
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

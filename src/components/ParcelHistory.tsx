@@ -6,11 +6,13 @@ import {
   useParcelProduction,
   useParcelTickets,
   useParcelResiduos,
-  useParcelCertification,
+  useParcelCertification
+} from '@/hooks/useOperaciones'
+import {
   useParcelAnalisisSuelo,
   useFincaAnalisisAgua,
   useParcelLecturasSensor
-} from '@/hooks/useParcelData'
+} from '@/hooks/useAnalisis'
 import { useRegistrosRiego } from '@/hooks/useRiego'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { CheckCircle2, AlertCircle, Clock, X, MapPin } from 'lucide-react'
@@ -119,24 +121,27 @@ export default function ParcelHistory({
         <TabsContent value="work" className="space-y-2 mt-0">
           {workRecords.isLoading && <Spinner />}
           {!workRecords.isLoading && !workRecords.data?.length && <Empty />}
-          {workRecords.data?.map(r => (
-            <Card key={r.id}>
-              <Row label="Tipo"         value={r.work_type} capitalize />
-              <Row label="Fecha"        value={r.date} />
-              <Row label="Trabajadores" value={`${r.workers || 0}`} />
-              <Row label="Horas"        value={`${r.hours || 0} h`} />
-              {(r as any).cuadrillas?.nombre && (
-                <Row label="Cuadrilla" value={(r as any).cuadrillas.nombre} accent />
-              )}
-              {r.hora_entrada && r.hora_salida && (
-                <Row
-                  label="Horario"
-                  value={`${new Date(r.hora_entrada).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} → ${new Date(r.hora_salida).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`}
-                />
-              )}
-              {r.description && <Row label="Nota" value={r.description} />}
-            </Card>
-          ))}
+          {workRecords.data?.map(r => {
+            const cuadrilla = (r as unknown as { cuadrillas?: { nombre: string } }).cuadrillas;
+            return (
+              <Card key={r.id}>
+                <Row label="Tipo"         value={r.work_type} capitalize />
+                <Row label="Fecha"        value={r.date} />
+                <Row label="Trabajadores" value={`${r.workers || 0}`} />
+                <Row label="Horas"        value={`${r.hours || 0} h`} />
+                {cuadrilla?.nombre && (
+                  <Row label="Cuadrilla" value={cuadrilla.nombre} accent />
+                )}
+                {r.hora_entrada && r.hora_salida && (
+                  <Row
+                    label="Horario"
+                    value={`${new Date(r.hora_entrada).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} → ${new Date(r.hora_salida).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`}
+                  />
+                )}
+                {r.description && <Row label="Nota" value={r.description} />}
+              </Card>
+            );
+          })}
         </TabsContent>
 
         {/* ── PLANTACIONES ─────────────────────────── */}
@@ -199,7 +204,8 @@ export default function ParcelHistory({
         <TabsContent value="tickets" className="space-y-2 mt-0">
           {!tickets?.length && <Empty />}
           {tickets?.map(t => {
-            const matricula = (t as any).camiones?.matricula ?? t.matricula_manual ?? '—'
+            const camion = (t as unknown as { camiones?: { matricula: string } }).camiones;
+            const matricula = camion?.matricula ?? t.matricula_manual ?? '—'
             const fecha     = t.created_at
               ? new Date(t.created_at).toLocaleDateString('es-ES')
               : '—'
@@ -293,7 +299,8 @@ export default function ParcelHistory({
         <TabsContent value="riego" className="space-y-2 mt-0">
           {!riegos?.length && <Empty />}
           {riegos?.map(r => {
-            const zonaNombre = (r as any).sistema_riego_zonas?.nombre_zona ?? '—'
+            const zona = (r as unknown as { sistema_riego_zonas?: { nombre_zona: string } }).sistema_riego_zonas;
+            const zonaNombre = zona?.nombre_zona ?? '—'
             return (
               <Card key={r.id}>
                 <Row label="Zona"     value={zonaNombre} accent />

@@ -153,7 +153,7 @@ export function useAddCamion() {
 
       const { data, error } = await supabase
         .from('camiones')
-        .insert([{ ...camionPayload, codigo_interno }])
+        .insert([{ ...camionPayload, codigo_interno, created_by: 'JuanPe' }])
         .select()
         .single();
       if (error) throw error;
@@ -259,7 +259,7 @@ export function useAddVehiculoEmpresa() {
 
       const { data, error } = await supabase
         .from('vehiculos_empresa')
-        .insert([{ ...vehiculoPayload, codigo_interno }])
+        .insert([{ ...vehiculoPayload, codigo_interno, created_by: 'JuanPe' }])
         .select()
         .single();
       if (error) throw error;
@@ -350,7 +350,7 @@ export function useAddViaje() {
     mutationFn: async (payload: Omit<Viaje, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
         .from('logistica_viajes')
-        .insert([payload])
+        .insert([{ ...payload, created_by: 'JuanPe' }])
         .select()
         .single();
       if (error) throw error;
@@ -359,10 +359,10 @@ export function useAddViaje() {
     onSuccess: (data, payload) => {
       try {
         logLiaEvento('logistica', 'viaje_registrado', {
-          finca: (payload as any).finca ?? null,
-          destino: (payload as any).destino ?? null,
-          km_recorridos: (payload as any).km_recorridos ?? null,
-          gasto_gasolina_litros: (payload as any).gasto_gasolina_litros ?? null,
+          finca: payload.finca ?? null,
+          destino: payload.destino ?? null,
+          km_recorridos: payload.km_recorridos ?? null,
+          gasto_gasolina_litros: payload.gasto_gasolina_litros ?? null,
         });
       } catch (e) {
         // silent
@@ -437,7 +437,7 @@ export function useAddMantenimientoCamion() {
     mutationFn: async (payload: Omit<MantenimientoCamion, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
         .from('logistica_mantenimiento')
-        .insert([payload])
+        .insert([{ ...payload, created_by: 'JuanPe' }])
         .select()
         .single();
       if (error) throw error;
@@ -513,7 +513,7 @@ export function useAddCombustible() {
     mutationFn: async (payload: Omit<Combustible, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
         .from('logistica_combustible')
-        .insert([payload])
+        .insert([{ ...payload, created_by: 'JuanPe' }])
         .select()
         .single();
       if (error) throw error;

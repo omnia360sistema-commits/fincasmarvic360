@@ -15,6 +15,8 @@ graph TD
         ExportarPDFPage["ExportarPDF.tsx"]
         FarmMapPage["FarmMap.tsx"]
         DashboardPage["Dashboard.tsx"]
+        MaterialesPage["Materiales.tsx"]
+        AuditoriaPage["Auditoria.tsx"]
     end
 
     subgraph Hooks["⚙️ Hooks Layer (src/hooks/)"]
@@ -26,6 +28,8 @@ graph TD
         useParcelData["useParcelData.ts<br/>(786 lines) 🔴"]
         useLogistica["useLogistica.ts<br/>(613 lines)"]
         useGeoJSON["useGeoJSON.ts"]
+        useMateriales["useMateriales.ts"]
+        useAuditoria["useAuditoria.ts"]
     end
 
     subgraph Utils["🔧 Utilities (src/utils/)"]

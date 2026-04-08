@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from '@/hooks/use-toast'
+import type { Tables, TablesInsert } from '@/integrations/supabase/types'
 
 export function useParcelAnalisisSuelo(parcelId: string | null) {
   return useQuery({
@@ -23,7 +24,7 @@ export function useFarmAnalisisSuelo(parcelIds: string[]) {
       if (parcelIds.length === 0) return {}
       const { data, error } = await supabase.from('analisis_suelo').select('*').in('parcel_id', parcelIds).order('fecha', { ascending: false })
       if (error) throw error
-      const latest: Record<string, any> = {}
+      const latest: Record<string, Tables<'analisis_suelo'>> = {}
       for (const row of data || []) { if (!latest[row.parcel_id]) latest[row.parcel_id] = row }
       return latest
     },
@@ -38,7 +39,7 @@ export function useAlertasAgronomicas() {
     queryFn: async () => {
       const { data, error } = await supabase.from('analisis_suelo').select('id, parcel_id, ph, conductividad_ec, fecha').order('fecha', { ascending: false }).limit(200)
       if (error) throw error
-      const latest: Record<string, any> = {}
+      const latest: Record<string, Partial<Tables<'analisis_suelo'>>> = {}
       for (const row of data || []) { if (!latest[row.parcel_id]) latest[row.parcel_id] = row }
       const alerts = []
       for (const row of Object.values(latest)) {
@@ -82,7 +83,7 @@ export function useFincaAnalisisAgua(finca: string | null) {
 export function useInsertAnalisisSuelo() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (record: any) => {
+    mutationFn: async (record: TablesInsert<'analisis_suelo'>) => {
       const { data, error } = await supabase.from('analisis_suelo').insert(record).select().single()
       if (error) throw error; return data
     },
@@ -94,7 +95,7 @@ export function useInsertAnalisisSuelo() {
 export function useInsertLecturaSensor() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (record: any) => {
+    mutationFn: async (record: TablesInsert<'lecturas_sensor_planta'>) => {
       const { data, error } = await supabase.from('lecturas_sensor_planta').insert(record).select().single()
       if (error) throw error; return data
     },
@@ -106,7 +107,7 @@ export function useInsertLecturaSensor() {
 export function useInsertAnalisisAgua() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (record: any) => {
+    mutationFn: async (record: TablesInsert<'analisis_agua'>) => {
       const { data, error } = await supabase.from('analisis_agua').insert(record).select().single()
       if (error) throw error; return data
     },

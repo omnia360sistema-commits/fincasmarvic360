@@ -21,7 +21,7 @@
   • RLS: Enabled anon role con políticas selectivas
   • Auditoría: Campos created_by, updated_by, deleted_at (soft delete)
 
-  VERSIÓN: 1.0.0 (04/04/2026 — Rev. 17 — COMPLETADO)
+  VERSIÓN: 1.1.0 (07/04/2026 — Rev. 38 — PRODUCCIÓN FINAL)
   AUTOR: Copilot (GitHub)
   CLIENTE: Grupo MARVIC — 250 ha ecológicas, Murcia y Valencia
 

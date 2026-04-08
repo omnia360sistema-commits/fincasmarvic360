@@ -1,5 +1,4 @@
 import React, { useState } from 'react'
-import AppLayout from '@/components/AppLayout'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { QrCode, Package, Thermometer, Plus, X, Search, MapPin, Truck, Box, FlaskConical, Sprout, Wrench, Droplets, Wheat, Activity, CalendarClock, Download, FileText, AlertCircle, Loader2 } from 'lucide-react'
 import {
@@ -26,6 +25,44 @@ const TIPOS_MOVIMIENTO = [
   { value: 'entrada_camara', label: 'Entrada a Cámara' },
   { value: 'salida_expedicion', label: 'Salida / Expedición' }
 ]
+
+interface DbRow {
+  id: string;
+  fecha?: string;
+  created_at?: string;
+  date?: string;
+  fecha_inicio?: string;
+  timestamp?: string;
+  ph?: number;
+  conductividad_ec?: number;
+  materia_organica?: number;
+  crop?: string;
+  variedad?: string;
+  tipo_trabajo?: string;
+  cuadrillas?: { nombre?: string };
+  nombres_operarios?: string;
+  hours?: number;
+  horas_reales?: number;
+  litros_aplicados?: number;
+  ndvi?: number;
+  clorofila?: number;
+  production_kg?: number;
+  qr_code?: string;
+  peso_kg?: number;
+  tipo?: string;
+  camiones?: { matricula?: string };
+}
+
+interface PalotRow {
+  id: string;
+  qr_code: string;
+  estado: string;
+  cultivo?: string | null;
+  lote?: string | null;
+  peso_kg?: number | null;
+  parcel_id?: string | null;
+  parcels?: { parcel_number?: string } | null;
+}
 
 export default function Trazabilidad() {
   const [filtroEstado, setFiltroEstado] = useState<string>('todos')
@@ -101,24 +138,16 @@ export default function Trazabilidad() {
         movimientos = movs || []
       }
 
-      const events: any[] = []
+      const events: { id: string; type: string; date: Date; data: DbRow }[] = []
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(suelo || []).forEach((e: any) => events.push({ id: e.id, type: 'suelo', date: new Date(e.fecha || e.created_at || 0), data: e }))
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(plantaciones || []).forEach((e: any) => events.push({ id: e.id, type: 'plantacion', date: new Date(e.date || e.created_at || 0), data: e }))
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(trabajos || []).forEach((e: any) => events.push({ id: e.id, type: 'trabajo', date: new Date(e.date || e.created_at || 0), data: e }))
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(riegos || []).forEach((e: any) => events.push({ id: e.id, type: 'riego', date: new Date(e.fecha_inicio || 0), data: e }))
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(sensores || []).forEach((e: any) => events.push({ id: e.id, type: 'sensor', date: new Date(e.fecha || e.created_at || 0), data: e }))
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(cosechas || []).forEach((e: any) => events.push({ id: e.id, type: 'cosecha', date: new Date(e.date || e.created_at || 0), data: e }))
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(palots || []).forEach((e: any) => events.push({ id: e.id, type: 'palot', date: new Date(e.created_at || 0), data: e }))
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      ;(movimientos || []).forEach((e: any) => events.push({ id: e.id, type: 'movimiento', date: new Date(e.timestamp || e.created_at || 0), data: e }))
+      ;((suelo ?? []) as DbRow[]).forEach(e => events.push({ id: e.id, type: 'suelo', date: new Date(e.fecha || e.created_at || 0), data: e }))
+      ;((plantaciones ?? []) as DbRow[]).forEach(e => events.push({ id: e.id, type: 'plantacion', date: new Date(e.date || e.created_at || 0), data: e }))
+      ;((trabajos ?? []) as DbRow[]).forEach(e => events.push({ id: e.id, type: 'trabajo', date: new Date(e.date || e.created_at || 0), data: e }))
+      ;((riegos ?? []) as DbRow[]).forEach(e => events.push({ id: e.id, type: 'riego', date: new Date(e.fecha_inicio || 0), data: e }))
+      ;((sensores ?? []) as DbRow[]).forEach(e => events.push({ id: e.id, type: 'sensor', date: new Date(e.fecha || e.created_at || 0), data: e }))
+      ;((cosechas ?? []) as DbRow[]).forEach(e => events.push({ id: e.id, type: 'cosecha', date: new Date(e.date || e.created_at || 0), data: e }))
+      ;((palots ?? []) as DbRow[]).forEach(e => events.push({ id: e.id, type: 'palot', date: new Date(e.created_at || 0), data: e }))
+      ;((movimientos ?? []) as DbRow[]).forEach(e => events.push({ id: e.id, type: 'movimiento', date: new Date(e.timestamp || e.created_at || 0), data: e }))
 
       return events.sort((a, b) => b.date.getTime() - a.date.getTime())
     },
@@ -155,7 +184,7 @@ export default function Trazabilidad() {
               ctx.checkPage(12)
               const dStr = ev.date.toLocaleDateString('es-ES')
               const e = ev.data
-              let label = ev.type.toUpperCase()
+              const label = ev.type.toUpperCase()
               let detail = ''
 
               if (ev.type === 'suelo') { detail = `pH: ${e.ph ?? '-'} | EC: ${e.conductividad_ec ?? '-'} | MO: ${e.materia_organica ?? '-'}%` }
@@ -194,8 +223,7 @@ export default function Trazabilidad() {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const renderEventInfo = (ev: any) => {
+  const renderEventInfo = (ev: { type: string; data: DbRow }) => {
     const e = ev.data;
     switch (ev.type) {
       case 'suelo': return <><span className="font-bold text-slate-300">Análisis:</span> pH {e.ph ?? '-'} | EC {e.conductividad_ec ?? '-'}</>;
@@ -273,8 +301,7 @@ export default function Trazabilidad() {
   }
 
   return (
-    <AppLayout>
-      <div className="flex flex-col h-[calc(100vh-4rem)] p-4 max-w-6xl mx-auto w-full text-slate-200">
+    <div className="flex flex-col min-h-screen p-4 pb-10 max-w-6xl mx-auto w-full text-slate-200">
         <div className="flex items-center gap-3 mb-6 shrink-0">
           <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
             <Package className="w-5 h-5 text-emerald-400" />
@@ -300,6 +327,7 @@ export default function Trazabilidad() {
                 options={['todos', ...Object.keys(ESTADOS_PALOT)]}
                 value={filtroEstado}
                 onChange={setFiltroEstado}
+                onCreateNew={() => {}}
                 placeholder="Filtrar por estado..."
               />
               <button
@@ -313,7 +341,7 @@ export default function Trazabilidad() {
             {loadingPalots && <p className="text-center py-10 text-slate-500 animate-pulse">Cargando palots...</p>}
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-              {palots.map((p: any) => (
+              {palots.map((p: PalotRow) => (
                 <div key={p.id} className="bg-slate-900/60 border border-white/5 p-4 rounded-xl relative overflow-hidden group hover:border-[#38bdf8]/30 transition-colors">
                   <div className="flex justify-between items-start mb-3">
                     <div>
@@ -400,7 +428,7 @@ export default function Trazabilidad() {
                     <div><p className="text-[10px] text-slate-500 uppercase">Cultivo</p><p className="text-sm font-bold">{palotEscaneado.cultivo || '-'}</p></div>
                     <div><p className="text-[10px] text-slate-500 uppercase">Lote</p><p className="text-sm font-bold">{palotEscaneado.lote || '-'}</p></div>
                     <div><p className="text-[10px] text-slate-500 uppercase">Peso</p><p className="text-sm font-bold">{palotEscaneado.peso_kg ? `${palotEscaneado.peso_kg} Kg` : '-'}</p></div>
-                    <div><p className="text-[10px] text-slate-500 uppercase">Sector</p><p className="text-sm font-bold">{(palotEscaneado as any).parcels?.parcel_number || palotEscaneado.parcel_id || '-'}</p></div>
+                    <div><p className="text-[10px] text-slate-500 uppercase">Sector</p><p className="text-sm font-bold">{(palotEscaneado as unknown as PalotRow).parcels?.parcel_number || palotEscaneado.parcel_id || '-'}</p></div>
                   </div>
 
                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-white/5 pb-2 mb-3">Historial de Movimientos</h4>
@@ -488,7 +516,6 @@ export default function Trazabilidad() {
             {loadingTimeline && <p className="text-center py-10 text-slate-500 animate-pulse">Cargando línea de tiempo...</p>}
           </TabsContent>
         </Tabs>
-      </div>
 
       {/* ── MODAL ALTA PALOT ── */}
       {showAltaPalot && (
@@ -499,7 +526,14 @@ export default function Trazabilidad() {
               <button onClick={() => setShowAltaPalot(false)}><X className="w-5 h-5 text-slate-500 hover:text-white" /></button>
             </div>
             <form onSubmit={handleAltaPalot} className="space-y-4">
-              <SelectWithOther label="Parcela / Sector" options={parcelas.map(p => p.parcel_id)} value={altaParcela} onChange={setAltaParcela} placeholder="Seleccionar..." />
+              <SelectWithOther 
+                label="Parcela / Sector" 
+                options={parcelas.map(p => p.parcel_id)} 
+                value={altaParcela} 
+                onChange={setAltaParcela} 
+                onCreateNew={setAltaParcela} 
+                placeholder="Seleccionar..." 
+              />
               <div><p className="text-[10px] text-slate-500 mb-1 uppercase font-bold">Cultivo</p><input type="text" value={altaCultivo} onChange={e => setAltaCultivo(e.target.value)} className="w-full bg-slate-800 rounded-lg border border-slate-700 px-3 py-2 text-sm text-white" /></div>
               <div><p className="text-[10px] text-slate-500 mb-1 uppercase font-bold">Lote</p><input type="text" value={altaLote} onChange={e => setAltaLote(e.target.value)} className="w-full bg-slate-800 rounded-lg border border-slate-700 px-3 py-2 text-sm text-white" /></div>
               <div><p className="text-[10px] text-slate-500 mb-1 uppercase font-bold">Peso Neto (Kg)</p><input type="number" step="0.1" value={altaPeso} onChange={e => setAltaPeso(e.target.value)} className="w-full bg-slate-800 rounded-lg border border-slate-700 px-3 py-2 text-sm text-white" /></div>
@@ -531,6 +565,6 @@ export default function Trazabilidad() {
           </div>
         </div>
       )}
-    </AppLayout>
+    </div>
   )
 }

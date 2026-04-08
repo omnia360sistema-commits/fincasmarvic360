@@ -1,11 +1,21 @@
 import { useEffect, useState } from 'react'
-import { usePresenciaTiempoReal } from '@/hooks/useParcelData'
-import { useCuadrillas } from '@/hooks/useParcelData'
+import { usePresenciaTiempoReal } from '@/hooks/usePresencia'
+import { useCuadrillas } from '@/hooks/useCatalogos'
 import { Users, RefreshCw, Download, FileText } from 'lucide-react'
 import { formatHora, formatFechaCompleta } from '@/utils/dateFormat'
-import { generarPDFCorporativoBase } from '@/utils/pdfUtils'
+import { generarPDFCorporativoBase, PDF_COLORS, pdfCorporateSection, pdfCorporateTable, PDF_MARGIN } from '@/utils/pdfUtils'
 import { SelectWithOther } from '@/components/base'
 import * as XLSX from 'xlsx'
+
+interface PresenciaRecord {
+  id: string
+  cuadrilla_id: string
+  parcel_id?: string | null
+  hora_entrada: string
+  hora_salida?: string | null
+  cuadrillas?: { nombre: string } | null
+  parcels?: { farm: string } | null
+}
 
 interface PresenciaAcumulada {
   cuadrilla_id: string
@@ -38,7 +48,7 @@ export default function PresenciaPanel() {
 
     const interval = setInterval(() => {
       const nuevos: Record<string, string> = {}
-      presencias.forEach((p: any) => {
+      presencias.forEach((p: PresenciaRecord) => {
         const entrada = new Date(p.hora_entrada)
         const ahora = new Date()
         const diffMs = ahora.getTime() - entrada.getTime()
@@ -62,7 +72,7 @@ export default function PresenciaPanel() {
     
     if (filtroFecha1) {
       const fecha1 = new Date(filtroFecha1).getTime()
-      registrosFiltrados = registrosFiltrados.filter((p: any) => {
+      registrosFiltrados = registrosFiltrados.filter((p: PresenciaRecord) => {
         const fechaEntrada = new Date(p.hora_entrada).getTime()
         return fechaEntrada >= fecha1
       })
@@ -72,20 +82,20 @@ export default function PresenciaPanel() {
       const fecha2 = new Date(filtroFecha2)
       fecha2.setHours(23, 59, 59, 999)
       const fecha2Time = fecha2.getTime()
-      registrosFiltrados = registrosFiltrados.filter((p: any) => {
+      registrosFiltrados = registrosFiltrados.filter((p: PresenciaRecord) => {
         const fechaEntrada = new Date(p.hora_entrada).getTime()
         return fechaEntrada <= fecha2Time
       })
     }
 
     if (filtroCuadrilla) {
-      registrosFiltrados = registrosFiltrados.filter((p: any) => p.cuadrilla_id === filtroCuadrilla)
+      registrosFiltrados = registrosFiltrados.filter((p: PresenciaRecord) => p.cuadrillas?.nombre === filtroCuadrilla)
     }
 
     // Agrupar por cuadrilla
     const mapa = new Map<string, PresenciaAcumulada>()
     
-    registrosFiltrados.forEach((p: any) => {
+    registrosFiltrados.forEach((p: PresenciaRecord) => {
       const key = p.cuadrilla_id
       const nombreCuadrilla = p.cuadrillas?.nombre ?? 'Sin nombre'
       
@@ -136,8 +146,8 @@ export default function PresenciaPanel() {
 
   // Generar PDF corporativo
   const generarPDF = () => {
-    const bloques = [(ctx: any, doc: any) => {
-      ctx.pdfCorporateSection(ctx, 'RESUMEN DE HORAS POR CUADRILLA')
+    const bloques: Parameters<typeof generarPDFCorporativoBase>[0]['bloques'] = [(ctx) => {
+      pdfCorporateSection(ctx, 'RESUMEN DE HORAS POR CUADRILLA')
       
       // Tabla resumen cuadrillas
       const rowsResumen = resumen.map((r) => [
@@ -147,7 +157,7 @@ export default function PresenciaPanel() {
         r.tipo_trabajo || '—'
       ])
 
-      ctx.pdfCorporateTable(
+      pdfCorporateTable(
         ctx,
         ['CUADRILLA', 'TOTAL HORAS', 'PARCELAS', 'TIPO TRABAJO'],
         [40, 30, 60, 50],
@@ -156,19 +166,19 @@ export default function PresenciaPanel() {
 
       // Pie: total general
       ctx.doc.setFontSize(10)
-      ctx.doc.text(`TOTAL GENERAL: ${totalHorasGlobal.toFixed(2)} HORAS`, ctx.PDF_MARGIN, ctx.doc.internal.pageSize.getHeight() - 40)
+      ctx.doc.text(`TOTAL GENERAL: ${totalHorasGlobal.toFixed(2)} HORAS`, PDF_MARGIN, ctx.doc.internal.pageSize.getHeight() - 40)
 
       // Detalle si hay registros
       if (resumen.some(r => r.registros.length > 0)) {
         ctx.checkPage(40)
-        ctx.pdfCorporateSection(ctx, 'DETALLE DE PRESENCIA')
+        pdfCorporateSection(ctx, 'DETALLE DE PRESENCIA')
         
         resumen.forEach((cuadrilla) => {
           if (cuadrilla.registros.length === 0) return
           
           ctx.doc.setFontSize(9)
           ctx.doc.setTextColor(56, 189, 248)
-          ctx.doc.text(`${cuadrilla.nombre_cuadrilla} - Total: ${cuadrilla.total_horas.toFixed(2)}h`, ctx.PDF_MARGIN, ctx.doc.getY() + 4)
+          ctx.doc.text(`${cuadrilla.nombre_cuadrilla} - Total: ${cuadrilla.total_horas.toFixed(2)}h`, PDF_MARGIN, ctx.y + 4)
           ctx.doc.setTextColor(200, 200, 200)
           
           const rows = cuadrilla.registros.map((r) => [
@@ -179,7 +189,7 @@ export default function PresenciaPanel() {
             r.horas.toFixed(2)
           ])
 
-          ctx.pdfCorporateTable(
+          pdfCorporateTable(
             ctx,
             ['PARCELA', 'FECHA', 'ENTRADA', 'SALIDA', 'HORAS'],
             [30, 30, 25, 25, 20],
@@ -197,7 +207,7 @@ export default function PresenciaPanel() {
       fecha: new Date(),
       filename: `Presencia_Horas_${new Date().toISOString().split('T')[0]}.pdf`,
       bloques,
-      accentColor: 'accent'
+      accentColor: PDF_COLORS.accent
     })
   }
 
@@ -218,7 +228,7 @@ export default function PresenciaPanel() {
     XLSX.utils.book_append_sheet(workbook, ws1, 'Resumen')
 
     // Hoja 2: Detalle
-    const datosDetalle: any[] = []
+    const datosDetalle: Array<Record<string, string>> = []
     resumen.forEach((cuadrilla) => {
       cuadrilla.registros.forEach((r) => {
         datosDetalle.push({
@@ -242,13 +252,10 @@ export default function PresenciaPanel() {
   }
 
   // Get lista cuadrillas para dropdown
-  const cuadrillasOpciones = (cuadrillas ?? []).map((c: any) => ({
-    value: c.id,
-    label: c.nombre
-  }))
+  const cuadrillasOpciones = (cuadrillas ?? []).map((c: { nombre: string }) => c.nombre)
   
   const fincasOpciones = Array.from(
-    new Set((presencias ?? []).map((p: any) => p.parcels?.farm).filter(Boolean))
+    new Set((presencias ?? []).map((p: PresenciaRecord) => p.parcels?.farm).filter(Boolean))
   ).map(f => ({ value: f, label: f }))
 
   if (isLoading) {
@@ -367,7 +374,7 @@ export default function PresenciaPanel() {
                 </tr>
               </thead>
               <tbody>
-                {presencias?.map((presencia: any) => {
+                {presencias?.map((presencia: PresenciaRecord) => {
                   const tiempoDisplay = tiemposTranscurridos[presencia.id] || '00:00:00'
                   return (
                     <tr

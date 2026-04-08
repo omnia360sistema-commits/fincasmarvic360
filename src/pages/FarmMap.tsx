@@ -230,7 +230,7 @@ export default function FarmMap() {
     labelsRef.current.forEach(m => m.remove())
     labelsRef.current = []
 
-    const fc: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: parcels as any }
+    const fc: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: parcels as unknown as GeoJSON.Feature[] }
 
     const geojsonLayer = L.geoJSON(fc, {
       style: feature => {
@@ -271,7 +271,7 @@ export default function FarmMap() {
           }).addTo(map)
           labelsRef.current.push(marker)
         }
-        layer.on('click', () => handleParcelClick(feature as any))
+        layer.on('click', () => handleParcelClick(feature as unknown as ParcelFeature))
       }
     }).addTo(map)
 
@@ -383,7 +383,7 @@ export default function FarmMap() {
   if (geoError) return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#020617] flex items-center justify-center flex-col gap-4 text-center px-8 transition-colors">
       <span className="text-red-400 text-sm font-black tracking-widest uppercase">Error cargando mapa</span>
-      <span className="text-slate-500 dark:text-slate-400 text-xs">{typeof geoError === 'string' ? geoError : (geoError as any)?.message || 'Error'}</span>
+      <span className="text-slate-500 dark:text-slate-400 text-xs">{typeof geoError === 'string' ? geoError : ((geoError as unknown as Error)?.message || 'Error')}</span>
       <button onClick={() => navigate('/farm')} className="text-[#38bdf8] text-xs underline">Volver al selector</button>
     </div>
   )

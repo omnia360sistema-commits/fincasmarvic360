@@ -22,12 +22,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Obtener sesión inicial
     const initializeAuth = async () => {
       try {
-        // Usamos getUser() en lugar de getSession() para forzar la validación
-        // del token contra el servidor real (evita sesiones fantasma locales)
-        const { data, error } = await supabase.auth.getUser();
+        // 1. Verificamos rápido si hay token local. Si no hay, no perdemos tiempo.
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          setUser(null);
+          setRol(null);
+          return;
+        }
         
+        // 2. Validamos contra el servidor con un Timeout de 4 segundos para evitar que se cuelgue en F5
+        const getUserPromise = supabase.auth.getUser();
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 4000));
+        
+        const { data, error } = await Promise.race([getUserPromise, timeoutPromise]) as any;
+
         if (error || !data?.user) {
-          // Si hay error de red, token caducado o BD limpia, forzamos cierre
           await supabase.auth.signOut().catch(() => {});
           setUser(null);
           setRol(null);
@@ -77,7 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const obtenerRolUsuario = async (userId: string) => {
     try {
-      const { data } = await (supabase as unknown as any)
+      const { data } = await supabase
         .from('usuario_roles')
         .select('rol')
         .eq('user_id', userId)
@@ -105,6 +114,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   if (context === undefined) {

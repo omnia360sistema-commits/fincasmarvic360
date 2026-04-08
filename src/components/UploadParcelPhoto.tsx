@@ -84,8 +84,8 @@ export default function UploadParcelPhoto({ parcelId, onClose }: Props) {
       toast({ title: '✅ Foto subida', description: `${coords ? 'Con geolocalización' : 'Sin GPS'}. Imagen guardada correctamente.` })
       if (onClose) onClose()
 
-    } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' })
+    } catch (err: unknown) {
+      toast({ title: 'Error', description: err instanceof Error ? err.message : 'Error desconocido', variant: 'destructive' })
     } finally {
       setUploading(false)
     }

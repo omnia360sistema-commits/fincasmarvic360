@@ -1,42 +1,110 @@
-import React from 'react';
-import { ShieldCheck, History, FileText } from 'lucide-react';
+import React, { useState } from 'react'
+import { ShieldCheck, Filter, Loader2, Wrench, Package, Truck, Users } from 'lucide-react'
+import { useAuditTrail, AuditEntry } from '@/hooks/useAuditoria'
+
+const MODULO_ICON: Record<string, React.ElementType> = {
+  'Trabajos': Wrench,
+  'Inventario': Package,
+  'Logística': Truck,
+  'Personal': Users,
+}
+
+const MODULO_COLOR: Record<string, string> = {
+  'Trabajos': 'text-amber-400',
+  'Inventario': 'text-sky-400',
+  'Logística': 'text-purple-400',
+  'Personal': 'text-pink-400',
+}
 
 export default function Auditoria() {
-  return (
-      <div className="p-6 max-w-6xl mx-auto w-full text-slate-200">
-        <div className="flex items-center gap-3 mb-6 shrink-0">
-          <div className="w-10 h-10 rounded-xl bg-indigo-500/20 flex items-center justify-center border border-indigo-500/30">
-            <ShieldCheck className="w-5 h-5 text-indigo-400" />
-          </div>
-          <div>
-            <h1 className="text-xl font-black text-white uppercase tracking-tight">Auditoría y Certificaciones</h1>
-            <p className="text-xs text-slate-400 font-medium">Certificaciones, trazas y logs del sistema</p>
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-slate-900/60 border border-white/5 p-5 rounded-xl">
-            <ShieldCheck className="w-6 h-6 text-emerald-400 mb-3" />
-            <h2 className="font-bold text-white mb-1">Certificaciones</h2>
-            <p className="text-xs text-slate-400">Gestión de CAAE, GlobalGAP y auditorías externas.</p>
-          </div>
-          <div className="bg-slate-900/60 border border-white/5 p-5 rounded-xl">
-            <History className="w-6 h-6 text-indigo-400 mb-3" />
-            <h2 className="font-bold text-white mb-1">Trazas de Producción</h2>
-            <p className="text-xs text-slate-400">Trazabilidad forense desde semilla a expedición.</p>
-          </div>
-          <div className="bg-slate-900/60 border border-white/5 p-5 rounded-xl">
-            <FileText className="w-6 h-6 text-slate-400 mb-3" />
-            <h2 className="font-bold text-white mb-1">Logs del Sistema</h2>
-            <p className="text-xs text-slate-400">Registro inmutable de acciones de usuarios en el ERP.</p>
-          </div>
-        </div>
+  const [fechaDesde, setFechaDesde] = useState(() => new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10))
+  const [fechaHasta, setFechaHasta] = useState(() => new Date().toISOString().slice(0, 10))
+  const [modulo, setModulo] = useState('')
+  const [usuario, setUsuario] = useState('')
 
-        <div className="mt-8 bg-slate-900/40 border border-slate-800 p-12 text-center rounded-xl flex flex-col items-center justify-center">
-          <ShieldCheck className="w-12 h-12 text-slate-600 mb-4 opacity-50" />
-          <p className="text-slate-400 uppercase tracking-widest text-sm font-black">Módulo en construcción</p>
-          <p className="text-slate-500 text-xs mt-2">Esta sección estará disponible en la próxima actualización de calidad.</p>
+  const { data: trail = [], isLoading } = useAuditTrail({ fechaDesde, fechaHasta, modulo, usuario })
+
+  const renderEntry = (entry: AuditEntry) => {
+    const Icon = MODULO_ICON[entry.modulo] || ShieldCheck
+    const color = MODULO_COLOR[entry.modulo] || 'text-slate-400'
+    return (
+      <div key={entry.id} className="relative pl-8 before:absolute before:left-3 before:top-3 before:h-full before:w-px before:bg-slate-800">
+        <div className="absolute left-0 top-1.5 w-6 h-6 rounded-full bg-slate-900 border-2 border-slate-700 flex items-center justify-center">
+          <Icon className={`w-3.5 h-3.5 ${color}`} />
+        </div>
+        <div className="bg-slate-900/50 border border-white/5 rounded-xl p-4 hover:border-slate-700 transition-colors">
+          <div className="flex justify-between items-start mb-1">
+            <div>
+              <span className={`text-[10px] font-black uppercase tracking-widest ${color}`}>{entry.modulo}</span>
+              <p className="text-sm font-bold text-white">{entry.accion}</p>
+            </div>
+            <span className="text-[10px] text-slate-500 font-mono">{new Date(entry.timestamp).toLocaleString('es-ES')}</span>
+          </div>
+          <p className="text-xs text-slate-400">{entry.detalle}</p>
+          <p className="text-[10px] text-slate-600 mt-2">Usuario: {entry.usuario}</p>
         </div>
       </div>
-  );
+    )
+  }
+
+  return (
+    <div className="flex flex-col min-h-screen p-4 pb-10 max-w-4xl mx-auto w-full text-slate-200">
+      <div className="flex items-center gap-3 mb-6 shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center border border-amber-500/30">
+          <ShieldCheck className="w-5 h-5 text-amber-400" />
+        </div>
+        <div>
+          <h1 className="text-xl font-black text-white uppercase tracking-tight">Auditoría del Sistema</h1>
+          <p className="text-xs text-slate-400 font-medium">Registro de actividades y cambios en la plataforma</p>
+        </div>
+      </div>
+
+      {/* Filtros */}
+      <div className="bg-slate-900/60 border border-white/10 rounded-xl p-4 mb-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <Filter className="w-4 h-4 text-amber-400" />
+          <h3 className="text-xs font-black uppercase tracking-widest text-white">Filtros de Búsqueda</h3>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-[9px] text-slate-500 uppercase font-bold mb-1">Desde</label>
+            <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
+          </div>
+          <div>
+            <label className="block text-[9px] text-slate-500 uppercase font-bold mb-1">Hasta</label>
+            <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
+          </div>
+          <div>
+            <label className="block text-[9px] text-slate-500 uppercase font-bold mb-1">Módulo</label>
+            <select value={modulo} onChange={e => setModulo(e.target.value)} className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white">
+              <option value="">Todos</option>
+              <option value="Trabajos">Trabajos</option>
+              <option value="Inventario">Inventario</option>
+              <option value="Logística">Logística</option>
+              <option value="Personal">Personal</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-[9px] text-slate-500 uppercase font-bold mb-1">Usuario</label>
+            <input type="text" value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="Email o nombre..." className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
+          </div>
+        </div>
+      </div>
+
+      {/* Timeline */}
+      <div className="space-y-6">
+        {isLoading && (
+          <div className="flex justify-center py-20">
+            <Loader2 className="w-8 h-8 text-amber-400 animate-spin" />
+          </div>
+        )}
+        {!isLoading && trail.length === 0 && (
+          <div className="text-center py-20 text-slate-600">
+            <p className="text-sm font-bold">No hay registros de actividad para los filtros seleccionados.</p>
+          </div>
+        )}
+        {!isLoading && trail.map(renderEntry)}
+      </div>
+    </div>
+  )
 }

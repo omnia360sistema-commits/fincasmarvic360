@@ -183,10 +183,10 @@ export default function Inventario() {
   }
 
   function toggleUbic(id: string) {
-    setSelUbics(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+    setSelUbics(prev => { const s = new Set(prev); if (s.has(id)) s.delete(id); else s.add(id); return s; });
   }
   function toggleCat(id: string) {
-    setSelCats(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
+    setSelCats(prev => { const s = new Set(prev); if (s.has(id)) s.delete(id); else s.add(id); return s; });
   }
 
   // ── Abrir modal proveedor ────────────────────────────────────
@@ -838,9 +838,9 @@ export default function Inventario() {
               <div>
                 <label className="block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">Proveedor</label>
                 <SelectWithOther
-                  options={proveedores.map(p => ({ value: p.id, label: p.nombre }))}
-                  value={entradaProveedorId}
-                  onChange={v => setEntradaProveedorId(v)}
+                  options={proveedores.map(p => p.nombre)}
+                  value={proveedores.find(p => p.id === entradaProveedorId)?.nombre ?? ''}
+                  onChange={v => { const p = proveedores.find(x => x.nombre === v); setEntradaProveedorId(p?.id ?? ''); }}
                   placeholder="Seleccionar proveedor"
                   onCreateNew={async (nombre) => {
                     const result = await addProveedor.mutateAsync({ nombre, tipo: 'proveedor_materiales' });
@@ -851,33 +851,39 @@ export default function Inventario() {
 
               <div>
                 <label className="block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">Ubicacion *</label>
-                <SelectWithOther
-                  options={ubicaciones.map(u => ({ value: u.id, label: u.nombre }))}
+                <select
                   value={entradaUbicacion}
-                  onChange={v => { setEntradaUbicacion(v); setEntradaProductoId(''); }}
-                  placeholder="Seleccionar ubicacion"
-                />
+                  onChange={e => { setEntradaUbicacion(e.target.value); setEntradaProductoId(''); }}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white outline-none"
+                >
+                  <option value="">Seleccionar ubicacion</option>
+                  {ubicaciones.map(u => <option key={u.id} value={u.id}>{u.nombre}</option>)}
+                </select>
               </div>
 
               <div>
                 <label className="block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">Categoria *</label>
-                <SelectWithOther
-                  options={categorias.map(c => ({ value: c.id, label: c.nombre }))}
+                <select
                   value={entradaCategoria}
-                  onChange={v => { setEntradaCategoria(v); setEntradaProductoId(''); }}
-                  placeholder="Seleccionar categoria"
-                />
+                  onChange={e => { setEntradaCategoria(e.target.value); setEntradaProductoId(''); }}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white outline-none"
+                >
+                  <option value="">Seleccionar categoria</option>
+                  {categorias.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+                </select>
               </div>
 
               <div>
                 <label className="block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">Producto</label>
-                <SelectWithOther
-                  options={productos.map(p => ({ value: p.id, label: p.nombre }))}
+                <select
                   value={entradaProductoId}
-                  onChange={v => setEntradaProductoId(v)}
-                  placeholder="Seleccionar producto"
+                  onChange={e => setEntradaProductoId(e.target.value)}
                   disabled={!entradaCategoria}
-                />
+                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white outline-none"
+                >
+                  <option value="">Seleccionar producto</option>
+                  {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                </select>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -888,9 +894,10 @@ export default function Inventario() {
                 <div>
                   <label className="block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">Unidad</label>
                   <SelectWithOther
-                    options={UNIDADES_FRECUENTES.map(u => ({ value: u, label: u }))}
+                    options={UNIDADES_FRECUENTES}
                     value={entradaUnidad}
                     onChange={v => setEntradaUnidad(v)}
+                    onCreateNew={v => setEntradaUnidad(v)}
                     placeholder="kg"
                   />
                 </div>
@@ -910,9 +917,10 @@ export default function Inventario() {
               <div>
                 <label className="block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">Receptor</label>
                 <SelectWithOther
-                  options={personal.filter(p => p.activo).map(p => ({ value: p.nombre, label: p.nombre }))}
+                  options={personal.filter(p => p.activo).map(p => p.nombre)}
                   value={entradaReceptor}
                   onChange={v => setEntradaReceptor(v)}
+                  onCreateNew={v => setEntradaReceptor(v)}
                   placeholder="Seleccionar receptor"
                 />
               </div>
@@ -924,7 +932,7 @@ export default function Inventario() {
 
               <div>
                 <label className="block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">Albaran (foto)</label>
-                <PhotoAttachment file={entradaFotoFile} onChange={f => setEntradaFotoFile(f)} />
+                <PhotoAttachment value={entradaFotoFile ? URL.createObjectURL(entradaFotoFile) : null} onChange={f => setEntradaFotoFile(f)} />
               </div>
 
               <div>
@@ -983,12 +991,14 @@ export default function Inventario() {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">Tipo</label>
-                <SelectWithOther
-                  options={TIPOS_PROVEEDOR.map(t => ({ value: t, label: TIPOS_PROVEEDOR_LABEL[t] ?? t }))}
+                <select
                   value={provTipo}
-                  onChange={v => setProvTipo(v)}
-                  placeholder="Seleccionar tipo"
-                />
+                  onChange={e => setProvTipo(e.target.value)}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white outline-none"
+                >
+                  <option value="">Seleccionar tipo</option>
+                  {TIPOS_PROVEEDOR.map(t => <option key={t} value={t}>{TIPOS_PROVEEDOR_LABEL[t] ?? t}</option>)}
+                </select>
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">Persona de contacto</label>
@@ -1010,7 +1020,7 @@ export default function Inventario() {
               </div>
               <div>
                 <label className="block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">Foto</label>
-                <PhotoAttachment file={provFotoFile} onChange={f => setProvFotoFile(f)} existingUrl={editProv?.foto_url ?? undefined} />
+                <PhotoAttachment value={provFotoFile ? URL.createObjectURL(provFotoFile) : (editProv?.foto_url ?? null)} onChange={f => setProvFotoFile(f)} />
               </div>
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setShowProvModal(false)} className="btn-secondary flex-1 py-2.5 rounded-lg text-sm">Cancelar</button>
@@ -1042,9 +1052,10 @@ export default function Inventario() {
                 <div>
                   <label className="block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">Unidad</label>
                   <SelectWithOther
-                    options={UNIDADES_FRECUENTES.map(u => ({ value: u, label: u }))}
+                    options={UNIDADES_FRECUENTES}
                     value={precioUnidad}
                     onChange={v => setPrecioUnidad(v)}
+                    onCreateNew={v => setPrecioUnidad(v)}
                     placeholder="kg"
                   />
                 </div>

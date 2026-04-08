@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import type { TablesInsert } from '@/integrations/supabase/types'
 import { logLiaEvento } from '@/utils/liaLogger'
+import { toast } from '@/hooks/use-toast'
 
 /*
 ================================================
@@ -157,6 +158,7 @@ export function useAddRegistro() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -184,6 +186,7 @@ export function useAddInforme() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -280,6 +283,7 @@ export function useAddProductoCatalogo() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -302,6 +306,7 @@ export function useUpdatePrecioProducto() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -411,7 +416,7 @@ export function useInventarioUbicacionActivosAll() {
   return useQuery({
     queryKey: ['inventario_ubicacion_activo', 'all'],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('inventario_ubicacion_activo')
         .select('id, ubicacion_id, maquinaria_tractor_id, apero_id, maquinaria_apero_id')
       if (error) throw error
@@ -437,7 +442,7 @@ export function useMaquinariaAperosAsignadosUbicacion(ubicacionId: string | null
     queryKey: ['inventario_uact_maquinaria_apero', ubicacionId],
     queryFn: async () => {
       if (!ubicacionId) return [] as FilaMapero[]
-        const { data, error } = await (supabase as any)
+        const { data, error } = await supabase
         .from('inventario_ubicacion_activo')
         .select('id, maquinaria_apero_id, maquinaria_aperos(tipo, descripcion, tractor_id)')
         .eq('ubicacion_id', ubicacionId)
@@ -487,6 +492,7 @@ export function useAssignActivoUbicacion() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -510,6 +516,7 @@ export function useRemoveActivoUbicacion() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -565,6 +572,7 @@ export function useAddProveedor() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -587,6 +595,7 @@ export function useUpdateProveedor() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -603,6 +612,7 @@ export function useDeleteProveedor() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -649,6 +659,7 @@ export function useAddPrecioProveedor() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -671,6 +682,7 @@ export function useUpdatePrecioProveedor() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -757,6 +769,7 @@ export function useAddEntrada() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -773,6 +786,7 @@ export function useDeleteEntrada() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }

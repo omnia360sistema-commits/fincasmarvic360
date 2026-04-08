@@ -68,6 +68,6 @@ export const NAV_ITEMS: NavItem[] = [
   { id: 'exportar-pdf',   label: 'EXPORTAR PDF',   ruta: '/exportar-pdf',   icono: Download,    color: '#94a3b8', activo: true  },
   { id: 'integracion-erp',label: 'INTEGRACIÓN ERP',ruta: '/integracion-erp',icono: Database,    color: '#6366f1', activo: true  },
   { id: 'trazabilidad',   label: 'TRAZABILIDAD',   ruta: '/trazabilidad',   icono: GitBranch,   color: '#475569', activo: true  },
-  { id: 'materiales',     label: 'MATERIALES',     ruta: '/materiales',     icono: Layers,      color: '#475569', activo: false },
-  { id: 'auditoria',      label: 'AUDITORÍA',      ruta: '/auditoria',      icono: ShieldCheck, color: '#475569', activo: false },
+  { id: 'materiales',     label: 'MATERIALES',     ruta: '/materiales',     icono: Layers,      color: '#14b8a6', activo: true  },
+  { id: 'auditoria',      label: 'AUDITORÍA',      ruta: '/auditoria',      icono: ShieldCheck, color: '#f59e0b', activo: true  },
 ];

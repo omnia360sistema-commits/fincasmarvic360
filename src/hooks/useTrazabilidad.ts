@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import type { TablesInsert } from '@/integrations/supabase/types';
 
 export function usePalots(parcelId?: string | null, estado?: string) {
   return useQuery({
@@ -19,7 +20,7 @@ export function usePalots(parcelId?: string | null, estado?: string) {
 export function useAddPalot() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: Omit<TablesInsert<'palots'>, 'qr_code'>) => {
       const qr_code = `PLT-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`;
       const { data, error } = await supabase.from('palots').insert([{ ...payload, qr_code }]).select().single();
       if (error) throw error;
@@ -60,7 +61,7 @@ export function useMovimientosPalot(palotId: string | null) {
 export function useAddMovimientoPalot() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: any) => {
+    mutationFn: async (payload: TablesInsert<'movimientos_palot'>) => {
       const { data, error } = await supabase.from('movimientos_palot').insert([payload]).select().single();
       if (error) throw error;
       return data;

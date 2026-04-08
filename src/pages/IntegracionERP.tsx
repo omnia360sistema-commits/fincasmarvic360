@@ -21,6 +21,18 @@ type ERPExportacion = {
   created_at: string
 }
 
+type ErpQuery = {
+  select: (q: string) => {
+    order: (c: string, o: { ascending: boolean }) => {
+      limit: (n: number) => Promise<{ data: unknown[] | null; error: Error | null }>
+    }
+  };
+  delete: () => {
+    eq: (c: string, v: string) => Promise<{ error: Error | null }>
+  };
+  insert: (v: unknown[]) => Promise<{ error: Error | null }>
+};
+
 export default function IntegracionERP() {
   const navigate = useNavigate()
   const qc = useQueryClient()
@@ -39,8 +51,8 @@ export default function IntegracionERP() {
   const { data: historial = [], isLoading: loadingHistorial } = useQuery({
     queryKey: ['erp_exportaciones'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('erp_exportaciones' as any)
+      const { data, error } = await (supabase as unknown as { from: (t: string) => ErpQuery })
+        .from('erp_exportaciones')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50)
@@ -51,18 +63,18 @@ export default function IntegracionERP() {
 
   const deleteExport = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('erp_exportaciones' as any).delete().eq('id', id)
+      const { error } = await (supabase as unknown as { from: (t: string) => ErpQuery }).from('erp_exportaciones').delete().eq('id', id)
       if (error) throw error
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['erp_exportaciones'] })
       toast({ title: 'Exportación eliminada del historial' })
     },
-    onError: (e) => toast({ title: 'Error', description: e.message, variant: 'destructive' })
+    onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' })
   })
 
   const registrarExportacion = async (tipo: string, formato: string, registros: number) => {
-    await supabase.from('erp_exportaciones' as any).insert([{
+    await (supabase as unknown as { from: (t: string) => ErpQuery }).from('erp_exportaciones').insert([{
       tipo,
       formato,
       registros_exportados: registros,
@@ -84,7 +96,7 @@ export default function IntegracionERP() {
     document.body.removeChild(link)
   }
 
-  const convertToCSV = (objArray: any[]) => {
+  const convertToCSV = (objArray: Record<string, unknown>[]) => {
     if (objArray.length === 0) return ''
     const headers = Object.keys(objArray[0]).join(',')
     const rows = objArray.map(obj => Object.values(obj).map(val => `"${val ?? ''}"`).join(','))
@@ -97,7 +109,7 @@ export default function IntegracionERP() {
     setLoadingProd(true)
     try {
       // Obtener cosechas
-      let query = supabase.from('harvests').select('*, plantings(variedad), tickets_pesaje(numero_albaran, destino, peso_neto_kg)')
+      const query = supabase.from('harvests').select('*, plantings(variedad), tickets_pesaje(numero_albaran, destino, peso_neto_kg)')
         .gte('date', fechaInicio).lte('date', fechaFin)
       
       const { data, error } = await query
@@ -111,7 +123,7 @@ export default function IntegracionERP() {
         return {
           parcela: h.parcel_id,
           cultivo: h.crop,
-          variedad: (h as any).plantings?.variedad || '',
+          variedad: (h as unknown as { plantings?: { variedad?: string } }).plantings?.variedad || '',
           fecha_cosecha: h.date,
           kg_neto: ticket?.peso_neto_kg || h.production_kg || 0,
           destino: ticket?.destino || '',
@@ -124,8 +136,8 @@ export default function IntegracionERP() {
       
       toast({ title: `✅ ${exportData.length} registros exportados` })
       await registrarExportacion('Producción', formato, exportData.length)
-    } catch (e: any) {
-      toast({ title: 'Error exportando Producción', description: e.message, variant: 'destructive' })
+    } catch (e: unknown) {
+      toast({ title: 'Error exportando Producción', description: e instanceof Error ? e.message : 'Error desconocido', variant: 'destructive' })
     } finally {
       setLoadingProd(false)
     }
@@ -139,8 +151,16 @@ export default function IntegracionERP() {
         .gte('date', fechaInicio).lte('date', fechaFin)
       
       // Maquinaria
-      const { data: maquinaria } = await supabase.from('maquinaria_uso' as any).select('id, fecha, tractor_id, horas_trabajadas, gasolina_litros')
+      const { data: maqRaw } = await supabase
+        .from('trabajos_registro')
+        .select('id, fecha, tractor_id, horas_reales')
+        .not('tractor_id', 'is', null)
         .gte('fecha', fechaInicio).lte('fecha', fechaFin)
+      const maquinaria = (maqRaw as any[] || []).map(m => ({
+        fecha: m.fecha,
+        horas_trabajadas: m.horas_reales,
+        gasolina_litros: 0
+      }));
 
       // Insumos
       const { data: insumos } = await supabase.from('inventario_entradas').select('id, fecha, cantidad, unidad, importe_total, proveedor_id')
@@ -148,7 +168,7 @@ export default function IntegracionERP() {
 
       const exportData = {
         mano_de_obra: (trabajos || []).map(t => ({ fecha: t.date, operacion: t.work_type, horas_totales: (t.hours || 0) * (t.workers || 1), parcela: t.parcel_id })),
-        maquinaria: (maquinaria || []).map((m: any) => ({ fecha: m.fecha, horas_motor: m.horas_trabajadas, litros_gasoil: m.gasolina_litros })),
+        maquinaria: (maquinaria || []).map(m => ({ fecha: m.fecha, horas_motor: m.horas_trabajadas, litros_gasoil: m.gasolina_litros })),
         insumos: (insumos || []).map(i => ({ fecha: i.fecha, cantidad: i.cantidad, unidad: i.unidad, coste_total: i.importe_total }))
       }
 
@@ -168,8 +188,8 @@ export default function IntegracionERP() {
       downloadFile(resultStr, `ERP_Costes_${new Date().getTime()}.${formato}`, formato === 'json')
       toast({ title: `✅ ${totalRegistros} registros de costes exportados` })
       await registrarExportacion('Costes', formato, totalRegistros)
-    } catch (e: any) {
-      toast({ title: 'Error exportando Costes', description: e.message, variant: 'destructive' })
+    } catch (e: unknown) {
+      toast({ title: 'Error exportando Costes', description: e instanceof Error ? e.message : 'Error desconocido', variant: 'destructive' })
     } finally {
       setLoadingCostes(false)
     }
@@ -190,8 +210,8 @@ export default function IntegracionERP() {
       
       toast({ title: `✅ ${exportData.length} registros agronómicos exportados` })
       await registrarExportacion('Análisis Agronómico', formato, exportData.length)
-    } catch (e: any) {
-      toast({ title: 'Error exportando Análisis', description: e.message, variant: 'destructive' })
+    } catch (e: unknown) {
+      toast({ title: 'Error exportando Análisis', description: e instanceof Error ? e.message : 'Error desconocido', variant: 'destructive' })
     } finally {
       setLoadingAgro(false)
     }

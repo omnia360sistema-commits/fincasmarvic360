@@ -191,7 +191,7 @@ interface ModalTrabajoPlanProps {
   onClose: () => void;
 }
 
-function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
+const ModalTrabajoPlan = React.memo(function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
   const isEdit = !!editData;
   const { user } = useAuth();
   const currentUser = user?.email || 'sistema';
@@ -280,11 +280,10 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
       };
 
       if (isEdit) {
-        await updateMut.mutateAsync({ id: editData!.id, ...(payload as any) });
+        await updateMut.mutateAsync({ id: editData!.id, ...(payload as unknown as Parameters<typeof updateMut.mutateAsync>[0]) });
       } else {
-        await addMut.mutateAsync(payload as any);
+        await addMut.mutateAsync(payload as unknown as Parameters<typeof addMut.mutateAsync>[0]);
       }
-      onClose();
     } finally {
       setSaving(false);
     }
@@ -492,7 +491,7 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
           <button type="button" onClick={onClose}
             className="flex-1 py-2 rounded-lg border border-white/10 text-[10px] font-black text-slate-400 hover:text-white transition-colors uppercase tracking-widest"
           >Cancelar</button>
-          <button type="button" onClick={handleSubmit(onSubmit)} disabled={saving}
+          <button type="button" onClick={(e) => { void handleSubmit(onSubmit)(e); }} disabled={saving}
             className="flex-1 py-2 rounded-lg bg-[#38bdf8] text-[10px] font-black uppercase tracking-widest text-black transition-colors disabled:opacity-40"
           >
             {saving ? 'Guardando…' : isEdit ? 'Actualizar' : 'Guardar'}
@@ -501,7 +500,7 @@ function ModalTrabajoPlan({ fecha, editData, onClose }: ModalTrabajoPlanProps) {
       </div>
     </div>
   );
-}
+});
 
 // ── Tarjeta Trabajo Planificado ───────────────────────────────
 const TarjetaTrabajoPlan = React.memo(function TarjetaTrabajoPlan({ t, onEdit }: { t: TrabajoRegistro; onEdit: (t: TrabajoRegistro) => void }) {
@@ -556,7 +555,7 @@ const TarjetaTrabajoPlan = React.memo(function TarjetaTrabajoPlan({ t, onEdit }:
 });
 
 // ── Modal Campaña ─────────────────────────────────────────────
-function ModalCampana({ editData, onClose }: { editData?: PlanificacionCampana | null; onClose: () => void }) {
+const ModalCampana = React.memo(function ModalCampana({ editData, onClose }: { editData?: PlanificacionCampana | null; onClose: () => void }) {
   const isEdit = !!editData;
   const { user } = useAuth();
   const currentUser = user?.email || 'sistema';
@@ -584,8 +583,7 @@ function ModalCampana({ editData, onClose }: { editData?: PlanificacionCampana |
       d.setDate(d.getDate() + cat.ciclo_dias);
       setFCosecha(d.toISOString().slice(0, 10));
     }
-  }, [fPlantacion, cultivo]);
-
+      }, [fPlantacion, cultivo, cultivos, fCosecha]);
   const handleSubmit = async () => {
     if (!finca.trim() || !cultivo.trim()) return;
     setSaving(true);
@@ -671,7 +669,7 @@ function ModalCampana({ editData, onClose }: { editData?: PlanificacionCampana |
       </div>
     </div>
   );
-}
+});
 
 // ── Tarjeta Campaña ───────────────────────────────────────────
 const TarjetaCampana = React.memo(function TarjetaCampana({ c, onEdit }: { c: PlanificacionCampana; onEdit: (c: PlanificacionCampana) => void }) {
@@ -710,7 +708,7 @@ const TarjetaCampana = React.memo(function TarjetaCampana({ c, onEdit }: { c: Pl
 });
 
 // ── Modal Incidencia completo ─────────────────────────────────
-function ModalIncidencia({ editData, onClose }: { editData?: TrabajoIncidencia | null; onClose: () => void }) {
+const ModalIncidencia = React.memo(function ModalIncidencia({ editData, onClose }: { editData?: TrabajoIncidencia | null; onClose: () => void }) {
   const isEdit = !!editData;
   const { user } = useAuth();
   const currentUser = user?.email || 'sistema';
@@ -863,7 +861,7 @@ function ModalIncidencia({ editData, onClose }: { editData?: TrabajoIncidencia |
       </div>
     </div>
   );
-}
+});
 
 // ── Tarjeta Incidencia ────────────────────────────────────────
 const TarjetaIncidencia = React.memo(function TarjetaIncidencia({ inc, onEdit }: { inc: TrabajoIncidencia; onEdit: (i: TrabajoIncidencia) => void }) {

@@ -1,9 +1,16 @@
 import { useState, useEffect } from 'react'
 import { useParams } from 'react-router-dom'
-import { useRegistrarEntradaQR, useRegistrarSalidaQR } from '@/hooks/useParcelData'
+import { useRegistrarEntradaQR, useRegistrarSalidaQR } from '@/hooks/usePresencia'
 import { useQuery } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import { CheckCircle2, Users, Clock, AlertCircle } from 'lucide-react'
+
+type PresenciaActiva = {
+  id: string;
+  hora_entrada: string;
+  parcel_id: string | null;
+  parcels: { parcel_id: string } | null;
+};
 
 export default function QRCuadrilla() {
   const { cuadrilla_id } = useParams<{ cuadrilla_id: string }>()
@@ -12,7 +19,7 @@ export default function QRCuadrilla() {
 
   const [stage, setStage] = useState<'entrada' | 'activa' | 'confirmada'>('entrada')
   const [error, setError] = useState<string | null>(null)
-  const [presenciaActual, setPresenciaActual] = useState<any>(null)
+  const [presenciaActual, setPresenciaActual] = useState<PresenciaActiva | null>(null)
   const [tiempoTranscurrido, setTiempoTranscurrido] = useState('00:00')
 
   // Obtener datos cuadrilla
@@ -93,8 +100,8 @@ export default function QRCuadrilla() {
         parcel_id: null
       })
       setStage('activa')
-    } catch (e: any) {
-      setError(e?.message ?? 'Error registrando entrada')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error registrando entrada')
     }
   }
 
@@ -109,8 +116,8 @@ export default function QRCuadrilla() {
     try {
       await registrarSalida(presenciaActual.id)
       setStage('confirmada')
-    } catch (e: any) {
-      setError(e?.message ?? 'Error registrando salida')
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Error registrando salida')
     }
   }
 

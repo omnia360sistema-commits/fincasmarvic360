@@ -1,0 +1,154 @@
+===================================================
+ÁRBOL ESTRUCTURAL OMNIA - RELEASE PRODUCCIÓN FINAL
+===================================================
+src
+├── App.css
+├── App.tsx
+├── AUDITORIA_TIPOS_OMNIA.ts
+├── components
+│   ├── AppLayout.tsx
+│   ├── base
+│   │   ├── AudioInput.tsx
+│   │   ├── FormError.tsx
+│   │   ├── index.ts
+│   │   ├── PhotoAttachment.tsx
+│   │   ├── RecordActions.tsx
+│   │   └── SelectWithOther.tsx
+│   ├── ErrorBoundary.tsx
+│   ├── GlobalSidebar.tsx
+│   ├── InspeccionForm.tsx
+│   ├── ParcelDetailPanel.tsx
+│   ├── ParcelHistory.tsx
+│   ├── ParteDiario
+│   │   ├── FormAnotacionesLibres.tsx
+│   │   ├── FormEstadoFinca.tsx
+│   │   ├── FormLogisticaResiduos.tsx
+│   │   ├── FormTrabajosRealizado.tsx
+│   │   ├── NavegadorFechas.tsx
+│   │   └── Shared.tsx
+│   ├── RegisterEstadoUnificadoForm.tsx
+│   ├── RegisterWorkForm.tsx
+│   ├── ui
+│   │   ├── accordion.tsx
+│   │   ├── alert-dialog.tsx
+│   │   ├── alert.tsx
+│   │   ├── aspect-ratio.tsx
+│   │   ├── avatar.tsx
+│   │   ├── badge.tsx
+│   │   ├── breadcrumb.tsx
+│   │   ├── button.tsx
+│   │   ├── calendar.tsx
+│   │   ├── card.tsx
+│   │   ├── carousel.tsx
+│   │   ├── chart.tsx
+│   │   ├── checkbox.tsx
+│   │   ├── collapsible.tsx
+│   │   ├── command.tsx
+│   │   ├── context-menu.tsx
+│   │   ├── dialog.tsx
+│   │   ├── drawer.tsx
+│   │   ├── dropdown-menu.tsx
+│   │   ├── form.tsx
+│   │   ├── hover-card.tsx
+│   │   ├── input-otp.tsx
+│   │   ├── input.tsx
+│   │   ├── label.tsx
+│   │   ├── menubar.tsx
+│   │   ├── navigation-menu.tsx
+│   │   ├── pagination.tsx
+│   │   ├── popover.tsx
+│   │   ├── progress.tsx
+│   │   ├── radio-group.tsx
+│   │   ├── resizable.tsx
+│   │   ├── scroll-area.tsx
+│   │   ├── select.tsx
+│   │   ├── separator.tsx
+│   │   ├── sheet.tsx
+│   │   ├── sidebar.tsx
+│   │   ├── skeleton.tsx
+│   │   ├── slider.tsx
+│   │   ├── sonner.tsx
+│   │   ├── switch.tsx
+│   │   ├── table.tsx
+│   │   ├── tabs.tsx
+│   │   ├── textarea.tsx
+│   │   ├── toaster.tsx
+│   │   ├── toast.tsx
+│   │   ├── toggle-group.tsx
+│   │   ├── toggle.tsx
+│   │   ├── tooltip.tsx
+│   │   └── use-toast.ts
+│   └── UploadParcelPhoto.tsx
+├── constants
+│   ├── estadosParcela.ts
+│   ├── farms.ts
+│   ├── navItems.ts
+│   └── tiposTrabajo.ts
+├── context
+│   ├── AuthContext.tsx
+│   ├── SidebarContext.tsx
+│   └── ThemeContext.tsx
+├── hooks
+│   ├── useGeoJSON.ts
+│   ├── useGPS.ts
+│   ├── useInventario.ts
+│   ├── useLogistica.ts
+│   ├── useMaquinaria.ts
+│   ├── use-mobile.tsx
+│   ├── useParcelData.ts
+│   ├── useParteDiario.ts
+│   ├── usePersonal.ts
+│   ├── useRiego.ts
+│   ├── use-toast.ts
+│   ├── useTrabajos.ts
+│   └── useTrazabilidad.ts
+├── index.css
+├── integrations
+│   └── supabase
+│       ├── client.ts
+│       └── types.ts
+├── lib
+│   └── utils.ts
+├── main.tsx
+├── pages
+│   ├── Auditoria.tsx
+│   ├── Dashboard.tsx
+│   ├── ErrorBoundary.tsx
+│   ├── EstadoGeneral.tsx
+│   ├── ExportarPDF.tsx
+│   ├── FarmMap.tsx
+│   ├── FarmSelector.tsx
+│   ├── Historicos.tsx
+│   ├── IntegracionERP.tsx
+│   ├── Inventario.tsx
+│   ├── InventarioUbicacion.tsx
+│   ├── Login.tsx
+│   ├── Logistica.tsx
+│   ├── Maquinaria.tsx
+│   ├── Materiales.tsx
+│   ├── NotFound.tsx
+│   ├── ParteDiario.tsx
+│   ├── Personal.tsx
+│   ├── PresenciaPanel.tsx
+│   ├── QRCuadrilla.tsx
+│   ├── Trabajos.tsx
+│   ├── Trazabilidad.tsx
+│   ├── useAnalisis.ts
+│   ├── useCatalogos.ts
+│   ├── useOperaciones.ts
+│   └── usePresencia.ts
+├── test
+│   ├── example.test.ts
+│   └── setup.ts
+├── types
+│   └── farm.ts
+├── utils
+│   ├── dateFormat.ts
+│   ├── liaCosechadora.ts
+│   ├── liaLogger.ts
+│   ├── pdfUtils.ts
+│   ├── uploadImage.ts
+│   └── validation.ts
+└── vite-env.d.ts
+
+14 directories, 134 files

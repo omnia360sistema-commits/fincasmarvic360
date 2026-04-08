@@ -81,8 +81,8 @@ export default function RegisterWorkForm({
           toast({ title: '✅ Trabajo registrado', description: 'El registro se guardó correctamente.' });
           onClose();
         },
-        onError: (err: any) => {
-          toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      onError: (err: unknown) => {
+        toast({ title: 'Error', description: err instanceof Error ? err.message : 'Error desconocido', variant: 'destructive' });
         },
       }
     );

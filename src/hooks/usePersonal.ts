@@ -133,19 +133,21 @@ export function useAddPersonal() {
         .filter(n => !isNaN(n));
       const siguiente = nums.length > 0 ? Math.max(...nums) + 1 : 1;
       const codigo_interno = `${prefijo}${String(siguiente).padStart(3, '0')}`;
+      const { data: { user } } = await supabase.auth.getUser();
 
       const { error } = await supabase.from('personal').insert({
         ...payload,
         codigo_interno,
+        created_by: user?.id,
       });
       if (error) throw error;
     },
     onSuccess: (_, payload) => {
       try {
         logLiaEvento('personal', 'alta_personal', {
-          categoria: (payload as any).categoria ?? null,
-          nombre: (payload as any).nombre ?? null,
-          dni: (payload as any).dni ?? null,
+          categoria: payload.categoria ?? null,
+          nombre: payload.nombre ?? null,
+          dni: payload.dni ?? null,
         });
       } catch (e) {
         // silent
@@ -217,6 +219,8 @@ export function useAddPersonalExterno() {
       presupuesto?:      string | null;
       trabajos_realiza?: string | null;
     }) => {
+      const { data: { user } } = await supabase.auth.getUser();
+
       // Generar código interno EX + correlativo 3 dígitos
       const { data: existentes } = await supabase
         .from('personal_externo')
@@ -231,6 +235,7 @@ export function useAddPersonalExterno() {
       const { error } = await supabase.from('personal_externo').insert({
         ...payload,
         codigo_interno,
+        created_by: user?.id,
       });
       if (error) throw error;
     },

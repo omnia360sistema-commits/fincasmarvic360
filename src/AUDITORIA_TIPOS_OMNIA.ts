@@ -19,7 +19,7 @@
  * - @logic: propiedades computadas o reglas de negocio
  * - @fk: relaciones foráneas explícitas
  *
- * Versión: 1.0.0 (04/04/2026)
+ * Versión: 1.1.0 (07/04/2026 - FINAL PRODUCCIÓN)
  * Autor: Copilot (GitHub)
  * ═══════════════════════════════════════════════════════════════════════════════
  */
@@ -1755,6 +1755,44 @@ export interface InspeccionFormData {
   resultado: ResultadoInspeccion;
   observaciones: string;
   fotoFile: File;
+}
+
+// ════════════════════════════════════════════════════════════════════════════════
+// ENTIDADES DE SOPORTE FINAL (MATERIALES Y AUDITORÍA)
+// ════════════════════════════════════════════════════════════════════════════════
+
+/**
+ * @origin inventario_registros (tabla Supabase)
+ * @logic Extensión específica de stock de campo (Fitosanitarios, Plásticos, Riego)
+ *        Filtra el historial de movimientos usando un Map interno por `ubicacion_id_producto_id`
+ *        para obtener exclusivamente el último stock neto actual.
+ */
+export interface MaterialStockRow {
+  id: string;
+  cantidad: number;
+  unidad: string;
+  descripcion: string | null;
+  precio_unitario: number | null;
+  ubicacion_id: string;
+  categoria_id: string;
+  producto_id: string | null;
+  inventario_productos_catalogo: { nombre: string; precio_unitario: number | null } | null;
+  inventario_ubicaciones: { nombre: string } | null;
+}
+
+/**
+ * @origin Multi-tabla (trabajos, inventario, logística, personal)
+ * @logic Unifica los eventos más críticos del sistema generados en el rango de fechas.
+ *        Se ordenan en memoria (React Query) para trazar la línea temporal de auditoría.
+ */
+export interface AuditEntry {
+  id: string;
+  timestamp: string;
+  modulo: string;
+  usuario: string;
+  accion: string;
+  detalle: string;
+  url?: string;
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
