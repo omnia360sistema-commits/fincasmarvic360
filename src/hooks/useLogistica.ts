@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../integrations/supabase/client';
 import { logLiaEvento } from '@/utils/liaLogger';
+import { useCreatedBy } from './useCreatedBy';
 
 // ── Tipos ─────────────────────────────────────────────────────
 
@@ -131,6 +132,7 @@ export function useCamiones() {
 // ── useAddCamion ──────────────────────────────────────────────
 
 export function useAddCamion() {
+  const createdBy = useCreatedBy();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Omit<Camion, 'id' | 'codigo_interno'> & { ubicacion_id?: string | null }) => {
@@ -153,7 +155,7 @@ export function useAddCamion() {
 
       const { data, error } = await supabase
         .from('camiones')
-        .insert([{ ...camionPayload, codigo_interno, created_by: 'JuanPe' }])
+        .insert([{ ...camionPayload, codigo_interno, created_by: createdBy }])
         .select()
         .single();
       if (error) throw error;
@@ -238,6 +240,7 @@ export function useVehiculosEmpresa() {
 // ── useAddVehiculoEmpresa ─────────────────────────────────────
 
 export function useAddVehiculoEmpresa() {
+  const createdBy = useCreatedBy();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Omit<VehiculoEmpresa, 'id' | 'created_at' | 'codigo_interno'> & { ubicacion_id?: string | null }) => {
@@ -259,7 +262,7 @@ export function useAddVehiculoEmpresa() {
 
       const { data, error } = await supabase
         .from('vehiculos_empresa')
-        .insert([{ ...vehiculoPayload, codigo_interno, created_by: 'JuanPe' }])
+        .insert([{ ...vehiculoPayload, codigo_interno, created_by: createdBy }])
         .select()
         .single();
       if (error) throw error;
@@ -345,12 +348,13 @@ export function useViajes(personalId?: string) {
 // ── useAddViaje ───────────────────────────────────────────────
 
 export function useAddViaje() {
+  const createdBy = useCreatedBy();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Omit<Viaje, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
         .from('logistica_viajes')
-        .insert([{ ...payload, created_by: 'JuanPe' }])
+        .insert([{ ...payload, created_by: createdBy }])
         .select()
         .single();
       if (error) throw error;
@@ -432,12 +436,13 @@ export function useMantenimientoCamion(camionId?: string) {
 // ── useAddMantenimientoCamion ─────────────────────────────────
 
 export function useAddMantenimientoCamion() {
+  const createdBy = useCreatedBy();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Omit<MantenimientoCamion, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
         .from('logistica_mantenimiento')
-        .insert([{ ...payload, created_by: 'JuanPe' }])
+        .insert([{ ...payload, created_by: createdBy }])
         .select()
         .single();
       if (error) throw error;
@@ -508,12 +513,13 @@ export function useCombustible(vehiculoId?: string, vehiculoTipo?: string) {
 // ── useAddCombustible ─────────────────────────────────────────
 
 export function useAddCombustible() {
+  const createdBy = useCreatedBy();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Omit<Combustible, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
         .from('logistica_combustible')
-        .insert([{ ...payload, created_by: 'JuanPe' }])
+        .insert([{ ...payload, created_by: createdBy }])
         .select()
         .single();
       if (error) throw error;

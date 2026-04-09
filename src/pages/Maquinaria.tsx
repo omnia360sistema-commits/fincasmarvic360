@@ -6,6 +6,7 @@ import {
   Calendar, Activity, Navigation,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
 import {
   useTractores, useTractoresEnInventario, useAperosEnInventario,
   useAddTractor, useUpdateTractor, useDeleteTractor,
@@ -157,6 +158,7 @@ const ModalTractor = React.memo(function ModalTractor({
   tractor?: TractorType;
   onClose: () => void;
 }) {
+  const { user }  = useAuth();
   const addMut    = useAddTractor();
   const updateMut = useUpdateTractor();
   const { data: ubicaciones = [] } = useUbicaciones();
@@ -208,7 +210,7 @@ const ModalTractor = React.memo(function ModalTractor({
         activo:                      true,
         foto_url,
         notas:                       form.notas || null,
-        created_by:                  'JuanPe',
+        created_by:                  user?.email ?? 'sistema',
         fecha_proxima_itv:           form.fecha_proxima_itv || null,
         fecha_proxima_revision:      form.fecha_proxima_revision || null,
         horas_proximo_mantenimiento: form.horas_proximo_mantenimiento ? Number(form.horas_proximo_mantenimiento) : null,
@@ -420,6 +422,7 @@ const ModalApero = React.memo(function ModalApero({
   tractores: TractorType[];
   onClose: () => void;
 }) {
+  const { user }  = useAuth();
   const addMut    = useAddApero();
   const { data: ubicaciones = [] } = useUbicaciones();
   const { data: aperosExistentes = [] } = useAperos();
@@ -463,7 +466,7 @@ const ModalApero = React.memo(function ModalApero({
         notas:          form.notas || null,
         estado:         form.estado || 'disponible',
         codigo_interno: apero?.codigo_interno ?? null,
-        created_by:     'JuanPe',
+        created_by:     user?.email ?? 'sistema',
         ubicacion_id:   form.ubicacion_id || null,
       });
       onClose();
@@ -590,6 +593,7 @@ const ModalUso = React.memo(function ModalUso({
   personal:  Personal[];
   onClose:   () => void;
 }) {
+  const { user }         = useAuth();
   const addMut           = useAddUsoMaquinaria();
   const { data: tiposDB = [] } = useTiposTrabajoMaquinaria();
   const addTipoMut       = useAddTipoTrabajoMaquinaria();
@@ -652,7 +656,7 @@ const ModalUso = React.memo(function ModalUso({
         gasolina_litros:  form.gasolina_litros ? Number(form.gasolina_litros) : null,
         foto_url,
         notas:            form.notas || null,
-        created_by:       'JuanPe',
+        created_by:       user?.email ?? 'sistema',
       });
       onClose();
     } finally {
@@ -820,6 +824,7 @@ const ModalMantenimiento = React.memo(function ModalMantenimiento({
   tractores:      TractorType[];
   onClose:        () => void;
 }) {
+  const { user } = useAuth();
   const addMut = useAddMantenimientoTractor();
 
   const [form, setForm] = useState({
@@ -884,7 +889,7 @@ const ModalMantenimiento = React.memo(function ModalMantenimiento({
         proveedor:              form.proveedor || null,
         foto_url,
         foto_url_2,
-        created_by:             'JuanPe',
+        created_by:             user?.email ?? 'sistema',
       });
       onClose();
     } finally {

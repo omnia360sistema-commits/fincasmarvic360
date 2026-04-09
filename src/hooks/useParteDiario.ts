@@ -2,7 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import type { TablesInsert } from '@/integrations/supabase/types'
 import { logLiaEvento } from '@/utils/liaLogger'
-
+import { useAuth } from '@/context/AuthContext'
+import { useCreatedBy } from './useCreatedBy'
 /*
 ================================================
 1. PARTE POR FECHA — consulta el registro cabecera
@@ -93,12 +94,13 @@ export function useEstadosFinca(parteId: string | null) {
 */
 
 export function useAddEstadoFinca() {
+  const createdBy = useCreatedBy()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (record: TablesInsert<'parte_estado_finca'>) => {
       const { data, error } = await supabase
         .from('parte_estado_finca')
-        .insert(record)
+        .insert({ ...record, created_by: createdBy })
         .select()
         .single()
       if (error) throw error
@@ -150,12 +152,13 @@ export function useTrabajos(parteId: string | null) {
 */
 
 export function useAddTrabajo() {
+  const createdBy = useCreatedBy()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (record: TablesInsert<'parte_trabajo'>) => {
       const { data, error } = await supabase
         .from('parte_trabajo')
-        .insert(record)
+        .insert({ ...record, created_by: createdBy })
         .select()
         .single()
       if (error) throw error
@@ -201,12 +204,13 @@ export function usePersonales(parteId: string | null) {
 */
 
 export function useAddPersonal() {
+  const createdBy = useCreatedBy()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (record: TablesInsert<'parte_personal'>) => {
       const { data, error } = await supabase
         .from('parte_personal')
-        .insert(record)
+        .insert({ ...record, created_by: createdBy })
         .select()
         .single()
       if (error) throw error
@@ -252,12 +256,13 @@ export function useResiduos(parteId: string | null) {
 */
 
 export function useAddResiduos() {
+  const createdBy = useCreatedBy()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (record: TablesInsert<'parte_residuos_vegetales'>) => {
       const { data, error } = await supabase
         .from('parte_residuos_vegetales')
-        .insert(record)
+        .insert({ ...record, created_by: createdBy })
         .select()
         .single()
       if (error) throw error
@@ -377,12 +382,13 @@ export function useGanaderos() {
 }
 
 export function useAddGanadero() {
+  const createdBy = useCreatedBy()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (nombre: string) => {
       const { data, error } = await supabase
         .from('ganaderos')
-        .insert({ nombre })
+        .insert({ nombre, created_by: createdBy })
         .select()
         .single()
       if (error) throw error

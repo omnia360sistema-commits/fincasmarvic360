@@ -6,6 +6,7 @@ import {
   ChevronDown, Car, Phone,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '@/context/AuthContext';
 import {
   useCamiones, useAddCamion, useUpdateCamion, useDeleteCamion,
   useVehiculosEmpresa, useAddVehiculoEmpresa, useUpdateVehiculoEmpresa, useDeleteVehiculoEmpresa,
@@ -175,7 +176,7 @@ const ModalCamion = React.memo(function ModalCamion({
       gps_info:                 null,
       notas_mantenimiento:      form.notas_mantenimiento || null,
       foto_url,
-      created_by: 'JuanPe',
+      created_by: user?.email ?? 'sistema',
     };
     if (isEdit && initial) {
       await updMut.mutateAsync({ id: initial.id, ...payload });
@@ -360,7 +361,7 @@ const ModalVehiculo = React.memo(function ModalVehiculo({
       gps_info:              null,
       notas:                 form.notas || null,
       foto_url,
-      created_by: 'JuanPe',
+      created_by: user?.email ?? 'sistema',
     };
     if (isEdit && initial) {
       await updMut.mutateAsync({ id: initial.id, ...payload });
@@ -535,7 +536,7 @@ const ModalViaje = React.memo(function ModalViaje({
       gasto_gasolina_euros:  form.gasto_gasolina_euros  ? Number(form.gasto_gasolina_euros)  : null,
       km_recorridos:         form.km_recorridos         ? Number(form.km_recorridos)          : null,
       notas:                 form.notas || null,
-      created_by:            'JuanPe',
+      created_by:            user?.email ?? 'sistema',
     };
     if (isEdit && initial) {
       await updMut.mutateAsync({ id: initial.id, ...payload });
@@ -716,7 +717,7 @@ const ModalMantenimiento = React.memo(function ModalMantenimiento({
         proveedor:   form.proveedor || null,
         foto_url:    fotoUrl1,
         foto_url_2:  fotoUrl2,
-        created_by:  'JuanPe',
+        created_by:  user?.email ?? 'sistema',
       };
       if (isEdit && initial) {
         await updMut.mutateAsync({ id: initial.id, ...payload });
@@ -868,7 +869,7 @@ const ModalCombustible = React.memo(function ModalCombustible({
         gasolinera:    form.gasolinera || null,
         foto_url,
         notas:         form.notas || null,
-        created_by:    'JuanPe',
+        created_by:    user?.email ?? 'sistema',
       };
       if (isEdit && initial) {
         await updMut.mutateAsync({ id: initial.id, ...payload });
@@ -964,6 +965,7 @@ const ModalCombustible = React.memo(function ModalCombustible({
 export default function Logistica() {
   const navigate   = useNavigate();
   const { theme }  = useTheme();
+  const { user }   = useAuth();
   const isDark     = theme === 'dark';
 
   const [tab, setTab] = useState<TabType>('camiones');

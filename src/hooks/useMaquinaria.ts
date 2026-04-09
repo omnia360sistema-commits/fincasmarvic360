@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../integrations/supabase/client';
 import { logLiaEvento } from '@/utils/liaLogger';
+import { useCreatedBy } from './useCreatedBy';
 
 // ── Tipos locales ────────────────────────────────────────────
 export interface Tractor {
@@ -132,6 +133,7 @@ export function useAperosEnInventario() {
 
 // ── useAddTractor ─────────────────────────────────────────────
 export function useAddTractor() {
+  const createdBy = useCreatedBy();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Omit<Tractor, 'id' | 'created_at'> & { ubicacion_id?: string | null }) => {
@@ -145,7 +147,7 @@ export function useAddTractor() {
 
       const { data, error } = await supabase
         .from('maquinaria_tractores')
-        .insert([{ ...rest, codigo_interno }])
+        .insert([{ ...rest, codigo_interno, created_by: createdBy }])
         .select()
         .single();
       if (error) throw error;
@@ -231,6 +233,7 @@ export function useAperos(tractorId?: string) {
 
 // ── useAddApero ───────────────────────────────────────────────
 export function useAddApero() {
+  const createdBy = useCreatedBy();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Omit<Apero, 'id' | 'created_at'> & { ubicacion_id?: string | null }) => {
@@ -244,7 +247,7 @@ export function useAddApero() {
 
       const { data, error } = await supabase
         .from('maquinaria_aperos')
-        .insert([{ ...rest, codigo_interno }])
+        .insert([{ ...rest, codigo_interno, created_by: createdBy }])
         .select()
         .single();
       if (error) throw error;
@@ -309,12 +312,13 @@ export function useUsosMaquinaria(tractorId?: string) {
 
 // ── useAddUsoMaquinaria ───────────────────────────────────────
 export function useAddUsoMaquinaria() {
+  const createdBy = useCreatedBy();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Omit<UsoMaquinaria, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
         .from('maquinaria_uso')
-        .insert([payload])
+        .insert([{ ...payload, created_by: createdBy }])
         .select()
         .single();
       if (error) throw error;
@@ -355,12 +359,13 @@ export function useMantenimientoTractor(tractorId?: string) {
 
 // ── useAddMantenimientoTractor ────────────────────────────────
 export function useAddMantenimientoTractor() {
+  const createdBy = useCreatedBy();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Omit<MantenimientoTractor, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
         .from('maquinaria_mantenimiento')
-        .insert([payload])
+        .insert([{ ...payload, created_by: createdBy }])
         .select()
         .single();
       if (error) throw error;

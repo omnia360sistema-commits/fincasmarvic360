@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client'
 import type { TablesInsert } from '@/integrations/supabase/types'
 import { logLiaEvento } from '@/utils/liaLogger'
 import { toast } from '@/hooks/use-toast'
+import { useCreatedBy } from './useCreatedBy'
 
 /*
 ================================================
@@ -138,12 +139,13 @@ AÑADIR REGISTRO
 */
 
 export function useAddRegistro() {
+  const createdBy = useCreatedBy()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (record: TablesInsert<'inventario_registros'>) => {
       const { data, error } = await supabase
         .from('inventario_registros')
-        .insert(record)
+        .insert({ ...record, created_by: createdBy })
         .select()
         .single()
       if (error) throw error
@@ -170,12 +172,13 @@ INFORMES — insertar snapshot manual
 */
 
 export function useAddInforme() {
+  const createdBy = useCreatedBy()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (record: TablesInsert<'inventario_informes'>) => {
       const { data, error } = await supabase
         .from('inventario_informes')
-        .insert(record)
+        .insert({ ...record, created_by: createdBy })
         .select()
         .single()
       if (error) throw error
@@ -267,12 +270,13 @@ export function useProductosCatalogo(categoriaId: string | null) {
 }
 
 export function useAddProductoCatalogo() {
+  const createdBy = useCreatedBy()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (record: TablesInsert<'inventario_productos_catalogo'>) => {
       const { data, error } = await supabase
         .from('inventario_productos_catalogo')
-        .insert(record)
+        .insert({ ...record, created_by: createdBy })
         .select()
         .single()
       if (error) throw error
@@ -337,12 +341,13 @@ export function useMovimientos(ubicacionId: string | null, categoriaId: string |
 }
 
 export function useAddMovimiento() {
+  const createdBy = useCreatedBy()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (record: TablesInsert<'inventario_movimientos'>) => {
       const { data, error } = await supabase
         .from('inventario_movimientos')
-        .insert(record)
+        .insert({ ...record, created_by: createdBy })
         .select()
         .single()
       if (error) throw error
@@ -472,12 +477,13 @@ export function useAperosTablaInventario() {
 }
 
 export function useAssignActivoUbicacion() {
+  const createdBy = useCreatedBy()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (record: TablesInsert<'inventario_ubicacion_activo'>) => {
       const { data, error } = await supabase
         .from('inventario_ubicacion_activo')
-        .insert(record)
+        .insert({ ...record, created_by: createdBy })
         .select()
         .single()
       if (error) throw error
@@ -546,6 +552,7 @@ export function useProveedores(tipo?: string | null) {
 }
 
 export function useAddProveedor() {
+  const createdBy = useCreatedBy()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (record: import('@/integrations/supabase/types').TablesInsert<'proveedores'>) => {
@@ -561,7 +568,7 @@ export function useAddProveedor() {
       const codigo_interno = 'PR' + String(num + 1).padStart(3, '0')
       const { data, error } = await supabase
         .from('proveedores')
-        .insert({ ...record, codigo_interno })
+        .insert({ ...record, codigo_interno, created_by: createdBy })
         .select()
         .single()
       if (error) throw error

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../integrations/supabase/client';
 import { logLiaEvento } from '@/utils/liaLogger';
 import { toast } from '@/hooks/use-toast';
+import { useCreatedBy } from './useCreatedBy';
 
 // ── Utilidades ──────────────────────────────────────────────
 
@@ -112,12 +113,13 @@ export function useRegistrosTrabajos(tipoBloque?: TipoBloque) {
 
 // ── useAddTrabajoRegistro ────────────────────────────────────
 export function useAddTrabajoRegistro() {
+  const createdBy = useCreatedBy();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Omit<TrabajoRegistro, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
         .from('trabajos_registro')
-        .insert([{ ...payload, created_at: new Date().toISOString() }])
+        .insert([{ ...payload, created_at: new Date().toISOString(), created_by: createdBy }])
         .select()
         .single();
       if (error) throw error;
@@ -160,12 +162,13 @@ export function useIncidencias(soloAbiertas = false) {
 
 // ── useAddIncidencia ──────────────────────────────────────────
 export function useAddIncidencia() {
+  const createdBy = useCreatedBy();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Omit<TrabajoIncidencia, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
         .from('trabajos_incidencias')
-        .insert([{ ...payload, created_at: new Date().toISOString() }])
+        .insert([{ ...payload, created_at: new Date().toISOString(), created_by: createdBy }])
         .select()
         .single();
       if (error) throw error;
@@ -278,12 +281,13 @@ export function usePlanificacionDia(fecha: string) {
 
 // ── useAddTrabajoPlanificado ──────────────────────────────────
 export function useAddTrabajoPlanificado() {
+  const createdBy = useCreatedBy();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Omit<TrabajoRegistro, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
         .from('trabajos_registro')
-        .insert([{ ...payload, created_at: new Date().toISOString() }])
+        .insert([{ ...payload, created_at: new Date().toISOString(), created_by: createdBy }])
         .select()
         .single();
       if (error) throw error;
@@ -381,12 +385,13 @@ export function usePlanificacionCampana() {
 
 // ── useAddPlanificacionCampana ────────────────────────────────
 export function useAddPlanificacionCampana() {
+  const createdBy = useCreatedBy();
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (payload: Omit<PlanificacionCampana, 'id' | 'created_at'>) => {
       const { data, error } = await supabase
         .from('planificacion_campana')
-        .insert([{ ...payload, created_at: new Date().toISOString() }])
+        .insert([{ ...payload, created_at: new Date().toISOString(), created_by: createdBy }])
         .select()
         .single();
       if (error) throw error;
