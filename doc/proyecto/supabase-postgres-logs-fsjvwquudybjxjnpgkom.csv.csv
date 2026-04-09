@@ -1,0 +1,110 @@
+detail,error_severity,event_message,hint,id,identifier,timestamp
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,6fc0dd32-7e66-4efe-b14b-7239cf148d99,fsjvwquudybjxjnpgkom,1775596491349000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,6b47e76c-8759-457c-8045-a9b50da78f0b,fsjvwquudybjxjnpgkom,1775596491349000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,2ba0d98c-1c52-44f5-a1b4-ef68f230ba6a,fsjvwquudybjxjnpgkom,1775596491106000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,447e0939-92ba-47d7-b944-a551eb62942d,fsjvwquudybjxjnpgkom,1775596491106000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,8ce44df0-d7de-44b6-93cc-141a4a047599,fsjvwquudybjxjnpgkom,1775596491080000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,04b1e2e8-2d6f-417f-b8f6-99144796085e,fsjvwquudybjxjnpgkom,1775596491080000
+null,LOG,connection received: host=2a05:d018:1e14:205:e115:3ccc:db6f:c5f3 port=48302,null,2dd940d1-837c-42a2-8b3a-b5d8f10d4e16,fsjvwquudybjxjnpgkom,1775596490984000
+null,LOG,connection received: host=2a05:d018:1e14:200:122f:ec6d:cf43:b603 port=57734,null,643dc631-930c-474f-996b-81734dd8d4f1,fsjvwquudybjxjnpgkom,1775596490967000
+null,LOG,connection received: host=2a05:d018:1e14:204:ceb:18e7:cc5d:9ef port=37688,null,370b95e3-4bd4-4fbc-b170-f5f2b8863a18,fsjvwquudybjxjnpgkom,1775596490951000
+null,LOG,"connection authenticated: user=""supabase_admin"" method=trust (/etc/postgresql/pg_hba.conf:85)",null,5dc428b8-43fe-4896-9e74-771f375693f7,fsjvwquudybjxjnpgkom,1775596472358000
+null,LOG,connection authorized: user=supabase_admin database=postgres application_name=postgres_exporter,null,eba50f0c-0ff8-47c8-a332-0f154d60e8dc,fsjvwquudybjxjnpgkom,1775596472358000
+null,LOG,connection received: host=::1 port=25677,null,c792ff31-8cb2-405d-8f18-1d603aed3888,fsjvwquudybjxjnpgkom,1775596472357000
+null,LOG,"connection authenticated: identity=""supabase_admin"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,2458f1bb-14f8-419e-8404-ee49a67e234e,fsjvwquudybjxjnpgkom,1775596424997000
+null,LOG,"connection authorized: user=supabase_admin database=postgres application_name=mgmt-api SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,92a62aab-128c-42ea-8f93-00601d7a5dfc,fsjvwquudybjxjnpgkom,1775596424997000
+null,LOG,"connection authorized: user=supabase_admin database=postgres application_name=mgmt-api SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,aaec0a0b-046c-41c9-89f2-3cdede6ee1cf,fsjvwquudybjxjnpgkom,1775596424556000
+null,LOG,"connection authenticated: identity=""supabase_admin"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,e9e7966a-473b-437d-a604-bb32f10b898c,fsjvwquudybjxjnpgkom,1775596424556000
+null,LOG,"connection authenticated: identity=""supabase_admin"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,f23c3c77-0fa5-474f-ac77-4a2072ad0c89,fsjvwquudybjxjnpgkom,1775596424300000
+null,LOG,"connection authorized: user=supabase_admin database=postgres application_name=mgmt-api SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,f6341eda-b0e3-430c-b1fa-0084fb6758fb,fsjvwquudybjxjnpgkom,1775596424300000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,e275f100-3250-4b77-ba74-f351fa307770,fsjvwquudybjxjnpgkom,1775596424210000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,91e8913f-0118-4bd9-95eb-cdecc4ce267e,fsjvwquudybjxjnpgkom,1775596424210000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,d11ed59f-2151-4857-9200-60013891c803,fsjvwquudybjxjnpgkom,1775596424120000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,bc2fa9a1-fba4-4458-8a92-00e8d1a21727,fsjvwquudybjxjnpgkom,1775596424120000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,157c74c1-d76e-4874-b79b-7cb5efef894c,fsjvwquudybjxjnpgkom,1775596424104000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,93b76dd6-6480-4eae-b57c-695ef38b9787,fsjvwquudybjxjnpgkom,1775596424104000
+null,LOG,"connection authorized: user=supabase_admin database=postgres application_name=mgmt-api SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,9230ea02-5e18-49ac-be27-76b838e4eae7,fsjvwquudybjxjnpgkom,1775596424020000
+null,LOG,"connection authenticated: identity=""supabase_admin"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,5b60d2a3-5928-48d2-a6d0-9e87aa2a013d,fsjvwquudybjxjnpgkom,1775596424020000
+null,LOG,"connection authenticated: identity=""supabase_admin"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,03d4db8a-95bf-4095-b7e2-6a6a9d77e4eb,fsjvwquudybjxjnpgkom,1775596424018000
+null,LOG,"connection authorized: user=supabase_admin database=postgres application_name=mgmt-api SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,9804ff9b-149f-467c-8769-9cb26efb5ddc,fsjvwquudybjxjnpgkom,1775596424018000
+null,LOG,"connection authenticated: identity=""supabase_admin"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,d755ab77-60f8-4260-a1c0-a51098f11fe1,fsjvwquudybjxjnpgkom,1775596423440000
+null,LOG,"connection authorized: user=supabase_admin database=postgres application_name=mgmt-api SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,5e62ece8-3ff3-46d8-ab02-0d6cf46d01a3,fsjvwquudybjxjnpgkom,1775596423440000
+null,LOG,connection received: host=2a05:d018:1e14:200:7c64:db82:22:43d5 port=51768,null,1ced6006-ad18-41e2-8f34-f04074507908,fsjvwquudybjxjnpgkom,1775596423330000
+null,LOG,connection authorized: user=supabase_admin database=postgres application_name=postgres_exporter,null,179dca66-9953-45f1-9e59-86d0395d9b3f,fsjvwquudybjxjnpgkom,1775596412358000
+null,LOG,"connection authenticated: user=""supabase_admin"" method=trust (/etc/postgresql/pg_hba.conf:85)",null,738de857-a10e-4d76-9b1f-26faddedee44,fsjvwquudybjxjnpgkom,1775596412358000
+null,LOG,connection received: host=::1 port=13379,null,4150cd00-85c4-40e9-9089-8abe29ffdee7,fsjvwquudybjxjnpgkom,1775596412357000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,9942a8e3-45ec-4e9c-8e5e-3e413c411e3a,fsjvwquudybjxjnpgkom,1775596405907000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,598f9e58-888c-41c7-bb36-f2216ab441f7,fsjvwquudybjxjnpgkom,1775596405907000
+null,LOG,"connection authenticated: identity=""supabase_admin"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,0ade35c8-e13f-4d28-8b43-6d97aace4031,fsjvwquudybjxjnpgkom,1775596404940000
+null,LOG,"connection authenticated: identity=""supabase_admin"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,6045f70f-7c78-4a3d-868e-82c0bda2d50b,fsjvwquudybjxjnpgkom,1775596404940000
+null,LOG,"connection authorized: user=supabase_admin database=postgres application_name=mgmt-api SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,5bcf3d13-e6b0-4036-a2f8-2dd01e7984b8,fsjvwquudybjxjnpgkom,1775596404940000
+null,LOG,"connection authorized: user=supabase_admin database=postgres application_name=mgmt-api SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,d9fe8a9a-11c6-4b17-b287-0ef6abb31dbe,fsjvwquudybjxjnpgkom,1775596404940000
+null,LOG,"connection authenticated: identity=""supabase_admin"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,1e20f924-df65-4cf5-b0e1-1310154ffd0a,fsjvwquudybjxjnpgkom,1775596403844000
+null,LOG,"connection authorized: user=supabase_admin database=postgres application_name=mgmt-api SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,eebcfa6b-0f79-4945-8ca7-cfb29284cacd,fsjvwquudybjxjnpgkom,1775596403844000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,58a01d02-9ad6-4ac5-aeba-c58b0e6d09d8,fsjvwquudybjxjnpgkom,1775596403836000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,2d9ee9e6-ec2e-4570-aa4c-6ec5b8b185e4,fsjvwquudybjxjnpgkom,1775596403836000
+null,LOG,"connection authorized: user=supabase_admin database=postgres application_name=mgmt-api SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,f5880ca6-be66-4ba9-a9e7-6dd65ba8e080,fsjvwquudybjxjnpgkom,1775596403737000
+null,LOG,"connection authenticated: identity=""supabase_admin"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,40aa1cd5-4630-4e43-a50a-ec1f1d8579e9,fsjvwquudybjxjnpgkom,1775596403737000
+null,LOG,"connection authorized: user=supabase_admin database=postgres application_name=mgmt-api SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,8c49d422-cb6e-433d-a50f-5c846739651c,fsjvwquudybjxjnpgkom,1775596403737000
+null,LOG,"connection authenticated: identity=""supabase_admin"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,5a603a2c-82c1-4969-ad15-7e2379e48c79,fsjvwquudybjxjnpgkom,1775596403737000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,f518dfc7-da62-46f2-9610-2795f829ec57,fsjvwquudybjxjnpgkom,1775596403686000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,ac42ab6f-7922-42b8-bb5e-577b481b4e64,fsjvwquudybjxjnpgkom,1775596403686000
+null,LOG,"connection authenticated: identity=""supabase_admin"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,81a46c8f-a623-41e6-90e0-88d86ad8d2d6,fsjvwquudybjxjnpgkom,1775596402957000
+null,LOG,"connection authorized: user=supabase_admin database=postgres application_name=mgmt-api SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,8f4c8811-f8fa-4f88-a638-9ca65c70d30b,fsjvwquudybjxjnpgkom,1775596402957000
+null,LOG,connection received: host=2a05:d018:1e14:204:ceb:18e7:cc5d:9ef port=38382,null,438cd4db-8ffd-437d-86a8-ca0f8d0e3310,fsjvwquudybjxjnpgkom,1775596402844000
+null,LOG,"checkpoint complete: wrote 211 buffers (0.7%); 0 WAL file(s) added, 0 removed, 2 recycled; write=21.291 s, sync=0.005 s, total=21.324 s; sync files=132, longest=0.002 s, average=0.001 s; distance=32793 kB, estimate=44714 kB; lsn=3/97006638, redo lsn=3/970065A8",null,5b0c5258-77b9-4343-85ef-9d02afd44e34,fsjvwquudybjxjnpgkom,1775596385203000
+null,LOG,checkpoint starting: time,null,26bde7d3-6ac8-46aa-8482-4e18eb18e4f9,fsjvwquudybjxjnpgkom,1775596363882000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,f2ba371b-b364-47f5-8cc8-105642ee7f45,fsjvwquudybjxjnpgkom,1775596353380000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,661416f7-e4e7-4de3-94d4-5cfe2392a30d,fsjvwquudybjxjnpgkom,1775596353380000
+null,LOG,connection authorized: user=supabase_admin database=postgres application_name=postgres_exporter,null,ea33fd16-e04a-4666-9e82-487e486ab065,fsjvwquudybjxjnpgkom,1775596352394000
+null,LOG,"connection authenticated: user=""supabase_admin"" method=trust (/etc/postgresql/pg_hba.conf:85)",null,97bfeb0c-292b-4ac7-ba8d-207df0492722,fsjvwquudybjxjnpgkom,1775596352393000
+null,LOG,connection received: host=::1 port=3161,null,9837367c-c2b5-4478-a4e0-de887626667c,fsjvwquudybjxjnpgkom,1775596352392000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,17277b8c-9d7e-4322-bded-78139640e952,fsjvwquudybjxjnpgkom,1775596350665000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,b170b646-3b24-4f68-9ff8-da9edfedff54,fsjvwquudybjxjnpgkom,1775596350665000
+null,LOG,connection received: host=2a05:d018:1e14:205:89f6:8a57:91b9:1312 port=59972,null,ccf10d34-0a0e-48c1-bd21-a46cc19448a9,fsjvwquudybjxjnpgkom,1775596350475000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,f27901a1-a06d-45ca-a501-502342d55b66,fsjvwquudybjxjnpgkom,1775596349102000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,d40686de-6955-4d6b-8b98-6441c0bc67f6,fsjvwquudybjxjnpgkom,1775596349102000
+null,LOG,connection received: host=2a05:d018:1e14:205:89f6:8a57:91b9:1312 port=59970,null,189ac602-f6e8-4f5c-a83d-8425f5f92644,fsjvwquudybjxjnpgkom,1775596348374000
+null,LOG,"connection authenticated: user=""supabase_admin"" method=trust (/etc/postgresql/pg_hba.conf:85)",null,c56d762d-13dd-495a-97a0-3526df788a03,fsjvwquudybjxjnpgkom,1775596341552000
+null,LOG,"connection authorized: user=supabase_admin database=postgres application_name=psql SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,1d19709c-31ab-4d7c-9f5c-86ad55caf3c6,fsjvwquudybjxjnpgkom,1775596341552000
+null,LOG,"connection authorized: user=supabase_admin database=postgres application_name=psql SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,2c17e713-2c60-42ec-a795-4af00406cf7b,fsjvwquudybjxjnpgkom,1775596341416000
+null,LOG,"connection authenticated: user=""supabase_admin"" method=trust (/etc/postgresql/pg_hba.conf:85)",null,458d74c2-b352-42f7-a489-23a57283b45f,fsjvwquudybjxjnpgkom,1775596341416000
+null,LOG,"connection authenticated: user=""supabase_admin"" method=trust (/etc/postgresql/pg_hba.conf:85)",null,3d2d8e31-0968-4336-a780-8b004863e5b8,fsjvwquudybjxjnpgkom,1775596341380000
+null,LOG,"connection authorized: user=supabase_admin database=postgres application_name=psql SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,9d42852f-c098-41fe-8d35-5f8a2fd98be6,fsjvwquudybjxjnpgkom,1775596341380000
+null,LOG,"connection authorized: user=supabase_admin database=postgres application_name=psql SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,19e8d0b1-ac83-4973-8ed5-1d39721d41f1,fsjvwquudybjxjnpgkom,1775596340889000
+null,LOG,"connection authenticated: user=""supabase_admin"" method=trust (/etc/postgresql/pg_hba.conf:85)",null,0ba95209-6d83-403d-94f2-38047c09f31e,fsjvwquudybjxjnpgkom,1775596340889000
+null,LOG,connection received: host=::1 port=3771,null,a88660ab-7157-44a1-8b58-aa9f469b556d,fsjvwquudybjxjnpgkom,1775596340845000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,3d670700-347a-4e64-917e-360e9c8a21d3,fsjvwquudybjxjnpgkom,1775596321850000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,c6ba354d-9cb5-4636-a45f-4e54f5b4639e,fsjvwquudybjxjnpgkom,1775596321849000
+null,LOG,connection received: host=2a05:d018:1e14:205:e115:3ccc:db6f:c5f3 port=40894,null,d41a12af-1d7c-4201-8fda-33b51f3b2279,fsjvwquudybjxjnpgkom,1775596321609000
+null,LOG,"connection authenticated: user=""authenticator"" method=trust (/etc/postgresql/pg_hba.conf:85)",null,3b1b6996-4a35-4c93-a885-4582e857a2cf,fsjvwquudybjxjnpgkom,1775596295387000
+null,LOG,"connection authorized: user=authenticator database=postgres application_name=postgrest SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,bc261711-47d6-428f-ab8e-effa7df01594,fsjvwquudybjxjnpgkom,1775596295387000
+null,LOG,connection received: host=::1 port=62741,null,6f94963c-0e8b-4af5-b09c-912949ebc002,fsjvwquudybjxjnpgkom,1775596295337000
+null,LOG,connection authorized: user=supabase_admin database=postgres application_name=postgres_exporter,null,64f55fd1-f2eb-4746-a44c-031f33c543d8,fsjvwquudybjxjnpgkom,1775596292359000
+null,LOG,"connection authenticated: user=""supabase_admin"" method=trust (/etc/postgresql/pg_hba.conf:85)",null,e394c617-cce3-4996-826e-25968e8ce08f,fsjvwquudybjxjnpgkom,1775596292358000
+null,LOG,connection received: host=::1 port=62727,null,6fa1efb1-4806-443c-a7be-4e6b8ed124a5,fsjvwquudybjxjnpgkom,1775596292358000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,dcb6d4e6-48f4-4f01-83a4-4fbfe34c562b,fsjvwquudybjxjnpgkom,1775596282596000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,81b7800c-4bef-496a-91c2-901747fa50ae,fsjvwquudybjxjnpgkom,1775596282596000
+null,LOG,connection received: host=2a05:d018:1e14:205:e115:3ccc:db6f:c5f3 port=60208,null,66c25a67-0219-4049-a46b-28cddb12416e,fsjvwquudybjxjnpgkom,1775596282440000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,18122d0d-4778-48f2-8285-faa27b1e0ea6,fsjvwquudybjxjnpgkom,1775596271204000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,d165a0ff-0b09-4aac-8319-e93b3ca6bd17,fsjvwquudybjxjnpgkom,1775596271204000
+null,LOG,connection received: host=2a05:d018:1e14:200:bc4a:160a:156a:17d3 port=53178,null,2c5a6715-e8e7-40a2-ae99-a63dd80340a6,fsjvwquudybjxjnpgkom,1775596271093000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,f3205024-bedb-4c4a-bf7a-195c7bc78920,fsjvwquudybjxjnpgkom,1775596269235000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,d30fe79f-756a-4ced-9999-b692c6e6bfc7,fsjvwquudybjxjnpgkom,1775596269235000
+null,LOG,connection received: host=2a05:d018:1e14:200:bc4a:160a:156a:17d3 port=53164,null,46390ee9-1151-46ce-adcc-0931e9a0218a,fsjvwquudybjxjnpgkom,1775596268892000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,c68d013b-efc3-4266-ba1e-860b9f052563,fsjvwquudybjxjnpgkom,1775596264051000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,c321a729-4294-4051-9b97-756ce06ba678,fsjvwquudybjxjnpgkom,1775596264051000
+null,LOG,"connection authenticated: user=""authenticator"" method=trust (/etc/postgresql/pg_hba.conf:85)",null,2e4644a4-a67c-4250-b747-c0166d76e896,fsjvwquudybjxjnpgkom,1775596263528000
+null,LOG,"connection authorized: user=authenticator database=postgres application_name=postgrest SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,52b35dab-1962-4f8d-b7a2-240020c473c9,fsjvwquudybjxjnpgkom,1775596263528000
+null,LOG,"statement: SET statement_timeout='58s'; SET idle_session_timeout='58s';CREATE SCHEMA IF NOT EXISTS pgmq;
+
+CREATE EXTENSION pgmq
+  SCHEMA pgmq
+  VERSION '1.5.1'
+  CASCADE;
+
+-- source: POST /platform/pg-meta/:ref/query
+-- user: session:0882665c-40b7-4fa9-b67e-8d7d8bf93ef2
+-- date: 2026-04-07T21:11:03.159Z",null,87417b83-b845-422c-ba94-e82acb96a500,fsjvwquudybjxjnpgkom,1775596263451000
+null,LOG,"connection authenticated: identity=""postgres"" method=scram-sha-256 (/etc/postgresql/pg_hba.conf:94)",null,ec6aaf03-6682-48a2-8383-e16b7db52c36,fsjvwquudybjxjnpgkom,1775596263428000
+null,LOG,"connection authorized: user=postgres database=postgres application_name=supabase/dashboard SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)",null,7bd87a33-ee53-4bfb-81d4-fc1b17dbb48c,fsjvwquudybjxjnpgkom,1775596263428000

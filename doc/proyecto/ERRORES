@@ -1,0 +1,61 @@
+Entendido y asimilado. Seguiré tus directrices al pie de la letra, actuando como un Senior QA Engineer metodológico. No habrá saltos, no habrá múltiples archivos a la vez y la documentación será el cierre obligatorio de cada ciclo.
+
+Comenzamos con la Fase 1 y Fase 2 de tu directriz.
+
+🕵️‍♂️ FASE 1: Auditoría y Estudio de los Errores
+He analizado el archivo reporte_errores.txt. Tienes 96 problemas (84 errores, 12 advertencias). El sistema los está marcando por las siguientes razones (estudio técnico):
+
+@typescript-eslint/no-explicit-any (El más común - 77 casos)
+Qué es: TypeScript bloquea el uso de la palabra clave any.
+Por qué es un error: Usar any apaga la verificación de tipos. Si la API devuelve algo distinto o cambiamos una tabla, el sistema no nos avisará y fallará en tiempo de ejecución.
+Solución: Importar y asignar los tipos estrictos (ej: Tables<'nombre_tabla'> generados por Supabase o las interfaces de AUDITORIA_TIPOS_OMNIA.ts).
+react-refresh/only-export-components (12 advertencias)
+Qué es: Advertencia del plugin de Vite (Fast Refresh).
+Por qué es un error: Vite requiere que los archivos .tsx que contienen componentes React solo exporten componentes. Si exportas constantes, tipos o funciones normales junto al componente, el hot-reload (recarga en vivo al guardar) se rompe.
+Solución: Extraer las constantes a otro archivo o ignorar la regla selectivamente si son archivos UI de shadcn.
+@typescript-eslint/no-empty-object-type (2 casos)
+Qué es: Interfaces vacías (ej: interface Props {}).
+Por qué es un error: Una interfaz vacía en TypeScript equivale a "cualquier objeto que no sea null/undefined", lo cual es ambiguo y propenso a errores.
+Solución: Eliminar la interfaz si no se usa, o reemplazarla por Record<string, never>.
+prefer-const (2 casos)
+Qué es: Variables declaradas con let que nunca cambian su valor.
+Por qué es un error: Afecta la optimización de memoria y legibilidad.
+Solución: Cambiar let por const.
+@typescript-eslint/ban-ts-comment (2 casos en Dashboard.tsx)
+Qué es: Uso prohibido de // @ts-ignore.
+Por qué es un error: @ts-ignore oculta errores ciegamente. La convención moderna obliga a usar // @ts-expect-error (que falla si el error deja de existir, manteniéndose limpio).
+Solución: Arreglar el tipo subyacente o cambiar a @ts-expect-error.
+@typescript-eslint/no-unused-expressions (2 casos en Inventario.tsx)
+Qué es: Código que se evalúa pero no hace nada (ej: una variable suelta en una línea o un map sin return).
+Por qué es un error: Suele indicar un bug lógico (como olvidar un return o usar == en lugar de =).
+Solución: Estructurar correctamente la instrucción.
+react-hooks/exhaustive-deps (1 caso en Trabajos.tsx)
+Qué es: Faltan variables en el array de dependencias de un useEffect.
+Por qué es un error: Crea "Stale Closures" (el hook lee datos viejos de renderizados anteriores, causando bugs invisibles y graves).
+Solución: Añadir las variables faltantes al array.
+@typescript-eslint/no-require-imports (1 caso en tailwind.config.ts)
+Qué es: Uso de require() en un entorno de módulos modernos.
+Por qué es un error: Vite y los ecosistemas modernos usan ES Modules (import).
+Solución: Cambiar a sintaxis import.
+📋 FASE 2: Orden de Prioridad para la Corrección
+Para evitar efectos en cascada (donde arreglar un archivo rompe otro), el orden de ataque DEBE ser desde el núcleo hacia las vistas:
+
+NIVEL 1: Configuración y Contextos (Aíslan problemas globales)
+tailwind.config.ts (Configuración raíz).
+src/context/AuthContext.tsx (Provee tipos a toda la app).
+src/context/SidebarContext.tsx
+src/context/ThemeContext.tsx
+NIVEL 2: Hooks (La capa de datos - Si arreglamos aquí, las páginas infieren los tipos solos) 5. src/hooks/useAnalisis.ts 6. src/hooks/useLogistica.ts 7. src/hooks/useOperaciones.ts 8. src/hooks/useParteDiario.ts 9. src/hooks/usePersonal.ts 10. src/hooks/useTrazabilidad.ts
+NIVEL 3: Componentes UI de shadcn (Fáciles y de uso global) 11. src/components/ui/*.tsx (command, textarea, form, etc.)
+NIVEL 4: Componentes de Bloque y Formularios 12. src/components/InspeccionForm.tsx, ParcelHistory.tsx, etc.
+NIVEL 5: Páginas (La punta del iceberg) 13. src/pages/IntegracionERP.tsx, PresenciaPanel.tsx, Dashboard.tsx, etc.
+🚀 FASE 3: Ejecución - Archivo 1
+De acuerdo a nuestro orden de prioridades, el archivo número 1 a corregir es: tailwind.config.ts
+
+Según las directrices que me has marcado: "si en tu context items o en el editor de archivos no esta o contienes el archivo a auditar o modificar, tu primer paso sera pedirme que te lo aporte".
+
+He revisado mi contexto y no dispongo del código fuente de tailwind.config.ts.
+
+Por favor, compárteme el contenido de tailwind.config.ts. En cuanto me lo des, te generaré el diff con la solución exacta para su error, comprobaremos que quede limpio, indicaremos la actualización para CLAUDE.md, y pasaremos al archivo número 2 (AuthContext.tsx).
+
+Quedo a la espera de tu código.
