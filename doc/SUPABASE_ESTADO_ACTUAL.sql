@@ -1,0 +1,524 @@
+-- =============================================================================
+-- AGRÍCOLA MARVIC 360 — ESTADO ACTUAL SUPABASE
+-- Fecha: 2026-04-12  |  Revisión: post-master-rebuild
+-- =============================================================================
+-- Este archivo es el ÚNICO punto de referencia del schema de BD.
+-- La migración maestra está en:
+--   supabase/migrations/20260412000000_master_schema_rebuild.sql
+--
+-- Para regenerar types.ts tras cambios en BD:
+--   supabase gen types typescript --linked > src/integrations/supabase/types.ts
+-- =============================================================================
+
+-- =============================================================================
+-- RESUMEN EJECUTIVO
+-- =============================================================================
+-- Tablas totales:  71 (operacionales) + 3 vistas
+-- ENUMs:           8 tipos PostgreSQL
+-- Tablas zombie eliminadas: tractores, logistica_conductores, maquinaria_tractoristas
+-- Fixes críticos aplicados:
+--   ✅ inventario_ubicacion_activo.maquinaria_apero_id (campo fantasma resuelto)
+--   ✅ trabajos_registro.recursos_personal + materiales_previstos (datos ya no se pierden)
+--   ✅ logistica_mantenimiento: sin FK camiones + vehiculo_tipo discriminador
+--   ✅ logistica_viajes.conductor_id: sin FK (solo personal_id activo)
+--   ✅ registros_estado_parcela.parcel_id: TEXT (era UUID en migración 20260314)
+--   ✅ maquinaria_tractores: eliminados campos legacy estado/codigo/tipo/ubicacion
+--   ✅ 3 vistas SQL creadas (faltaban en todas las migrations anteriores)
+
+-- =============================================================================
+-- ENUMS ACTIVOS (8 tipos)
+-- =============================================================================
+--
+-- estado_parcela:       activa|plantada|preparacion|cosechada|vacia|baja|en_produccion|acolchado
+-- tipo_riego:           goteo|tradicional|aspersion|ninguno
+-- tipo_suelo:           arcilloso|franco|arenoso|limoso|franco_arcilloso
+-- tipo_residuo:         plastico_acolchado|cinta_riego|rafia|envase_fitosanitario|otro
+-- estado_certificacion: vigente|suspendida|en_tramite|caducada
+-- ai_proposal_category: analysis|planning|report
+-- ai_proposal_status:   pending|approved|rejected|executed|failed
+-- ai_validation_decision: approved|rejected
+
+-- =============================================================================
+-- BLOQUE 1 — MULTI-TENANT
+-- =============================================================================
+--
+-- companies
+--   id uuid PK | name text NOT NULL | slug text UNIQUE | created_at
+--   Seed: '00000000-0000-0000-0000-000000000001' = Fincas Marvic
+--
+-- user_profiles
+--   id uuid PK → auth.users | email | full_name
+--   role text DEFAULT 'operario'  (admin|encargado|operario)
+--   company_id uuid → companies DEFAULT '00000000-...-0001'
+--   status text DEFAULT 'active'
+--   RLS: profiles_own_select (id=auth.uid) + profiles_select (company_id) + profiles_admin_all
+--
+-- Funciones SECURITY DEFINER (SET row_security = off — evitan recursión):
+--   current_user_company_id() → uuid
+--   current_user_role()       → text
+--   current_user_is_admin()   → boolean
+--   user_has_role(text)       → boolean  (jerarquía: admin > encargado > operario)
+
+-- =============================================================================
+-- BLOQUE 2 — CATÁLOGOS GLOBALES (sin company_id)
+-- =============================================================================
+--
+-- cultivos_catalogo
+--   id | nombre_interno UNIQUE | nombre_display | ciclo_dias
+--   rendimiento_kg_ha | kg_plastico_por_ha | m_cinta_riego_por_ha
+--   marco_std_entre_lineas_cm | marco_std_entre_plantas_cm | es_ecologico bool
+--   RLS: FOR ALL TO authenticated USING (true)
+--
+-- catalogo_tipos_trabajo
+--   id | nombre | categoria | activo bool
+--   Seed: 25 tipos (Laboreo, Siembra, Transplante ... Otro)
+--
+-- catalogo_tipos_mantenimiento
+--   id | nombre | modulo (maquinaria|logistica) | activo bool
+--   Seed: 16 tipos (8 maquinaria + 8 logística)
+--
+-- inventario_categorias
+--   id | nombre | slug UNIQUE | icono | orden
+--   Seed: 9 categorías (Fitosanitarios, Semillas, Material riego...)
+--
+-- usuario_roles
+--   id | nombre UNIQUE | descripcion | permisos jsonb
+--   Seed: admin | encargado | operario
+
+-- =============================================================================
+-- BLOQUE 3 — CAMPO / PARCELAS
+-- =============================================================================
+--
+-- parcels  ⚠️ parcel_id TEXT NOT NULL PRIMARY KEY (no uuid)
+--   parcel_id TEXT PK | farm | parcel_number | area_hectares
+--   status estado_parcela | irrigation_type_v2 tipo_riego | tipo_suelo
+--   ph_suelo | materia_organica_pct | ultima_analisis_suelo | company_id
+--
+-- cuadrillas
+--   id | nombre | empresa | nif | responsable | telefono | activa | qr_code UNIQUE
+--   company_id
+--   RLS ANON: FOR SELECT TO anon USING (true)
+--
+-- harvests
+--   id | parcel_id TEXT→parcels | crop | date | production_kg | price_kg | harvest_cost
+--   company_id
+--
+-- plantings
+--   id | parcel_id TEXT→parcels | crop | date | variedad | lote_semilla
+--   proveedor_semilla | marco_cm_entre_lineas | marco_cm_entre_plantas
+--   num_plantas_real | fecha_cosecha_estimada | sistema_riego tipo_riego | notes
+--   company_id
+--
+-- work_records
+--   id | parcel_id TEXT→parcels | work_type | date | cuadrilla_id→cuadrillas
+--   workers_count | hours_worked | hora_entrada | hora_salida | notas
+--   qr_scan_entrada | qr_scan_salida | horas_calculadas numeric
+--   company_id
+--   RLS ANON: FOR ALL TO anon USING (true)
+--
+-- work_records_cuadrillas
+--   id | work_record_id→work_records | cuadrilla_id→cuadrillas
+--   num_trabajadores | hora_entrada | hora_salida
+--   UNIQUE(work_record_id, cuadrilla_id)
+--
+-- parcel_photos
+--   id | parcel_id TEXT→parcels | image_url | description | company_id
+--
+-- fotos_campo
+--   id | parcel_id TEXT→parcels | url_imagen | descripcion
+--   latitud numeric | longitud numeric | tipo | fecha | company_id
+--
+-- registros_estado_parcela  ⚠️ FIX: parcel_id TEXT (era UUID en migración 20260314)
+--   id | parcel_id TEXT→parcels | estado | cultivo | foto_url | observaciones | fecha
+--   company_id
+--
+-- certificaciones_parcela
+--   id | parcel_id TEXT→parcels | estado estado_certificacion DEFAULT 'en_tramite'
+--   campana | entidad_certificadora | fecha_inicio | fecha_fin | numero_expediente
+--   company_id
+--
+-- residuos_operacion
+--   id | parcel_id TEXT→parcels | operacion_id→work_records | tipo_residuo tipo_residuo
+--   kg_instalados | kg_retirados | proveedor | lote_material | gestor_residuos
+--   fecha_instalacion | fecha_retirada | company_id
+--
+-- parcel_production  (tabla de referencia — nunca escrita desde hooks, calculada en useParcelProduction)
+--   parcel_id TEXT PK→parcels | crop | area_hectares | estimated_production_kg
+--   estimated_plastic_kg | estimated_drip_meters | estimated_cost | company_id
+
+-- =============================================================================
+-- BLOQUE 4 — PERSONAL
+-- =============================================================================
+--
+-- personal  (FUENTE ÚNICA de conductores y tractoristas)
+--   id | nombre | dni | telefono
+--   categoria text CHECK(operario_campo|encargado|conductor_maquinaria|conductor_camion)
+--   activo | foto_url | qr_code UNIQUE | tacografo bool | notas | created_by
+--   company_id
+--   NOTA: conductor = categoria='conductor_camion'; tractorista = 'conductor_maquinaria'
+--
+-- personal_externo
+--   id | nombre_empresa | nif | telefono_contacto
+--   tipo text CHECK(destajo|jornal_servicio)
+--   activo | qr_code UNIQUE | notas | created_by | company_id
+--
+-- personal_tipos_trabajo  (N:N)
+--   id | personal_id→personal | tipo_trabajo_id→catalogo_tipos_trabajo
+--   UNIQUE(personal_id, tipo_trabajo_id) | company_id
+--
+-- ganaderos
+--   id | nombre NOT NULL | telefono | direccion | activo | notas | created_by | company_id
+--   NOTA: created_by existe en BD (faltaba en interfaz TS anterior)
+
+-- =============================================================================
+-- BLOQUE 5 — MAQUINARIA
+-- =============================================================================
+--
+-- maquinaria_tractores  ⚠️ FIX: sin campos legacy estado/codigo/tipo/ubicacion
+--   id | matricula UNIQUE NOT NULL | marca | modelo | anio | horas_motor | ficha_tecnica
+--   activo | foto_url | notas | fecha_proxima_itv | fecha_proxima_revision
+--   horas_proximo_mantenimiento | gps_info | codigo_interno UNIQUE
+--   estado_operativo text CHECK(disponible|en_uso|mantenimiento|baja)
+--   created_by | company_id
+--
+-- maquinaria_aperos
+--   id | tipo | descripcion | tractor_id→maquinaria_tractores | activo | foto_url | notas
+--   codigo_interno UNIQUE | estado text CHECK(disponible|asignado|en_reparacion|baja)
+--   created_by | company_id
+--
+-- maquinaria_uso
+--   id | tractor_id→maquinaria_tractores | apero_id→maquinaria_aperos | personal_id→personal
+--   tractorista text (legacy — personal_id es la fuente real)
+--   finca | parcel_id text | tipo_trabajo | fecha | hora_inicio | hora_fin
+--   horas_trabajadas | gasolina_litros | foto_url | notas | created_by | company_id
+--
+-- maquinaria_mantenimiento
+--   id | tractor_id→maquinaria_tractores | tipo | descripcion | fecha
+--   horas_motor_al_momento | coste_euros | proveedor | foto_url | foto_url_2
+--   created_by | company_id
+--
+-- maquinaria_inventario_sync
+--   id | tipo text CHECK(tractor|apero) | maquinaria_id uuid (sin FK — polimórfico)
+--   ubicacion_id→inventario_ubicaciones | activo | company_id
+
+-- =============================================================================
+-- BLOQUE 6 — LOGÍSTICA
+-- =============================================================================
+--
+-- camiones
+--   id | matricula UNIQUE NOT NULL | activo | marca | modelo | anio
+--   kilometros_actuales | fecha_itv | fecha_proxima_itv | fecha_proxima_revision
+--   km_proximo_mantenimiento | gps_info | notas_mantenimiento | foto_url
+--   capacidad_kg | empresa_transporte | tipo CHECK(propio|contratado)
+--   codigo_interno UNIQUE | estado_operativo CHECK(disponible|en_uso|mantenimiento|baja)
+--   created_by | company_id
+--
+-- vehiculos_empresa
+--   id | codigo_interno UNIQUE | matricula UNIQUE NOT NULL | marca | modelo | anio
+--   tipo CHECK(furgoneta|turismo|pick_up|otro)
+--   conductor_habitual_id→personal | km_actuales
+--   estado_operativo CHECK(disponible|en_uso|mantenimiento|baja)
+--   fecha_proxima_itv | fecha_proxima_revision | foto_url | notas | gps_info
+--   created_by | company_id
+--
+-- logistica_viajes  ⚠️ FIX: conductor_id SIN FK (legacy data, solo personal_id activo)
+--   id | conductor_id uuid (sin FK) | personal_id→personal | camion_id→camiones
+--   finca | destino | trabajo_realizado | ruta
+--   hora_salida | hora_llegada | gasto_gasolina_litros | gasto_gasolina_euros
+--   km_recorridos | notas | created_by | company_id
+--
+-- logistica_combustible
+--   id | vehiculo_tipo CHECK(camion|vehiculo) | vehiculo_id uuid (sin FK polimórfico)
+--   conductor_id→personal | fecha | litros | coste_total | gasolinera | foto_url | notas
+--   created_by | company_id
+--
+-- logistica_mantenimiento  ⚠️ FIX: SIN FK a camiones + vehiculo_tipo discriminador
+--   id | camion_id uuid (sin FK) | vehiculo_tipo CHECK(camion|vehiculo) DEFAULT 'camion'
+--   tipo | descripcion | fecha | coste_euros | proveedor | foto_url | foto_url_2
+--   created_by | company_id
+--
+-- logistica_inventario_sync
+--   id | tipo CHECK(camion|vehiculo) | vehiculo_id uuid (sin FK polimórfico)
+--   ubicacion_id→inventario_ubicaciones | activo | company_id
+
+-- =============================================================================
+-- BLOQUE 7 — INVENTARIO
+-- =============================================================================
+--
+-- inventario_ubicaciones
+--   id | nombre | descripcion | foto_url | activa | orden | updated_at | company_id
+--
+-- inventario_productos_catalogo
+--   id | nombre | categoria_id→inventario_categorias | precio_unitario | unidad_defecto | activo
+--   company_id
+--   UNIQUE(nombre, categoria_id)  ← permite upsert por nombre+categoría
+--
+-- inventario_registros  ⚠️ NO tiene campo 'responsable' — solo created_by
+--   id | ubicacion_id→inventario_ubicaciones | categoria_id→inventario_categorias
+--   producto_id→inventario_productos_catalogo | cantidad | unidad | descripcion
+--   foto_url | foto_url_2 | precio_unitario | notas | created_by | company_id
+--
+-- inventario_movimientos
+--   id | categoria_id→inventario_categorias | producto_id→inventario_productos_catalogo
+--   cantidad | unidad | ubicacion_origen_id→inventario_ubicaciones
+--   ubicacion_destino_id→inventario_ubicaciones | fecha | notas | responsable
+--   created_by | company_id
+--
+-- inventario_entradas
+--   id | proveedor_id→proveedores | ubicacion_id→inventario_ubicaciones
+--   categoria_id→inventario_categorias | producto_id→inventario_productos_catalogo
+--   cantidad NOT NULL | unidad NOT NULL | precio_unitario | importe_total
+--   receptor | fecha | foto_albaran | notas | created_by | company_id
+--
+-- inventario_informes
+--   id | tipo | fecha_inicio | fecha_fin | ubicacion_id→inventario_ubicaciones
+--   categoria_id→inventario_categorias | contenido jsonb | generado_at | company_id
+--
+-- inventario_ubicacion_activo  ⚠️ FIX CRÍTICO: maquinaria_apero_id añadido
+--   id | ubicacion_id→inventario_ubicaciones NOT NULL
+--   maquinaria_tractor_id→maquinaria_tractores ON DELETE SET NULL
+--   maquinaria_apero_id→maquinaria_aperos ON DELETE SET NULL  ← CAMPO NUEVO (era fantasma)
+--   apero_id→aperos ON DELETE SET NULL  (legacy tabla aperos)
+--   notas | created_by | company_id
+--
+-- aperos  (legacy — solo lectura via useAperosTablaInventario)
+--   id | codigo | denominacion NOT NULL | marca | estado | ubicacion | company_id
+
+-- =============================================================================
+-- BLOQUE 8 — PROVEEDORES
+-- =============================================================================
+--
+-- proveedores
+--   id | codigo_interno UNIQUE | nombre NOT NULL | nif | telefono | email | direccion
+--   tipo CHECK(proveedor_materiales|ganadero|gestor_residuos_plasticos|otro)
+--   persona_contacto | activo | notas | foto_url | created_by | company_id
+--
+-- proveedores_precios
+--   id | proveedor_id→proveedores ON DELETE CASCADE NOT NULL
+--   producto NOT NULL | unidad | precio_unitario | fecha_vigencia | activo
+
+-- =============================================================================
+-- BLOQUE 9 — PARTE DIARIO
+-- =============================================================================
+--
+-- partes_diarios
+--   id | fecha DATE UNIQUE NOT NULL | responsable DEFAULT 'JuanPe' | notas_generales | company_id
+--
+-- parte_estado_finca
+--   id | parte_id→partes_diarios | finca | parcel_id text | estado
+--   num_operarios | nombres_operarios | foto_url | foto_url_2 | notas | company_id
+--
+-- parte_trabajo
+--   id | parte_id→partes_diarios | tipo_trabajo | finca | ambito
+--   parcelas text[] | num_operarios | nombres_operarios
+--   hora_inicio | hora_fin | foto_url | foto_url_2 | notas | company_id
+--
+-- parte_personal
+--   id | parte_id→partes_diarios | texto | con_quien | donde | foto_url | fecha_hora | company_id
+--
+-- parte_residuos_vegetales
+--   id | parte_id→partes_diarios | nombre_conductor | personal_id→personal
+--   hora_salida_nave | nombre_ganadero | ganadero_id→ganaderos
+--   hora_llegada_ganadero | hora_regreso_nave | foto_url | notas_descarga | company_id
+--
+-- cierres_jornada
+--   id | fecha DATE UNIQUE NOT NULL | parte_diario_id→partes_diarios ON DELETE SET NULL
+--   trabajos_ejecutados | trabajos_pendientes | trabajos_arrastrados
+--   notas | cerrado_at | cerrado_by DEFAULT 'JuanPe'
+
+-- =============================================================================
+-- BLOQUE 10 — TRABAJOS
+-- =============================================================================
+--
+-- trabajos_registro  ⚠️ FIX CRÍTICO: recursos_personal + materiales_previstos añadidos
+--   id | tipo_bloque CHECK(logistica|maquinaria_agricola|mano_obra_interna|mano_obra_externa)
+--   fecha | hora_inicio | hora_fin | finca | parcel_id text | tipo_trabajo NOT NULL
+--   num_operarios | nombres_operarios
+--   recursos_personal text[]  ← NUEVO (datos ya no se pierden silenciosamente)
+--   materiales_previstos jsonb ← NUEVO (datos ya no se pierden silenciosamente)
+--   foto_url | notas | created_by
+--   estado_planificacion DEFAULT 'borrador' CHECK(borrador|confirmado|ejecutado|pendiente|cancelado)
+--   prioridad DEFAULT 'media' CHECK(alta|media|baja)
+--   fecha_planificada date | fecha_original date
+--   tractor_id→maquinaria_tractores ON DELETE SET NULL
+--   apero_id→maquinaria_aperos ON DELETE SET NULL
+--   company_id
+--
+-- trabajos_incidencias
+--   id | urgente bool | titulo NOT NULL | descripcion | finca | parcel_id text
+--   estado DEFAULT 'abierta' CHECK(abierta|en_proceso|resuelta)
+--   foto_url | fecha | fecha_resolucion | notas_resolucion | created_by | company_id
+--
+-- planificacion_campana
+--   id | finca NOT NULL | parcela | cultivo NOT NULL | variedad
+--   fecha_siembra | fecha_cosecha_estimada | produccion_estimada_kg | precio_venta_estimado
+--   notas | created_by DEFAULT 'JuanPe' | company_id
+
+-- =============================================================================
+-- BLOQUE 11 — PRESENCIA EN TIEMPO REAL / GPS
+-- =============================================================================
+--
+-- presencia_tiempo_real
+--   id | cuadrilla_id→cuadrillas NOT NULL | parcel_id TEXT→parcels | work_record_id→work_records
+--   hora_entrada timestamptz NOT NULL DEFAULT now() | hora_salida | activo | company_id
+--   RLS ANON: FOR ALL TO anon USING (true)  ← acceso QR sin login
+--
+-- vehicle_positions
+--   id | vehicle_type text | vehicle_id uuid (polimórfico sin FK)
+--   latitude | longitude | speed | heading | timestamp | recorded_at | company_id
+
+-- =============================================================================
+-- BLOQUE 12 — TRAZABILIDAD
+-- =============================================================================
+--
+-- camaras_almacen
+--   id | nombre NOT NULL | ubicacion | capacidad_palots int | temperatura_objetivo | activa | company_id
+--
+-- palots
+--   id | numero_palot UNIQUE NOT NULL | parcel_id TEXT→parcels | cultivo | variedad
+--   peso_kg | estado | camara_id→camaras_almacen | fecha_entrada | fecha_salida | notas | company_id
+--
+-- movimientos_palot
+--   id | palot_id→palots NOT NULL | tipo_movimiento | origen | destino
+--   fecha | responsable | notas | company_id
+--
+-- trazabilidad_registros
+--   id | tipo | referencia_id uuid | datos jsonb | created_by | company_id
+--
+-- tickets_pesaje
+--   id | harvest_id→harvests | camion_id→camiones | matricula_manual | destino NOT NULL
+--   peso_bruto_kg NOT NULL | peso_tara_kg DEFAULT 0
+--   peso_neto_kg GENERATED ALWAYS AS (peso_bruto_kg - peso_tara_kg) STORED
+--   conductor | hora_salida | numero_albaran UNIQUE | observaciones | company_id
+
+-- =============================================================================
+-- BLOQUE 13 — ANÁLISIS AGRONÓMICO / RIEGO
+-- =============================================================================
+--
+-- analisis_suelo
+--   id | parcel_id TEXT→parcels | ph | conductividad_ec | salinidad_ppm | temperatura_suelo
+--   materia_organica | sodio_ppm | nitrogeno_ppm | fosforo_ppm | potasio_ppm
+--   textura | profundidad_cm | num_muestras | operario | herramienta | informe_url
+--   observaciones | fecha | company_id
+--
+-- analisis_agua
+--   id | finca text | fuente text | ph | conductividad_ec | salinidad_ppm | temperatura
+--   sodio_ppm | cloruros_ppm | nitratos_ppm | dureza_total
+--   operario | herramienta | observaciones | fecha | company_id
+--
+-- lecturas_sensor_planta
+--   id | parcel_id TEXT→parcels | indice_salud | nivel_estres | ndvi | clorofila
+--   cultivo | num_plantas_medidas | operario | herramienta | observaciones | fecha | company_id
+--
+-- sistema_riego_zonas
+--   id | parcel_id TEXT→parcels | nombre_zona | tipo_riego tipo_riego
+--   superficie_ha | goteros_por_planta | caudal_lh | activa | company_id
+--
+-- registros_riego
+--   id | zona_id→sistema_riego_zonas | fecha | duracion_minutos | volumen_m3
+--   presion_bar | conductividad_entrada | ph_entrada | notas | company_id
+
+-- =============================================================================
+-- BLOQUE 14 — IA / LIA / MISC
+-- =============================================================================
+--
+-- ai_proposals
+--   id | status ai_proposal_status DEFAULT 'pending' | category ai_proposal_category
+--   input_json jsonb | output_json jsonb | related_parcel_id TEXT→parcels | company_id
+--
+-- ai_proposal_validations
+--   id | proposal_id→ai_proposals NOT NULL | decision ai_validation_decision NOT NULL
+--   note | decided_by
+--
+-- lia_contexto_sesion
+--   id | sesion_id text | contexto jsonb | company_id
+--
+-- lia_memoria
+--   id | tipo | clave | valor jsonb | company_id
+--
+-- lia_patrones
+--   id | patron | frecuencia int | ultimo_uso timestamptz | company_id
+--
+-- vuelos_dron
+--   id | parcel_id TEXT→parcels | fecha_vuelo | url_imagen | observaciones | company_id
+--
+-- erp_exportaciones
+--   id | tipo | fecha | contenido jsonb | generado_at | created_by | company_id
+
+-- =============================================================================
+-- VISTAS ACTIVAS (3)
+-- =============================================================================
+--
+-- v_inventario_activos_en_ubicacion
+--   JOIN inventario_ubicacion_activo + inventario_ubicaciones + maquinaria_tractores + maquinaria_aperos
+--   Devuelve: todos los activos (tractor + apero) asignados por ubicación
+--
+-- v_tractores_en_inventario
+--   JOIN inventario_ubicacion_activo (WHERE maquinaria_tractor_id IS NOT NULL)
+--   Devuelve: tractores asignados con datos completos del tractor
+--
+-- v_maquinaria_aperos_en_inventario
+--   JOIN inventario_ubicacion_activo (WHERE maquinaria_apero_id IS NOT NULL)
+--   Devuelve: aperos de maquinaria asignados con datos completos del apero
+
+-- =============================================================================
+-- RLS — RESUMEN DE POLÍTICAS
+-- =============================================================================
+--
+-- Tablas operacionales (todas): _pilot_open → FOR ALL TO authenticated USING (true)
+-- Catálogos globales:           _catalog_open → FOR ALL TO authenticated USING (true)
+-- companies:                    companies_read → FOR SELECT TO authenticated USING (true)
+-- user_profiles:                profiles_own_select (id=auth.uid)
+--                               profiles_select (company_id=current_user_company_id())
+--                               profiles_admin_all (is_admin + company_id)
+-- presencia_tiempo_real:        presencia_anon → FOR ALL TO anon USING (true)  [QR sin login]
+-- work_records:                 work_records_anon → FOR ALL TO anon USING (true) [QR sin login]
+-- cuadrillas:                   cuadrillas_anon → FOR SELECT TO anon USING (true) [QR sin login]
+
+-- =============================================================================
+-- QUERIES DE VERIFICACIÓN — Ejecutar en SQL Editor tras aplicar la migración
+-- =============================================================================
+
+-- Resumen completo de tablas
+SELECT table_name,
+  (SELECT COUNT(*) FROM information_schema.columns c
+   WHERE c.table_schema = 'public' AND c.table_name = t.table_name) AS num_cols,
+  rowsecurity
+FROM pg_tables t
+WHERE schemaname = 'public'
+ORDER BY table_name;
+
+-- Fix crítico 1: maquinaria_apero_id debe estar en inventario_ubicacion_activo
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'inventario_ubicacion_activo'
+ORDER BY ordinal_position;
+
+-- Fix crítico 2: recursos_personal + materiales_previstos en trabajos_registro
+SELECT column_name, data_type
+FROM information_schema.columns
+WHERE table_schema = 'public'
+  AND table_name = 'trabajos_registro'
+  AND column_name IN ('recursos_personal', 'materiales_previstos');
+-- Debe devolver 2 filas
+
+-- Fix medio: campos legacy eliminados de maquinaria_tractores
+SELECT column_name FROM information_schema.columns
+WHERE table_schema = 'public' AND table_name = 'maquinaria_tractores'
+  AND column_name IN ('estado', 'codigo', 'tipo', 'ubicacion');
+-- Debe devolver 0 filas
+
+-- Fix alto: FK de logistica_mantenimiento eliminada
+SELECT conname FROM pg_constraint
+WHERE conrelid = 'public.logistica_mantenimiento'::regclass
+  AND conname = 'logistica_mantenimiento_camion_id_fkey';
+-- Debe devolver 0 filas
+
+-- Vistas activas
+SELECT viewname FROM pg_views WHERE schemaname = 'public' ORDER BY viewname;
+-- Debe incluir: v_inventario_activos_en_ubicacion, v_tractores_en_inventario, v_maquinaria_aperos_en_inventario
+
+-- Total tablas
+SELECT COUNT(*) AS total_tablas FROM pg_tables WHERE schemaname = 'public';
+-- Debe devolver 71

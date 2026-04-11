@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../integrations/supabase/client';
+import type { Json } from '../integrations/supabase/types';
 import { logLiaEvento } from '@/utils/liaLogger';
 import { toast } from '@/hooks/use-toast';
 import { useCreatedBy } from './useCreatedBy';
@@ -47,7 +48,7 @@ export interface TrabajoRegistro {
   recursos_personal:     string[] | null;
   tractor_id:            string | null;
   apero_id:              string | null;
-  materiales_previstos:  Record<string, unknown> | null;
+  materiales_previstos:  Json | null;
 }
 
 export interface TrabajoIncidencia {

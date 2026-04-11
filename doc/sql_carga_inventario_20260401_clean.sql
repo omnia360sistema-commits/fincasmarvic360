@@ -55,7 +55,7 @@ create temporary table tmp_tractor_load (
   marca text null,
   modelo text null,
   notes text null
-) on commit drop;
+)
 insert into tmp_inventory_load (source_file, location_name, category_name, product_name, quantity, unit, description, notes) values
   ('Inventario_fitosanitarios_semillero.pdf', 'Semillero', 'Fitosanitarios y abonos', 'ALTACOR 35WG', 0.25, 'bote 300g', NULL, NULL),
   ('Inventario_fitosanitarios_semillero.pdf', 'Semillero', 'Fitosanitarios y abonos', 'CARAQUIM RB', 1.5, 'bolsa 5kg', NULL, NULL),
@@ -570,18 +570,25 @@ on conflict (matricula) do update set
 -- ---------------------------
 -- 5) Catálogo inventario (upsert por nombre+categoría)
 -- ---------------------------
+with deduped as (
+  select
+    t.product_name,
+    c.id as categoria_id,
+    min(t.unit) as unidad_defecto
+  from tmp_inventory_load t
+  join public.inventario_categorias c on lower(c.nombre) = lower(t.category_name)
+  group by t.product_name, c.id
+)
 insert into public.inventario_productos_catalogo (nombre, categoria_id, precio_unitario, unidad_defecto, activo, created_by, created_at)
 select
-  t.product_name,
-  c.id as categoria_id,
+  d.product_name,
+  d.categoria_id,
   null::numeric as precio_unitario,
-  min(t.unit) as unidad_defecto,
+  d.unidad_defecto,
   true as activo,
   'carga_inventario_fisico_2026_04_01' as created_by,
   '2026-04-01T12:00:00+02:00'::timestamptz as created_at
-from tmp_inventory_load t
-join public.inventario_categorias c on lower(c.nombre) = lower(t.category_name)
-group by t.product_name, c.id
+from deduped d
 on conflict (nombre, categoria_id) do update set
   unidad_defecto = coalesce(public.inventario_productos_catalogo.unidad_defecto, excluded.unidad_defecto),
   activo = true;
