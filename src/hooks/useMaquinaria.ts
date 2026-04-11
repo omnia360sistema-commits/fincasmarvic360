@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../integrations/supabase/client';
 import { logLiaEvento } from '@/utils/liaLogger';
 import { useCreatedBy } from './useCreatedBy';
+import { toast } from '@/hooks/use-toast';
 
 // ── Tipos locales ────────────────────────────────────────────
 export interface Tractor {
@@ -170,6 +171,7 @@ export function useAddTractor() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -188,6 +190,7 @@ export function useDeleteTractor() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -209,6 +212,7 @@ export function useUpdateTractor() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -270,6 +274,7 @@ export function useAddApero() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -288,6 +293,7 @@ export function useDeleteApero() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -335,6 +341,7 @@ export function useAddUsoMaquinaria() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -374,6 +381,7 @@ export function useAddMantenimientoTractor() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['maquinaria_mantenimiento'] }),
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -411,6 +419,7 @@ export function useAddTipoTrabajoMaquinaria() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['catalogo_tipos_trabajo', 'maquinaria'] }),
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -449,6 +458,7 @@ export function useAddSyncMaquinaria() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }

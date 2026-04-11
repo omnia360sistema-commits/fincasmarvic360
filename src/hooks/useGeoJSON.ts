@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import type { ParcelCollection, ParcelFeature, FarmSummary } from '@/types/farm';
 
-// Flag de módulo: el upsert solo se ejecuta una vez por sesión de navegador,
-// aunque FarmMap se monte/desmonte varias veces.
-let upsertDone = false;
+// Upsert flag: sessionStorage persiste mientras la pestaña esté abierta,
+// evitando 119 upserts en cada F5 (el module-level flag se reseteaba en HMR y recargas).
+const UPSERT_KEY = 'marvic_geojson_upsert_done';
 
 export function useGeoJSON() {
   const [data, setData]       = useState<ParcelCollection | null>(null);
@@ -21,9 +21,8 @@ export function useGeoJSON() {
         setData(geojson);
         setLoading(false);
 
-        // Upsert parcelas reales en Supabase (solo una vez por sesión)
-        if (!upsertDone) {
-          upsertDone = true;
+        // Upsert parcelas reales en Supabase (solo una vez por sesión de pestaña)
+        if (!sessionStorage.getItem(UPSERT_KEY)) {
           try {
             const { supabase } = await import('@/integrations/supabase/client');
             const parcelas = geojson.features.map(f => ({
@@ -34,9 +33,10 @@ export function useGeoJSON() {
               area_hectares:   f.properties.superficie,
               irrigation_type: f.properties.riego,
             }));
-            await supabase
+            const { error: upsertError } = await supabase
               .from('parcels')
               .upsert(parcelas, { onConflict: 'parcel_id' });
+            if (!upsertError) sessionStorage.setItem(UPSERT_KEY, '1');
           } catch (e) {
             console.warn('Upsert parcelas fallido:', e);
           }

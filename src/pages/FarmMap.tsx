@@ -100,7 +100,7 @@ function Modal({
       <div className={`relative z-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl shadow-2xl w-full ${wide ? 'max-w-2xl' : 'max-w-lg'} mx-4 flex flex-col max-h-[85vh]`}>
         <div className="flex items-start justify-between px-5 py-4 border-b border-slate-200 dark:border-white/10 shrink-0">
           <div>
-            <p className="text-[11px] font-black text-[#38bdf8] uppercase tracking-[0.3em]">{title}</p>
+            <p className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-[0.3em]">{title}</p>
             {subtitle && <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{subtitle}</p>}
           </div>
           <button
@@ -121,10 +121,10 @@ function Modal({
 function SectorTooltip({ parcel, onClose }: { parcel: ParcelFeature; onClose: () => void }) {
   const p = parcel.properties
   return (
-    <div className="bg-white/95 dark:bg-slate-900/95 border border-[#38bdf8]/30 rounded-lg p-3 min-w-[180px] shadow-2xl">
+    <div className="bg-white/95 dark:bg-slate-900/95 border border-[#6d9b7d]/30 rounded-lg p-3 min-w-[180px] shadow-2xl">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="text-[11px] font-black text-[#38bdf8] uppercase tracking-widest">{p.parcela}</p>
+          <p className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-widest">{p.parcela}</p>
           <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{p.finca}</p>
         </div>
         <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:text-slate-600 dark:hover:text-slate-400">
@@ -257,7 +257,7 @@ export default function FarmMap() {
         return {
           fillColor:   STATUS_COLORS[status],
           fillOpacity: isSelected ? 0.45 : isVacia ? 0.08 : 0.25,
-          color:       isSelected ? '#38bdf8' : isVacia ? 'rgba(255,255,255,0.4)' : STATUS_COLORS[status],
+          color:       isSelected ? '#6d9b7d' : isVacia ? 'rgba(255,255,255,0.4)' : STATUS_COLORS[status],
           weight:      isSelected ? 2.5 : isVacia ? 1 : 1.5,
         }
       },
@@ -375,7 +375,7 @@ export default function FarmMap() {
   }
 
   if (loading) return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#020617] flex items-center justify-center text-[#38bdf8] text-sm font-black tracking-widest uppercase transition-colors">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#020617] flex items-center justify-center text-[#6d9b7d] text-sm font-black tracking-widest uppercase transition-colors">
       Cargando sistema...
     </div>
   )
@@ -384,7 +384,7 @@ export default function FarmMap() {
     <div className="min-h-screen bg-slate-50 dark:bg-[#020617] flex items-center justify-center flex-col gap-4 text-center px-8 transition-colors">
       <span className="text-red-400 text-sm font-black tracking-widest uppercase">Error cargando mapa</span>
       <span className="text-slate-500 dark:text-slate-400 text-xs">{typeof geoError === 'string' ? geoError : ((geoError as unknown as Error)?.message || 'Error')}</span>
-      <button onClick={() => navigate('/farm')} className="text-[#38bdf8] text-xs underline">Volver al selector</button>
+      <button onClick={() => navigate('/farm')} className="text-[#6d9b7d] text-xs underline">Volver al selector</button>
     </div>
   )
 
@@ -402,7 +402,7 @@ export default function FarmMap() {
 
       {/* PANEL IDENTIDAD */}
       <div className="absolute top-4 left-4 z-[1000] bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 rounded-lg px-4 py-3 min-w-[200px] shadow-lg">
-        <p className="text-[10px] font-black text-[#38bdf8] uppercase tracking-[0.3em] mb-1">Marvic 360</p>
+        <p className="text-[10px] font-black text-[#6d9b7d] uppercase tracking-[0.3em] mb-1">Marvic 360</p>
         <p className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none">{decodedFarm}</p>
         <div className="flex items-center gap-2 mt-2">
           <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
@@ -414,7 +414,7 @@ export default function FarmMap() {
       {/* BOTÓN VOLVER */}
       <button
         onClick={() => navigate(-1)}
-        className="absolute top-4 left-[220px] z-[1000] w-8 h-8 rounded-lg border border-slate-200 dark:border-white/10 flex items-center justify-center bg-white/90 dark:bg-slate-900/90 hover:border-[#38bdf8]/40 shadow-lg transition-colors"
+        className="absolute top-4 left-[220px] z-[1000] w-8 h-8 rounded-lg border border-slate-200 dark:border-white/10 flex items-center justify-center bg-white/90 dark:bg-slate-900/90 hover:border-[#6d9b7d]/40 shadow-lg transition-colors"
       >
         <ArrowLeft className="w-4 h-4 text-slate-500 dark:text-slate-400" />
       </button>
@@ -427,8 +427,8 @@ export default function FarmMap() {
             onClick={() => setActiveMenu(activeMenu === id ? null : id)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-[11px] font-black uppercase tracking-widest transition-all shadow-sm ${
               activeMenu === id
-                ? 'bg-[#38bdf8]/10 dark:bg-[#38bdf8]/20 border-[#38bdf8]/40 dark:border-[#38bdf8]/60 text-[#38bdf8]'
-                : 'bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:border-[#38bdf8]/30 hover:text-[#38bdf8]'
+                ? 'bg-[#6d9b7d]/10 dark:bg-[#6d9b7d]/20 border-[#6d9b7d]/40 dark:border-[#6d9b7d]/60 text-[#6d9b7d]'
+                : 'bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:border-[#6d9b7d]/30 hover:text-[#6d9b7d]'
             }`}
           >
             <Icon className="w-3.5 h-3.5 shrink-0" />
@@ -440,7 +440,7 @@ export default function FarmMap() {
         <div className="h-px bg-slate-200 dark:bg-white/10 my-1" />
         <button
           onClick={() => { setInformeError(null); setShowInformeFinca(true) }}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg border text-[11px] font-black uppercase tracking-widest transition-all bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:border-[#38bdf8]/30 hover:text-[#38bdf8] shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border text-[11px] font-black uppercase tracking-widest transition-all bg-white/90 dark:bg-slate-900/90 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:border-[#6d9b7d]/30 hover:text-[#6d9b7d] shadow-sm"
         >
           <FileText className="w-3.5 h-3.5 shrink-0" />
           Informe PDF
@@ -451,7 +451,7 @@ export default function FarmMap() {
       {activeMenu === 'sectores' && (
         <div className="absolute top-4 right-52 bottom-10 z-[999] w-72 bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 shrink-0">
-            <span className="text-[11px] font-black text-[#38bdf8] uppercase tracking-widest">Sectores</span>
+            <span className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-widest">Sectores</span>
             <button onClick={() => setActiveMenu(null)}><X className="w-4 h-4 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-white" /></button>
           </div>
           <div className="flex-1 overflow-y-auto p-3 space-y-1">
@@ -479,7 +479,7 @@ export default function FarmMap() {
                   }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-lg border text-left transition-all ${
                     selectedParcel?.properties.parcel_id === p.properties.parcel_id
-                      ? 'bg-[#38bdf8]/10 border-[#38bdf8]/30 dark:border-[#38bdf8]/40'
+                      ? 'bg-[#6d9b7d]/10 border-[#6d9b7d]/30 dark:border-[#6d9b7d]/40'
                       : 'bg-slate-50 dark:bg-slate-800/50 border-transparent hover:border-slate-200 dark:hover:border-white/10'
                   }`}
                 >
@@ -499,7 +499,7 @@ export default function FarmMap() {
       {activeMenu === 'suelo' && (
         <div className="absolute top-4 right-52 bottom-10 z-[999] w-72 bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 shrink-0 bg-slate-50 dark:bg-slate-800/50">
-            <span className="text-[11px] font-black text-[#38bdf8] uppercase tracking-widest flex items-center gap-2">
+            <span className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-widest flex items-center gap-2">
               <Layers className="w-3.5 h-3.5" /> Capa Agronómica
             </span>
             <button onClick={() => setActiveMenu(null)}><X className="w-4 h-4 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-white transition-colors" /></button>
@@ -513,14 +513,14 @@ export default function FarmMap() {
                   onClick={() => setSueloParam(param)}
                   className={`w-full text-left px-3 py-2.5 rounded border text-[11px] font-bold transition-all flex justify-between items-center ${
                     sueloParam === param 
-                      ? 'bg-[#38bdf8]/10 border-[#38bdf8]/40 text-[#38bdf8]' 
+                      ? 'bg-[#6d9b7d]/10 border-[#6d9b7d]/40 text-[#6d9b7d]' 
                       : 'bg-slate-50 dark:bg-slate-800/40 border-transparent text-slate-600 dark:text-slate-400 hover:border-slate-200 dark:hover:border-white/10 hover:text-slate-900 dark:hover:text-slate-200'
                   }`}
                 >
                   <span>
                     {param === 'pH' ? 'pH (Acidez)' : param === 'EC' ? 'EC (Conductividad)' : param === 'N' ? 'Nitrógeno (ppm)' : param === 'P' ? 'Fósforo (ppm)' : param === 'K' ? 'Potasio (ppm)' : 'Materia Orgánica (%)'}
                   </span>
-                  {sueloParam === param && <div className="w-1.5 h-1.5 rounded-full bg-[#38bdf8] animate-pulse" />}
+                  {sueloParam === param && <div className="w-1.5 h-1.5 rounded-full bg-[#6d9b7d] animate-pulse" />}
                 </button>
               ))}
             </div>
@@ -533,7 +533,7 @@ export default function FarmMap() {
         <div className="absolute top-4 right-52 bottom-10 z-[999] w-72 bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 shrink-0">
             <div>
-              <span className="text-[11px] font-black text-[#38bdf8] uppercase tracking-widest">Registrar</span>
+              <span className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-widest">Registrar</span>
               {selectedParcel && <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{parcelNombre}</p>}
             </div>
             <button onClick={() => setActiveMenu(null)}><X className="w-4 h-4 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-white" /></button>
@@ -554,9 +554,9 @@ export default function FarmMap() {
                   <button
                     key={action}
                     onClick={() => { setActiveModal(action); setActiveMenu(null) }}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-[#38bdf8]/30 transition-all text-left"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-[#6d9b7d]/30 transition-all text-left"
                   >
-                    <Icon className="w-4 h-4 text-[#38bdf8] shrink-0" />
+                    <Icon className="w-4 h-4 text-[#6d9b7d] shrink-0" />
                     <span className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wide">{label}</span>
                     <ChevronRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-600 ml-auto" />
                   </button>
@@ -572,7 +572,7 @@ export default function FarmMap() {
         <div className="absolute top-4 right-52 bottom-10 z-[999] w-72 bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 shrink-0">
             <div>
-              <span className="text-[11px] font-black text-[#38bdf8] uppercase tracking-widest">Análisis</span>
+              <span className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-widest">Análisis</span>
               {selectedParcel && <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{parcelNombre}</p>}
             </div>
             <button onClick={() => setActiveMenu(null)}><X className="w-4 h-4 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-white" /></button>
@@ -595,9 +595,9 @@ export default function FarmMap() {
                   <button
                     key={label}
                     onClick={() => { setActiveModal('estado_unificado'); setActiveMenu(null) }}
-                    className="w-full flex items-start gap-3 px-3 py-3 rounded border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-[#38bdf8]/30 transition-all text-left"
+                    className="w-full flex items-start gap-3 px-3 py-3 rounded border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 hover:border-[#6d9b7d]/30 transition-all text-left"
                   >
-                    <Icon className="w-4 h-4 text-[#38bdf8] shrink-0 mt-0.5" />
+                    <Icon className="w-4 h-4 text-[#6d9b7d] shrink-0 mt-0.5" />
                     <div className="flex-1">
                       <p className="text-[11px] font-bold text-slate-900 dark:text-white uppercase tracking-wide">{label}</p>
                       <p className="text-[9px] text-slate-500 mt-0.5">{desc}</p>
@@ -616,7 +616,7 @@ export default function FarmMap() {
         <div className="absolute top-4 right-52 bottom-10 z-[999] w-[480px] bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 shrink-0">
             <div>
-              <span className="text-[11px] font-black text-[#38bdf8] uppercase tracking-widest">Histórico</span>
+              <span className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-widest">Histórico</span>
               {selectedParcel && <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{parcelNombre}</p>}
             </div>
             <button onClick={() => setActiveMenu(null)}><X className="w-4 h-4 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-white" /></button>
@@ -637,7 +637,7 @@ export default function FarmMap() {
       {['trazabilidad', 'alertas'].includes(activeMenu ?? '') && (
         <div className="absolute top-4 right-52 bottom-10 z-[999] w-72 bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 shrink-0">
-            <span className="text-[11px] font-black text-[#38bdf8] uppercase tracking-widest">
+            <span className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-widest">
               {MENU_ITEMS.find(m => m.id === activeMenu)?.label}
             </span>
             <button onClick={() => setActiveMenu(null)}><X className="w-4 h-4 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-white" /></button>
@@ -699,9 +699,9 @@ export default function FarmMap() {
       {/* BOTÓN LOCALIZAR */}
       <button
         onClick={() => mapRef.current?.locate({ setView: true, maxZoom: 16 })}
-        className="absolute bottom-10 right-4 z-[1000] w-10 h-10 rounded-full border border-slate-200 dark:border-white/10 flex items-center justify-center bg-white/90 dark:bg-slate-900/90 hover:border-[#38bdf8]/40 shadow-lg transition-colors"
+        className="absolute bottom-10 right-4 z-[1000] w-10 h-10 rounded-full border border-slate-200 dark:border-white/10 flex items-center justify-center bg-white/90 dark:bg-slate-900/90 hover:border-[#6d9b7d]/40 shadow-lg transition-colors"
       >
-        <LocateFixed className="w-4 h-4 text-[#38bdf8]" />
+        <LocateFixed className="w-4 h-4 text-[#6d9b7d]" />
       </button>
 
       <MapLegend activeMenu={activeMenu} sueloParam={sueloParam} />
@@ -737,7 +737,7 @@ export default function FarmMap() {
             {/* Header */}
             <div className="flex items-start justify-between px-5 py-4 border-b border-slate-200 dark:border-white/10 shrink-0">
               <div>
-                <p className="text-[11px] font-black text-[#38bdf8] uppercase tracking-[0.3em]">Informe PDF</p>
+                <p className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-[0.3em]">Informe PDF</p>
                 <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{decodedFarm}</p>
               </div>
               <button
@@ -760,7 +760,7 @@ export default function FarmMap() {
                   onClick={() => setInformeFincaTipo(id)}
                   className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 ${
                     informeFincaTipo === id
-                      ? 'border-[#38bdf8] text-[#38bdf8]'
+                      ? 'border-[#6d9b7d] text-[#6d9b7d]'
                       : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                   }`}
                 >
@@ -785,7 +785,7 @@ export default function FarmMap() {
                     <select
                       value={informeSector}
                       onChange={e => setInformeSector(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#38bdf8]/50"
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#6d9b7d]/50"
                     >
                       <option value="">Seleccionar sector…</option>
                       {parcels.map(p => (
@@ -798,12 +798,12 @@ export default function FarmMap() {
                   <div>
                     <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">Fecha inicio</label>
                     <input type="date" value={informeFechaInicio} onChange={e => setInformeFechaInicio(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#38bdf8]/50" />
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#6d9b7d]/50" />
                   </div>
                   <div>
                     <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">Fecha fin</label>
                     <input type="date" value={informeFechaFin} onChange={e => setInformeFechaFin(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#38bdf8]/50" />
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#6d9b7d]/50" />
                   </div>
                 </>
               )}
@@ -819,7 +819,7 @@ export default function FarmMap() {
                     <select
                       value={informeTipoDato}
                       onChange={e => setInformeTipoDato(e.target.value as InformeTipoDato)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#38bdf8]/50"
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#6d9b7d]/50"
                     >
                       <option value="trabajos">Trabajos</option>
                       <option value="plantaciones">Plantaciones</option>
@@ -832,12 +832,12 @@ export default function FarmMap() {
                   <div>
                     <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">Fecha inicio</label>
                     <input type="date" value={informeFechaInicio} onChange={e => setInformeFechaInicio(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#38bdf8]/50" />
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#6d9b7d]/50" />
                   </div>
                   <div>
                     <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5">Fecha fin</label>
                     <input type="date" value={informeFechaFin} onChange={e => setInformeFechaFin(e.target.value)}
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#38bdf8]/50" />
+                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-[#6d9b7d]/50" />
                   </div>
                 </>
               )}
@@ -863,11 +863,11 @@ export default function FarmMap() {
               <button
                 onClick={generarPDFFinca}
                 disabled={generandoInforme || (informeFincaTipo === 'sector' && !informeSector)}
-                className="w-full py-2.5 rounded-lg bg-[#38bdf8]/20 border border-[#38bdf8]/40 hover:bg-[#38bdf8]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-[11px] font-black uppercase tracking-widest text-[#38bdf8] flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-lg bg-[#6d9b7d]/20 border border-[#6d9b7d]/40 hover:bg-[#6d9b7d]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-[11px] font-black uppercase tracking-widest text-[#6d9b7d] flex items-center justify-center gap-2"
               >
                 {generandoInforme ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-[#38bdf8] border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-[#6d9b7d] border-t-transparent rounded-full animate-spin" />
                     Generando...
                   </>
                 ) : (

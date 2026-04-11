@@ -13,8 +13,8 @@ import {
   usePersonales,
   useResiduos,
   useDeleteEntradaParte,
-  useCerrarJornada,
 } from '@/hooks/useParteDiario'
+import { useCerrarJornada } from '@/hooks/useTrabajos'
 import { NavegadorFechas } from '@/components/ParteDiario/NavegadorFechas'
 import { FormEstadoFinca } from '@/components/ParteDiario/FormEstadoFinca'
 import { FormTrabajosRealizado } from '@/components/ParteDiario/FormTrabajosRealizado'
@@ -510,7 +510,7 @@ export default function ParteDiario() {
   async function handleCerrarJornada() {
     if (!parteId || !confirm('¿Cerrar la jornada de hoy? Se marcarán trabajos ejecutados/pendientes y se arrastrarán a mañana.')) return
     try {
-      const res = await cerrarJornada.mutateAsync({ fecha, parteId })
+      const res = await cerrarJornada.mutateAsync(fecha)
       setCierreResultado(res as { ejecutados: number; pendientes: number; arrastrados: number; incidenciasArrastradas: number })
       setShowCierre(true)
       // Ejecutar cosechadora LIA sin bloquear
@@ -824,7 +824,7 @@ export default function ParteDiario() {
 
         <div className="w-px h-4 bg-white/10" />
 
-        <span className="text-[10px] font-black uppercase tracking-widest text-[#38bdf8]">
+        <span className="text-[10px] font-black uppercase tracking-widest text-[#6d9b7d]">
           Parte Diario
         </span>
 
@@ -840,10 +840,10 @@ export default function ParteDiario() {
             type="button"
             onClick={() => setPdfMenuOpen(o => !o)}
             disabled={generandoPdf || !parteId}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#38bdf8]/30 bg-[#38bdf8]/5 hover:bg-[#38bdf8]/15 text-[#38bdf8] text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#6d9b7d]/30 bg-[#6d9b7d]/5 hover:bg-[#6d9b7d]/15 text-[#6d9b7d] text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
           >
             {generandoPdf
-              ? <span className="w-3.5 h-3.5 border-2 border-[#38bdf8]/20 border-t-[#38bdf8] rounded-full animate-spin" />
+              ? <span className="w-3.5 h-3.5 border-2 border-[#6d9b7d]/20 border-t-[#6d9b7d] rounded-full animate-spin" />
               : <FileText className="w-3.5 h-3.5" />
             }
             PDF
@@ -901,7 +901,7 @@ export default function ParteDiario() {
 
         {cargando && (
           <div className="flex items-center justify-center py-16">
-            <span className="w-5 h-5 border-2 border-white/10 border-t-[#38bdf8] rounded-full animate-spin" />
+            <span className="w-5 h-5 border-2 border-white/10 border-t-[#6d9b7d] rounded-full animate-spin" />
           </div>
         )}
 

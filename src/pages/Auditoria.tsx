@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
-import { ShieldCheck, Filter, Loader2, Wrench, Package, Truck, Users } from 'lucide-react'
+import { ShieldCheck, Filter, Loader2, Wrench, Package, Truck, Users, FileText } from 'lucide-react'
 import { useAuditTrail, AuditEntry } from '@/hooks/useAuditoria'
+import { PDFExportModal, type PDFExportParams } from '@/components/base'
+import { generarPDFCorporativoBase, pdfCorporateSection, pdfCorporateTable } from '@/utils/pdfUtils'
 
 const MODULO_ICON: Record<string, React.ElementType> = {
   'Trabajos': Wrench,
@@ -21,8 +23,56 @@ export default function Auditoria() {
   const [fechaHasta, setFechaHasta] = useState(() => new Date().toISOString().slice(0, 10))
   const [modulo, setModulo] = useState('')
   const [usuario, setUsuario] = useState('')
+  const [pdfOpen, setPdfOpen] = useState(false)
 
   const { data: trail = [], isLoading } = useAuditTrail({ fechaDesde, fechaHasta, modulo, usuario })
+
+  const handleExportPDF = async ({ desde, hasta, filtros }: PDFExportParams) => {
+    // Filtrar el trail por rango seleccionado en el modal
+    const entradas = trail.filter(e => {
+      const d = e.timestamp.slice(0, 10)
+      return d >= desde && d <= hasta
+    })
+
+    await generarPDFCorporativoBase({
+      titulo: 'Auditoría del Sistema',
+      subtitulo: `Registro de actividad · ${desde} → ${hasta}`,
+      fecha: new Date(),
+      filename: `auditoria_${desde}_${hasta}.pdf`,
+      accentColor: [245, 158, 11], // amber
+      bloques: [
+        (ctx) => {
+          pdfCorporateSection(ctx, 'Resumen')
+          const porModulo = entradas.reduce((acc, e) => {
+            acc[e.modulo] = (acc[e.modulo] || 0) + 1
+            return acc
+          }, {} as Record<string, number>)
+          ctx.writeLine('Total de eventos', String(entradas.length))
+          Object.entries(porModulo).forEach(([mod, count]) => {
+            ctx.writeLine(`  ${mod}`, String(count))
+          })
+          ctx.y += 4
+        },
+        (ctx) => {
+          if (entradas.length === 0) return
+          pdfCorporateSection(ctx, 'Timeline de Eventos')
+          const rows = entradas.map(e => [
+            new Date(e.timestamp).toLocaleString('es-ES'),
+            e.modulo,
+            e.accion,
+            filtros.incluir_detalle ? e.detalle : '—',
+            e.usuario,
+          ])
+          pdfCorporateTable(
+            ctx,
+            ['Fecha/Hora', 'Módulo', 'Acción', 'Detalle', 'Usuario'],
+            [32, 22, 30, 60, 40],
+            rows,
+          )
+        },
+      ],
+    })
+  }
 
   const renderEntry = (entry: AuditEntry) => {
     const Icon = MODULO_ICON[entry.modulo] || ShieldCheck
@@ -53,11 +103,30 @@ export default function Auditoria() {
         <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center border border-amber-500/30">
           <ShieldCheck className="w-5 h-5 text-amber-400" />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-black text-white uppercase tracking-tight">Auditoría del Sistema</h1>
           <p className="text-xs text-slate-400 font-medium">Registro de actividades y cambios en la plataforma</p>
         </div>
+        <button
+          onClick={() => setPdfOpen(true)}
+          className="px-3 py-2 rounded-lg bg-amber-500/20 border border-amber-500/40 text-amber-400 hover:bg-amber-500/30 transition-colors flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+        >
+          <FileText className="w-4 h-4" />
+          <span className="hidden sm:inline">PDF</span>
+        </button>
       </div>
+
+      <PDFExportModal
+        open={pdfOpen}
+        onClose={() => setPdfOpen(false)}
+        title="Auditoría del Sistema"
+        subtitle="Timeline cronológico de eventos"
+        accentColor="#f59e0b"
+        filtros={[
+          { key: 'incluir_detalle', label: 'Incluir detalle completo de cada evento', default: true },
+        ]}
+        onExport={handleExportPDF}
+      />
 
       {/* Filtros */}
       <div className="bg-slate-900/60 border border-white/10 rounded-xl p-4 mb-6 space-y-4">

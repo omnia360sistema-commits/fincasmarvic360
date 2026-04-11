@@ -15,7 +15,7 @@ export default function FarmSelector() {
       <header className="w-full bg-white/90 dark:bg-slate-900/80 border-b border-slate-200 dark:border-white/10 pl-14 pr-6 py-3 flex items-center gap-4">
         <button
           onClick={() => navigate('/dashboard')}
-          className="flex items-center gap-2 text-slate-400 hover:text-[#38bdf8] transition-colors"
+          className="flex items-center gap-2 text-slate-400 hover:text-[#6d9b7d] transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           <span className="text-[10px] font-black uppercase tracking-widest">Dashboard</span>

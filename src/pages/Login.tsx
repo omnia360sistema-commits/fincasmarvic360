@@ -32,22 +32,24 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#020617] flex items-center justify-center px-4">
-      <div className="w-full max-w-md bg-slate-900 rounded-lg shadow-lg p-8 border border-slate-800">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <div className="w-full max-w-md bg-card rounded-lg shadow-lg p-8 border border-border">
         {/* Logo Marvic */}
         <div className="mb-8 text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-sky-400 rounded-lg">
-            <span className="text-2xl font-bold text-slate-900">M</span>
-          </div>
-          <h1 className="mt-4 text-3xl font-bold text-white">MARVIC 360</h1>
-          <p className="mt-2 text-sm text-slate-400">Sistema de gestión agrícola</p>
+          <img
+            src="/MARVIC_logo.png"
+            alt="Agrícola Marvic"
+            className="mx-auto h-20 w-auto object-contain"
+          />
+          <h1 className="mt-4 text-3xl font-bold text-foreground tracking-wide">AGRÍCOLA MARVIC 360</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Sistema de gestión agrícola integral</p>
         </div>
 
         {/* Formulario */}
         <form onSubmit={handleSignIn} className="space-y-4">
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Correo electrónico
             </label>
             <Input
@@ -56,14 +58,14 @@ const Login: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={loading}
-              className="w-full bg-slate-800 border-slate-700 text-white placeholder-slate-500"
+              className="w-full bg-secondary border-border text-foreground placeholder:text-muted-foreground"
               required
             />
           </div>
 
           {/* Contraseña */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Contraseña
             </label>
             <Input
@@ -72,14 +74,14 @@ const Login: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
-              className="w-full bg-slate-800 border-slate-700 text-white placeholder-slate-500"
+              className="w-full bg-secondary border-border text-foreground placeholder:text-muted-foreground"
               required
             />
           </div>
 
           {/* Error */}
           {error && (
-            <div className="p-3 bg-red-900/20 border border-red-500/50 rounded text-red-400 text-sm">
+            <div className="p-3 bg-destructive/10 border border-destructive/40 rounded text-destructive text-sm">
               {error}
             </div>
           )}
@@ -95,7 +97,7 @@ const Login: React.FC = () => {
         </form>
 
         {/* Footer */}
-        <p className="mt-6 text-center text-xs text-slate-500">
+        <p className="mt-6 text-center text-xs text-muted-foreground">
           Agrícola Marvic 360 — Gestión agrícola integrada
         </p>
       </div>

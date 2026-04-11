@@ -21,6 +21,33 @@ export default {
     },
     extend: {
       colors: {
+        // ── Paleta Marvic: Verde Bosque Suave (reemplaza sky) ──
+        sky: {
+          50:  "#f1f7f3",
+          100: "#dfeae3",
+          200: "#c0d5c8",
+          300: "#97b9a3",
+          400: "#6d9b7d",  // color principal (antes sky-400 = #38bdf8)
+          500: "#528163",
+          600: "#3f6a4f",
+          700: "#355541",
+          800: "#2d4536",
+          900: "#27392d",
+          950: "#131e17",
+        },
+        // Alias semántico del verde bosque para uso futuro
+        forest: {
+          50:  "#f1f7f3",
+          100: "#dfeae3",
+          200: "#c0d5c8",
+          300: "#97b9a3",
+          400: "#6d9b7d",
+          500: "#528163",
+          600: "#3f6a4f",
+          700: "#355541",
+          800: "#2d4536",
+          900: "#27392d",
+        },
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
         ring: "hsl(var(--ring))",

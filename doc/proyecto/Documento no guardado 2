@@ -1,8 +1,0 @@
-Me gustaría añadir tests unitarios a los hooks. ¿Por dónde empezamos? La build se ha generado correctamente. ¿Cómo puedo desplegarla en Vercel?
-
-
-~/.nvm/versions/node/v20.20.1/bin/node ./node_modules/.bin/vite build
-
-
-
-¡Increíble trabajo! Ayúdame con los pasos para hacer el despliegue a Vercel con este código de producción. El build fue un éxito total. Me gustaría repasar cómo configurar el Auth de Supabase para los usuarios reales (JuanPe y los operarios). 

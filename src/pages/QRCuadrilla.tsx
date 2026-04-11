@@ -128,7 +128,7 @@ export default function QRCuadrilla() {
     return (
       <div className="min-h-screen flex flex-col justify-center bg-[#020617] px-6">
         <div className="text-center mb-10">
-          <Users className="w-12 h-12 text-[#38bdf8] mx-auto mb-4" />
+          <Users className="w-12 h-12 text-[#6d9b7d] mx-auto mb-4" />
           <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">
             Registro de cuadrilla
           </p>

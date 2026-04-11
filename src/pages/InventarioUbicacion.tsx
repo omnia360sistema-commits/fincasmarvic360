@@ -274,10 +274,7 @@ export default function InventarioUbicacion() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!ubicacionId || !activeCatId || !cantidad) return
-    if (isFito && !fotoFile2) {
-      setSubmitError('La foto del lote / código de barras es obligatoria para fitosanitarios')
-      return
-    }
+    // Modo piloto: foto del lote en fitos es opcional (warning no bloqueante)
     setSubmitting(true)
     setSubmitError(null)
 
@@ -725,7 +722,7 @@ export default function InventarioUbicacion() {
 
       {/* ── PANEL IDENTIDAD ────────────────────────────────── */}
       <div className="absolute top-4 left-4 z-[1000] bg-slate-900/90 border border-white/10 rounded-lg px-4 py-3 min-w-[200px] max-w-[260px]">
-        <p className="text-[10px] font-black text-[#38bdf8] uppercase tracking-[0.3em] mb-1">
+        <p className="text-[10px] font-black text-[#6d9b7d] uppercase tracking-[0.3em] mb-1">
           Marvic 360 · Inventario
         </p>
         <p className="text-sm font-black text-white uppercase tracking-tight leading-tight">
@@ -741,7 +738,7 @@ export default function InventarioUbicacion() {
       {/* ── BOTÓN VOLVER ───────────────────────────────────── */}
       <button
         onClick={() => navigate('/inventario')}
-        className="absolute top-4 left-[276px] z-[1000] w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center bg-slate-900/90 hover:border-[#38bdf8]/40 transition-colors"
+        className="absolute top-4 left-[276px] z-[1000] w-8 h-8 rounded-lg border border-white/10 flex items-center justify-center bg-slate-900/90 hover:border-[#6d9b7d]/40 transition-colors"
       >
         <ArrowLeft className="w-4 h-4 text-slate-400" />
       </button>
@@ -756,8 +753,8 @@ export default function InventarioUbicacion() {
               onClick={() => handleSelectCat(cat.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
                 activeCatId === cat.id
-                  ? 'bg-[#38bdf8]/20 border-[#38bdf8]/60 text-[#38bdf8]'
-                  : 'bg-slate-900/90 border-white/10 text-slate-300 hover:border-[#38bdf8]/30 hover:text-[#38bdf8]'
+                  ? 'bg-[#6d9b7d]/20 border-[#6d9b7d]/60 text-[#6d9b7d]'
+                  : 'bg-slate-900/90 border-white/10 text-slate-300 hover:border-[#6d9b7d]/30 hover:text-[#6d9b7d]'
               }`}
             >
               <Icon className="w-3.5 h-3.5 shrink-0" />
@@ -771,7 +768,7 @@ export default function InventarioUbicacion() {
         <div className="relative">
           <button
             onClick={() => setShowPdfMenu(v => !v)}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg border text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap bg-slate-900/90 border-white/10 text-slate-300 hover:border-[#38bdf8]/30 hover:text-[#38bdf8] w-full"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg border text-[11px] font-black uppercase tracking-widest transition-all whitespace-nowrap bg-slate-900/90 border-white/10 text-slate-300 hover:border-[#6d9b7d]/30 hover:text-[#6d9b7d] w-full"
           >
             <FileText className="w-3.5 h-3.5 shrink-0" />
             Informes PDF
@@ -787,7 +784,7 @@ export default function InventarioUbicacion() {
                 <button
                   key={tipo}
                   onClick={() => { setInformeTipo(tipo); setPdfError(null); setShowInformeModal(true); setShowPdfMenu(false); }}
-                  className="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-300 hover:bg-[#38bdf8]/10 hover:text-[#38bdf8] transition-colors"
+                  className="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-300 hover:bg-[#6d9b7d]/10 hover:text-[#6d9b7d] transition-colors"
                 >
                   {label}
                 </button>
@@ -795,7 +792,7 @@ export default function InventarioUbicacion() {
               <div className="w-full h-px bg-white/10" />
               <button
                 onClick={() => { setInformeTipo('historico'); setShowInformeModal(true); setShowPdfMenu(false); }}
-                className="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-300 hover:bg-[#38bdf8]/10 hover:text-[#38bdf8] transition-colors"
+                className="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase tracking-widest text-slate-300 hover:bg-[#6d9b7d]/10 hover:text-[#6d9b7d] transition-colors"
               >
                 Exportar Excel
               </button>
@@ -810,7 +807,7 @@ export default function InventarioUbicacion() {
 
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-white/10 shrink-0">
-            <span className="text-[11px] font-black text-[#38bdf8] uppercase tracking-widest">
+            <span className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-widest">
               {activeCat.nombre}
             </span>
             <button onClick={() => setActiveCatId(null)}>
@@ -829,7 +826,7 @@ export default function InventarioUbicacion() {
                 onClick={() => setPanelView(id)}
                 className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 ${
                   panelView === id
-                    ? 'border-[#38bdf8] text-[#38bdf8]'
+                    ? 'border-[#6d9b7d] text-[#6d9b7d]'
                     : 'border-transparent text-slate-500 hover:text-slate-300'
                 }`}
               >
@@ -871,7 +868,7 @@ export default function InventarioUbicacion() {
                   {ultimoRegistro.precio_unitario != null && (
                     <div className="bg-slate-800/40 rounded-lg p-3">
                       <p className="text-[9px] text-slate-500 uppercase tracking-widest mb-1">Valor aprox.</p>
-                      <p className="text-lg font-black text-[#38bdf8]">
+                      <p className="text-lg font-black text-[#6d9b7d]">
                         {(ultimoRegistro.cantidad * ultimoRegistro.precio_unitario)
                           .toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €
                       </p>
@@ -952,14 +949,14 @@ export default function InventarioUbicacion() {
           <div className="shrink-0 p-3 border-t border-white/10 flex gap-2">
             <button
               onClick={openModal}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-[#38bdf8]/20 border border-[#38bdf8]/40 hover:bg-[#38bdf8]/30 transition-all text-[10px] font-black uppercase tracking-widest text-[#38bdf8]"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-[#6d9b7d]/20 border border-[#6d9b7d]/40 hover:bg-[#6d9b7d]/30 transition-all text-[10px] font-black uppercase tracking-widest text-[#6d9b7d]"
             >
               <Plus className="w-3.5 h-3.5" />
               Añadir
             </button>
             <button
               onClick={openMoverModal}
-              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-slate-800 border border-white/10 hover:border-[#38bdf8]/30 hover:text-[#38bdf8] transition-all text-[10px] font-black uppercase tracking-widest text-slate-400"
+              className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-lg bg-slate-800 border border-white/10 hover:border-[#6d9b7d]/30 hover:text-[#6d9b7d] transition-all text-[10px] font-black uppercase tracking-widest text-slate-400"
             >
               <MoveRight className="w-3.5 h-3.5" />
               Mover
@@ -971,10 +968,10 @@ export default function InventarioUbicacion() {
 
       {/* ── STOCK ACTUAL POR CATEGORÍA ─────────────────────── */}
       {resumenUbic.length > 0 && (
-        <div className="absolute top-[84px] left-4 z-[997] w-[min(100%-2rem,22rem)] bg-slate-900/95 border border-[#38bdf8]/20 rounded-lg overflow-hidden shadow-lg">
-          <div className="flex items-center gap-2 px-3 py-2 border-b border-white/10 bg-[#38bdf8]/5">
-            <Package className="w-3.5 h-3.5 text-[#38bdf8]" />
-            <span className="text-[10px] font-black text-[#38bdf8] uppercase tracking-widest">Stock actual</span>
+        <div className="absolute top-[84px] left-4 z-[997] w-[min(100%-2rem,22rem)] bg-slate-900/95 border border-[#6d9b7d]/20 rounded-lg overflow-hidden shadow-lg">
+          <div className="flex items-center gap-2 px-3 py-2 border-b border-white/10 bg-[#6d9b7d]/5">
+            <Package className="w-3.5 h-3.5 text-[#6d9b7d]" />
+            <span className="text-[10px] font-black text-[#6d9b7d] uppercase tracking-widest">Stock actual</span>
           </div>
           <div className="px-3 py-2 space-y-1 max-h-[28vh] overflow-y-auto">
             {resumenUbic.map(r => {
@@ -991,7 +988,7 @@ export default function InventarioUbicacion() {
                       <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded border border-green-500/40 text-green-400">Entrada reciente</span>
                     )}
                     {nEntradas > 0 && (
-                      <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded border border-[#38bdf8]/40 text-[#38bdf8]">{nEntradas} entrada{nEntradas !== 1 ? 's' : ''}</span>
+                      <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded border border-[#6d9b7d]/40 text-[#6d9b7d]">{nEntradas} entrada{nEntradas !== 1 ? 's' : ''}</span>
                     )}
                     <span className="text-[11px] font-black text-white">{r.cantidad} <span className="text-slate-500 font-normal">{r.unidad}</span></span>
                   </div>
@@ -1131,7 +1128,7 @@ export default function InventarioUbicacion() {
             {/* Header */}
             <div className="flex items-start justify-between px-5 py-4 border-b border-white/10 shrink-0">
               <div>
-                <p className="text-[11px] font-black text-[#38bdf8] uppercase tracking-[0.3em]">
+                <p className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-[0.3em]">
                   Informe PDF
                 </p>
                 <p className="text-[10px] text-slate-500 mt-0.5">{ubicacion?.nombre}</p>
@@ -1156,7 +1153,7 @@ export default function InventarioUbicacion() {
                   onClick={() => setInformeTipo(id)}
                   className={`flex-1 py-2.5 text-[10px] font-black uppercase tracking-widest transition-all border-b-2 ${
                     informeTipo === id
-                      ? 'border-[#38bdf8] text-[#38bdf8]'
+                      ? 'border-[#6d9b7d] text-[#6d9b7d]'
                       : 'border-transparent text-slate-500 hover:text-slate-300'
                   }`}
                 >
@@ -1182,7 +1179,7 @@ export default function InventarioUbicacion() {
                       type="date"
                       value={informeFechaInicio}
                       onChange={e => setInformeFechaInicio(e.target.value)}
-                      className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#38bdf8]/50"
+                      className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#6d9b7d]/50"
                     />
                   </div>
                   <div>
@@ -1193,7 +1190,7 @@ export default function InventarioUbicacion() {
                       type="date"
                       value={informeFechaFin}
                       onChange={e => setInformeFechaFin(e.target.value)}
-                      className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#38bdf8]/50"
+                      className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#6d9b7d]/50"
                     />
                   </div>
                 </>
@@ -1212,7 +1209,7 @@ export default function InventarioUbicacion() {
                     <select
                       value={informeCategoria}
                       onChange={e => setInformeCategoria(e.target.value)}
-                      className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#38bdf8]/50"
+                      className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#6d9b7d]/50"
                     >
                       <option value="">Seleccionar…</option>
                       {categorias.map(c => (
@@ -1228,7 +1225,7 @@ export default function InventarioUbicacion() {
                       type="date"
                       value={informeFechaInicio}
                       onChange={e => setInformeFechaInicio(e.target.value)}
-                      className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#38bdf8]/50"
+                      className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#6d9b7d]/50"
                     />
                   </div>
                   <div>
@@ -1239,7 +1236,7 @@ export default function InventarioUbicacion() {
                       type="date"
                       value={informeFechaFin}
                       onChange={e => setInformeFechaFin(e.target.value)}
-                      className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#38bdf8]/50"
+                      className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#6d9b7d]/50"
                     />
                   </div>
                 </>
@@ -1259,7 +1256,7 @@ export default function InventarioUbicacion() {
                       <select
                         value={informeMes}
                         onChange={e => setInformeMes(Number(e.target.value))}
-                        className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#38bdf8]/50"
+                        className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#6d9b7d]/50"
                       >
                         {MESES_ES.map((m, i) => (
                           <option key={i + 1} value={i + 1}>{m}</option>
@@ -1276,7 +1273,7 @@ export default function InventarioUbicacion() {
                         max="2030"
                         value={informeAnio}
                         onChange={e => setInformeAnio(Number(e.target.value))}
-                        className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#38bdf8]/50"
+                        className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#6d9b7d]/50"
                       />
                     </div>
                   </div>
@@ -1298,11 +1295,11 @@ export default function InventarioUbicacion() {
               <button
                 onClick={generarPDF}
                 disabled={generandoPDF || generandoExcel || (informeTipo === 'categoria' && !informeCategoria)}
-                className="flex-1 py-2.5 rounded-lg bg-[#38bdf8]/20 border border-[#38bdf8]/40 hover:bg-[#38bdf8]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-[11px] font-black uppercase tracking-widest text-[#38bdf8] flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 rounded-lg bg-[#6d9b7d]/20 border border-[#6d9b7d]/40 hover:bg-[#6d9b7d]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-[11px] font-black uppercase tracking-widest text-[#6d9b7d] flex items-center justify-center gap-2"
               >
                 {generandoPDF ? (
                   <>
-                    <div className="w-3.5 h-3.5 border-2 border-[#38bdf8] border-t-transparent rounded-full animate-spin" />
+                    <div className="w-3.5 h-3.5 border-2 border-[#6d9b7d] border-t-transparent rounded-full animate-spin" />
                     PDF...
                   </>
                 ) : (
@@ -1315,7 +1312,7 @@ export default function InventarioUbicacion() {
               <button
                 onClick={generarExcel}
                 disabled={generandoPDF || generandoExcel || (informeTipo === 'categoria' && !informeCategoria)}
-                className="flex-1 py-2.5 rounded-lg bg-slate-800 border border-white/10 hover:border-[#38bdf8]/30 hover:text-[#38bdf8] disabled:opacity-40 disabled:cursor-not-allowed transition-all text-[11px] font-black uppercase tracking-widest text-slate-300 flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 rounded-lg bg-slate-800 border border-white/10 hover:border-[#6d9b7d]/30 hover:text-[#6d9b7d] disabled:opacity-40 disabled:cursor-not-allowed transition-all text-[11px] font-black uppercase tracking-widest text-slate-300 flex items-center justify-center gap-2"
               >
                 {generandoExcel ? (
                   <>
@@ -1344,7 +1341,7 @@ export default function InventarioUbicacion() {
             {/* Modal header */}
             <div className="flex items-start justify-between px-5 py-4 border-b border-white/10 shrink-0">
               <div>
-                <p className="text-[11px] font-black text-[#38bdf8] uppercase tracking-[0.3em]">
+                <p className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-[0.3em]">
                   Añadir Registro
                 </p>
                 <p className="text-[10px] text-slate-500 mt-0.5">{activeCat.nombre}</p>
@@ -1380,7 +1377,7 @@ export default function InventarioUbicacion() {
                       setPrecioUnitario('')
                     }
                   }}
-                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#38bdf8]/50"
+                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#6d9b7d]/50"
                 >
                   <option value="">Sin especificar</option>
                   {productos.map(p => (
@@ -1392,7 +1389,7 @@ export default function InventarioUbicacion() {
 
               {/* Campos nuevo producto */}
               {productoId === 'nuevo' && (
-                <div className="pl-3 border-l-2 border-[#38bdf8]/30 space-y-3">
+                <div className="pl-3 border-l-2 border-[#6d9b7d]/30 space-y-3">
                   <div>
                     <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
                       Nombre del producto <span className="text-red-400">*</span>
@@ -1402,7 +1399,7 @@ export default function InventarioUbicacion() {
                       value={productoNombre}
                       onChange={e => setProductoNombre(e.target.value)}
                       required
-                      className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#38bdf8]/50"
+                      className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#6d9b7d]/50"
                       placeholder="Ej: Glifosato 36%, THIOVIT..."
                     />
                   </div>
@@ -1422,7 +1419,7 @@ export default function InventarioUbicacion() {
                     value={cantidad}
                     onChange={e => setCantidad(e.target.value)}
                     required
-                    className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#38bdf8]/50"
+                    className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#6d9b7d]/50"
                     placeholder="0"
                   />
                 </div>
@@ -1433,7 +1430,7 @@ export default function InventarioUbicacion() {
                   <select
                     value={unidad}
                     onChange={e => setUnidad(e.target.value)}
-                    className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#38bdf8]/50"
+                    className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#6d9b7d]/50"
                   >
                     {UNIDADES.map(u => (
                       <option key={u} value={u}>{u}</option>
@@ -1454,7 +1451,7 @@ export default function InventarioUbicacion() {
                     min="0"
                     value={precioUnitario}
                     onChange={e => setPrecioUnitario(e.target.value)}
-                    className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#38bdf8]/50"
+                    className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#6d9b7d]/50"
                     placeholder="0.00"
                   />
                 </div>
@@ -1462,7 +1459,7 @@ export default function InventarioUbicacion() {
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
                     Importe total
                   </label>
-                  <div className="bg-slate-800/40 border border-white/5 rounded-lg px-3 py-2 text-sm font-black text-[#38bdf8]">
+                  <div className="bg-slate-800/40 border border-white/5 rounded-lg px-3 py-2 text-sm font-black text-[#6d9b7d]">
                     {importe > 0
                       ? importe.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
                       : '— €'}
@@ -1479,7 +1476,7 @@ export default function InventarioUbicacion() {
                   type="text"
                   value={descripcion}
                   onChange={e => setDescripcion(e.target.value)}
-                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#38bdf8]/50"
+                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#6d9b7d]/50"
                   placeholder="Ej: Herbicida Glifosato 36%, lote 2024..."
                 />
               </div>
@@ -1493,7 +1490,7 @@ export default function InventarioUbicacion() {
                   value={notas}
                   onChange={e => setNotas(e.target.value)}
                   rows={2}
-                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#38bdf8]/50 resize-none"
+                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#6d9b7d]/50 resize-none"
                   placeholder="Observaciones opcionales..."
                 />
               </div>
@@ -1515,7 +1512,7 @@ export default function InventarioUbicacion() {
                     </button>
                   </div>
                 ) : (
-                  <label className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-dashed border-white/20 cursor-pointer hover:border-[#38bdf8]/40 transition-colors">
+                  <label className="flex items-center gap-3 px-3 py-2.5 rounded-lg border border-dashed border-white/20 cursor-pointer hover:border-[#6d9b7d]/40 transition-colors">
                     <Plus className="w-4 h-4 text-slate-500" />
                     <span className="text-[11px] text-slate-500">Seleccionar imagen</span>
                     <input
@@ -1532,7 +1529,7 @@ export default function InventarioUbicacion() {
               {isFito && (
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">
-                    Foto lote / código de barras <span className="text-red-400">*</span>
+                    Foto lote / código de barras <span className="text-amber-500/70">(recomendada)</span>
                   </label>
                   {preview2 ? (
                     <div className="relative rounded-lg overflow-hidden border border-white/10">
@@ -1573,7 +1570,7 @@ export default function InventarioUbicacion() {
                   type="text"
                   value={responsable}
                   onChange={e => setResponsable(e.target.value)}
-                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#38bdf8]/50"
+                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#6d9b7d]/50"
                   placeholder="Nombre de quien registra..."
                 />
               </div>
@@ -1590,7 +1587,7 @@ export default function InventarioUbicacion() {
               <button
                 type="submit"
                 disabled={submitting || !cantidad}
-                className="w-full py-2.5 rounded-lg bg-[#38bdf8]/20 border border-[#38bdf8]/40 hover:bg-[#38bdf8]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-[11px] font-black uppercase tracking-widest text-[#38bdf8]"
+                className="w-full py-2.5 rounded-lg bg-[#6d9b7d]/20 border border-[#6d9b7d]/40 hover:bg-[#6d9b7d]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-[11px] font-black uppercase tracking-widest text-[#6d9b7d]"
               >
                 {submitting ? 'Guardando...' : 'Guardar registro'}
               </button>
@@ -1609,7 +1606,7 @@ export default function InventarioUbicacion() {
             {/* Header */}
             <div className="flex items-start justify-between px-5 py-4 border-b border-white/10 shrink-0">
               <div>
-                <p className="text-[11px] font-black text-[#38bdf8] uppercase tracking-[0.3em]">
+                <p className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-[0.3em]">
                   Mover Producto
                 </p>
                 <p className="text-[10px] text-slate-500 mt-0.5">{activeCat.nombre}</p>
@@ -1633,7 +1630,7 @@ export default function InventarioUbicacion() {
                 <select
                   value={moverProductoId}
                   onChange={e => setMoverProductoId(e.target.value)}
-                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#38bdf8]/50"
+                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#6d9b7d]/50"
                 >
                   <option value="">Sin especificar</option>
                   {productos.map(p => (
@@ -1655,7 +1652,7 @@ export default function InventarioUbicacion() {
                     value={moverCantidad}
                     onChange={e => setMoverCantidad(e.target.value)}
                     required
-                    className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#38bdf8]/50"
+                    className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#6d9b7d]/50"
                     placeholder="0"
                   />
                 </div>
@@ -1666,7 +1663,7 @@ export default function InventarioUbicacion() {
                   <select
                     value={moverUnidad}
                     onChange={e => setMoverUnidad(e.target.value)}
-                    className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#38bdf8]/50"
+                    className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#6d9b7d]/50"
                   >
                     {UNIDADES.map(u => (
                       <option key={u} value={u}>{u}</option>
@@ -1684,7 +1681,7 @@ export default function InventarioUbicacion() {
                   value={moverDestinoId}
                   onChange={e => setMoverDestinoId(e.target.value)}
                   required
-                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#38bdf8]/50"
+                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-[#6d9b7d]/50"
                 >
                   <option value="">Seleccionar destino…</option>
                   {ubicaciones
@@ -1704,7 +1701,7 @@ export default function InventarioUbicacion() {
                   type="text"
                   value={moverResponsable}
                   onChange={e => setMoverResponsable(e.target.value)}
-                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#38bdf8]/50"
+                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#6d9b7d]/50"
                   placeholder="Nombre de quien mueve el producto..."
                 />
               </div>
@@ -1718,7 +1715,7 @@ export default function InventarioUbicacion() {
                   value={moverNotas}
                   onChange={e => setMoverNotas(e.target.value)}
                   rows={2}
-                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#38bdf8]/50 resize-none"
+                  className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-[#6d9b7d]/50 resize-none"
                   placeholder="Motivo del movimiento, observaciones..."
                 />
               </div>
@@ -1735,11 +1732,11 @@ export default function InventarioUbicacion() {
               <button
                 type="submit"
                 disabled={submittingMover || !moverCantidad || !moverDestinoId}
-                className="w-full py-2.5 rounded-lg bg-[#38bdf8]/20 border border-[#38bdf8]/40 hover:bg-[#38bdf8]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-[11px] font-black uppercase tracking-widest text-[#38bdf8] flex items-center justify-center gap-2"
+                className="w-full py-2.5 rounded-lg bg-[#6d9b7d]/20 border border-[#6d9b7d]/40 hover:bg-[#6d9b7d]/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-[11px] font-black uppercase tracking-widest text-[#6d9b7d] flex items-center justify-center gap-2"
               >
                 {submittingMover ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-[#38bdf8] border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-[#6d9b7d] border-t-transparent rounded-full animate-spin" />
                     Registrando...
                   </>
                 ) : (

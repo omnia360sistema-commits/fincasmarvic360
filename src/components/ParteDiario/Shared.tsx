@@ -12,7 +12,7 @@ export const EntradaRow = React.memo(({
   <div className="px-4 py-3 flex items-start justify-between gap-2 hover:bg-white/5 transition-colors">
     <div className="flex-1 min-w-0">
       <div className="flex items-center gap-2">
-        <span className="text-[10px] font-mono text-[#38bdf8] shrink-0">{hora}</span>
+        <span className="text-[10px] font-mono text-[#6d9b7d] shrink-0">{hora}</span>
         {hasPhoto && <Camera className="w-3 h-3 text-slate-500 shrink-0" />}
       </div>
       <p className="text-sm text-white font-medium truncate mt-0.5">{titulo}</p>

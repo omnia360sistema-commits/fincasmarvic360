@@ -51,7 +51,7 @@ export const NAV_ITEMS: NavItem[] = [
     id: 'inventario',
     label: 'INVENTARIO',
     icono: Package,
-    color: '#38bdf8',
+    color: '#6d9b7d',
     activo: true,
     children: [
       { id: 'inventario-ubicaciones', label: 'Ubicaciones',  ruta: '/inventario', icono: Package },

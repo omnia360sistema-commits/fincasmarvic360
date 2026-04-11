@@ -1,10 +1,13 @@
 import React, { useState } from 'react'
-import { Package, Plus, Loader2, MapPin, X, Search, MinusCircle } from 'lucide-react'
+import { Package, Plus, Loader2, MapPin, X, Search, MinusCircle, FileText } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useMaterialesStock, useAddMaterial, MaterialStockRow } from '@/hooks/useMateriales'
 import { useCategorias, useUbicaciones, useProductosCatalogo, useAddProductoCatalogo } from '@/hooks/useInventario'
-import { SelectWithOther, AudioInput } from '@/components/base'
+import { SelectWithOther, AudioInput, PDFExportModal, type PDFExportParams } from '@/components/base'
+import { useCatalogoLocal } from '@/hooks/useCatalogoLocal'
 import { toast } from '@/hooks/use-toast'
+import { supabase } from '@/integrations/supabase/client'
+import { generarPDFCorporativoBase, pdfCorporateSection, pdfCorporateTable } from '@/utils/pdfUtils'
 
 export default function Materiales() {
   const [activeTab, setActiveTab] = useState('fitosanitarios_abonos')
@@ -25,12 +28,64 @@ export default function Materiales() {
   const [productoNombre, setProductoNombre] = useState('')
   const [cantidad, setCantidad] = useState('')
   const [unidad, setUnidad] = useState('L')
+  const catUnidades = useCatalogoLocal('unidades_materiales', ['Kg', 'L', 'Unidades', 'Rollos', 'm'])
   const [notas, setNotas] = useState('')
   const [saving, setSaving] = useState(false)
   
   const [consumeItem, setConsumeItem] = useState<MaterialStockRow | null>(null)
   const [consumeCantidad, setConsumeCantidad] = useState('')
   const [consumeNotas, setConsumeNotas] = useState('')
+  const [pdfOpen, setPdfOpen] = useState(false)
+
+  const handleExportPDF = async ({ desde, hasta, filtros }: PDFExportParams) => {
+    const categoriasIncluidas = filtros.solo_tab_actual
+      ? [activeCatId]
+      : categorias.map(c => c.id)
+
+    // Obtener movimientos del rango en las categorías seleccionadas
+    const { data: movimientos } = await supabase
+      .from('inventario_registros')
+      .select('*, inventario_productos_catalogo(nombre), inventario_ubicaciones(nombre), inventario_categorias(nombre)')
+      .in('categoria_id', categoriasIncluidas)
+      .gte('created_at', `${desde}T00:00:00`)
+      .lte('created_at', `${hasta}T23:59:59`)
+      .order('created_at', { ascending: false })
+
+    const rows = (movimientos ?? []).map(m => [
+      new Date(m.created_at ?? '').toLocaleDateString('es-ES'),
+      (m as { inventario_categorias?: { nombre?: string } }).inventario_categorias?.nombre ?? '—',
+      (m as { inventario_productos_catalogo?: { nombre?: string } }).inventario_productos_catalogo?.nombre ?? m.descripcion ?? '—',
+      `${m.cantidad} ${m.unidad}`,
+      (m as { inventario_ubicaciones?: { nombre?: string } }).inventario_ubicaciones?.nombre ?? '—',
+      m.notas ?? '—',
+    ])
+
+    await generarPDFCorporativoBase({
+      titulo: 'Materiales de Campo',
+      subtitulo: `Movimientos · ${desde} → ${hasta}`,
+      fecha: new Date(),
+      filename: `materiales_${desde}_${hasta}.pdf`,
+      accentColor: [20, 184, 166], // teal
+      bloques: [
+        (ctx) => {
+          pdfCorporateSection(ctx, 'Resumen')
+          ctx.writeLine('Total movimientos', String(rows.length))
+          ctx.writeLine('Categorías', filtros.solo_tab_actual ? (categorias.find(c => c.id === activeCatId)?.nombre ?? '—') : 'Todas')
+          ctx.y += 4
+        },
+        (ctx) => {
+          if (rows.length === 0) return
+          pdfCorporateSection(ctx, 'Detalle de Movimientos')
+          pdfCorporateTable(
+            ctx,
+            ['Fecha', 'Categoría', 'Producto', 'Cantidad', 'Ubicación', 'Notas'],
+            [22, 28, 42, 22, 28, 40],
+            rows,
+          )
+        },
+      ],
+    })
+  }
 
   const resetForm = () => {
     setUbicacionId('')
@@ -159,11 +214,30 @@ export default function Materiales() {
         <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center border border-teal-500/30">
           <Package className="w-5 h-5 text-teal-400" />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-black text-white uppercase tracking-tight">Materiales de Campo</h1>
           <p className="text-xs text-slate-400 font-medium">Gestión de fitosanitarios, sistemas de riego y plásticos</p>
         </div>
+        <button
+          onClick={() => setPdfOpen(true)}
+          className="px-3 py-2 rounded-lg bg-teal-500/20 border border-teal-500/40 text-teal-400 hover:bg-teal-500/30 transition-colors flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+        >
+          <FileText className="w-4 h-4" />
+          <span className="hidden sm:inline">PDF</span>
+        </button>
       </div>
+
+      <PDFExportModal
+        open={pdfOpen}
+        onClose={() => setPdfOpen(false)}
+        title="Materiales de Campo"
+        subtitle="Informe de movimientos por fecha"
+        accentColor="#14b8a6"
+        filtros={[
+          { key: 'solo_tab_actual', label: 'Solo la categoría activa', default: false },
+        ]}
+        onExport={handleExportPDF}
+      />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
         <TabsList className="bg-slate-900 border border-white/5 shrink-0 grid w-full grid-cols-3">
@@ -239,7 +313,7 @@ export default function Materiales() {
                 </div>
                 <div>
                   <p className="text-[10px] text-slate-500 mb-1 uppercase font-bold">Unidad</p>
-                  <SelectWithOther options={['Kg', 'L', 'Unidades', 'Rollos', 'm']} value={unidad} onChange={setUnidad} onCreateNew={setUnidad} />
+                  <SelectWithOther options={catUnidades.opciones} value={unidad} onChange={setUnidad} onCreateNew={v => { catUnidades.addOpcion(v); setUnidad(v); }} />
                 </div>
               </div>
 

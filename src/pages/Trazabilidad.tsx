@@ -11,6 +11,7 @@ import { useQuery } from '@tanstack/react-query'
 import SelectWithOther from '@/components/base/SelectWithOther'
 import { generarPDFCorporativoBase, PDF_COLORS } from '@/utils/pdfUtils'
 import { FINCAS_NOMBRES } from '@/constants/farms'
+import { toast } from '@/hooks/use-toast'
 
 const ESTADOS_PALOT = {
   en_campo: 'bg-green-500/20 text-green-400 border-green-500/30',
@@ -314,10 +315,10 @@ export default function Trazabilidad() {
 
         <Tabs defaultValue="palots" className="flex-1 flex flex-col min-h-0">
           <TabsList className="bg-slate-900 border border-white/5 shrink-0 grid w-full grid-cols-4">
-            <TabsTrigger value="palots" className="text-xs font-bold uppercase tracking-wider data-[state=active]:bg-[#38bdf8]/10 data-[state=active]:text-[#38bdf8]">PALOTS</TabsTrigger>
-            <TabsTrigger value="camaras" className="text-xs font-bold uppercase tracking-wider data-[state=active]:bg-[#38bdf8]/10 data-[state=active]:text-[#38bdf8]">CÁMARAS</TabsTrigger>
-            <TabsTrigger value="scanner" className="text-xs font-bold uppercase tracking-wider data-[state=active]:bg-[#38bdf8]/10 data-[state=active]:text-[#38bdf8]">SCANNER QR</TabsTrigger>
-            <TabsTrigger value="timeline" className="text-xs font-bold uppercase tracking-wider data-[state=active]:bg-[#38bdf8]/10 data-[state=active]:text-[#38bdf8]">TIMELINE PARCELA</TabsTrigger>
+            <TabsTrigger value="palots" className="text-xs font-bold uppercase tracking-wider data-[state=active]:bg-[#6d9b7d]/10 data-[state=active]:text-[#6d9b7d]">PALOTS</TabsTrigger>
+            <TabsTrigger value="camaras" className="text-xs font-bold uppercase tracking-wider data-[state=active]:bg-[#6d9b7d]/10 data-[state=active]:text-[#6d9b7d]">CÁMARAS</TabsTrigger>
+            <TabsTrigger value="scanner" className="text-xs font-bold uppercase tracking-wider data-[state=active]:bg-[#6d9b7d]/10 data-[state=active]:text-[#6d9b7d]">SCANNER QR</TabsTrigger>
+            <TabsTrigger value="timeline" className="text-xs font-bold uppercase tracking-wider data-[state=active]:bg-[#6d9b7d]/10 data-[state=active]:text-[#6d9b7d]">TIMELINE PARCELA</TabsTrigger>
           </TabsList>
 
           {/* ── TAB: PALOTS ── */}
@@ -327,12 +328,12 @@ export default function Trazabilidad() {
                 options={['todos', ...Object.keys(ESTADOS_PALOT)]}
                 value={filtroEstado}
                 onChange={setFiltroEstado}
-                onCreateNew={() => {}}
+                onCreateNew={() => toast({ title: 'Estado fijo', description: 'Los estados de palot están predefinidos por el flujo de trazabilidad.' })}
                 placeholder="Filtrar por estado..."
               />
               <button
                 onClick={() => setShowAltaPalot(true)}
-                className="px-4 py-2 bg-[#38bdf8] text-slate-900 font-bold rounded-lg text-xs uppercase flex items-center gap-2"
+                className="px-4 py-2 bg-[#6d9b7d] text-slate-900 font-bold rounded-lg text-xs uppercase flex items-center gap-2"
               >
                 <Plus className="w-4 h-4" /> Alta Palot
               </button>
@@ -342,7 +343,7 @@ export default function Trazabilidad() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {palots.map((p: PalotRow) => (
-                <div key={p.id} className="bg-slate-900/60 border border-white/5 p-4 rounded-xl relative overflow-hidden group hover:border-[#38bdf8]/30 transition-colors">
+                <div key={p.id} className="bg-slate-900/60 border border-white/5 p-4 rounded-xl relative overflow-hidden group hover:border-[#6d9b7d]/30 transition-colors">
                   <div className="flex justify-between items-start mb-3">
                     <div>
                       <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">QR CODE</p>
@@ -359,7 +360,7 @@ export default function Trazabilidad() {
                     <p className="text-xs text-slate-400 flex items-center gap-1.5"><Box className="w-3 h-3" /> {p.peso_kg ? `${p.peso_kg} Kg` : 'Peso sin registrar'}</p>
                   </div>
 
-                  <button onClick={() => setShowMovimiento(p.id)} className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-[#38bdf8] rounded-lg transition-colors border border-white/5">
+                  <button onClick={() => setShowMovimiento(p.id)} className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-[#6d9b7d] rounded-lg transition-colors border border-white/5">
                     Registrar Movimiento
                   </button>
                 </div>
@@ -387,9 +388,9 @@ export default function Trazabilidad() {
           {/* ── TAB: SCANNER ── */}
           <TabsContent value="scanner" className="flex-1 overflow-y-auto mt-4">
             <div className="max-w-md mx-auto space-y-6">
-              <div className="p-6 bg-slate-900/80 rounded-2xl border border-[#38bdf8]/20 flex flex-col items-center justify-center text-center shadow-[0_0_30px_rgba(56,189,248,0.1)]">
-                <div className="w-16 h-16 bg-[#38bdf8]/20 rounded-full flex items-center justify-center mb-4">
-                  <QrCode className="w-8 h-8 text-[#38bdf8]" />
+              <div className="p-6 bg-slate-900/80 rounded-2xl border border-[#6d9b7d]/20 flex flex-col items-center justify-center text-center shadow-[0_0_30px_rgba(56,189,248,0.1)]">
+                <div className="w-16 h-16 bg-[#6d9b7d]/20 rounded-full flex items-center justify-center mb-4">
+                  <QrCode className="w-8 h-8 text-[#6d9b7d]" />
                 </div>
                 <h3 className="text-lg font-bold text-white mb-2">Escáner de Palot</h3>
                 <p className="text-xs text-slate-400 mb-6">Introduce el código QR exacto del palot para consultar su trazabilidad completa.</p>
@@ -401,11 +402,11 @@ export default function Trazabilidad() {
                     value={scanInput}
                     onChange={e => setScanInput(e.target.value)}
                     onKeyDown={e => { if (e.key === 'Enter') setSearchedQR(scanInput) }}
-                    className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white text-sm focus:outline-none focus:border-[#38bdf8] transition-colors font-mono"
+                    className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-white text-sm focus:outline-none focus:border-[#6d9b7d] transition-colors font-mono"
                   />
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                 </div>
-                <button onClick={() => setSearchedQR(scanInput)} className="w-full mt-3 py-3 bg-[#38bdf8] text-slate-900 font-bold rounded-xl text-xs uppercase tracking-widest hover:bg-[#38bdf8]/90">
+                <button onClick={() => setSearchedQR(scanInput)} className="w-full mt-3 py-3 bg-[#6d9b7d] text-slate-900 font-bold rounded-xl text-xs uppercase tracking-widest hover:bg-[#6d9b7d]/90">
                   Consultar Palot
                 </button>
               </div>
@@ -417,7 +418,7 @@ export default function Trazabilidad() {
                   <div className="flex justify-between items-center border-b border-white/5 pb-4 mb-4">
                     <div>
                       <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">FICHA DE PALOT</p>
-                      <p className="text-sm font-mono text-[#38bdf8]">{palotEscaneado.qr_code}</p>
+                      <p className="text-sm font-mono text-[#6d9b7d]">{palotEscaneado.qr_code}</p>
                     </div>
                     <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md border uppercase tracking-wider ${ESTADOS_PALOT[palotEscaneado.estado as keyof typeof ESTADOS_PALOT]}`}>
                       {palotEscaneado.estado?.replace('_', ' ')}
@@ -439,7 +440,7 @@ export default function Trazabilidad() {
                           <div className="w-2 h-2 rounded-full bg-current"></div>
                         </div>
                         <div className="w-[calc(100%-2.5rem)] md:w-[calc(50%-1.5rem)] bg-slate-800/50 p-3 rounded-xl border border-white/5">
-                          <p className="text-xs font-bold text-[#38bdf8] mb-1">{TIPOS_MOVIMIENTO.find(t => t.value === m.tipo)?.label || m.tipo}</p>
+                          <p className="text-xs font-bold text-[#6d9b7d] mb-1">{TIPOS_MOVIMIENTO.find(t => t.value === m.tipo)?.label || m.tipo}</p>
                           <p className="text-[10px] text-slate-400">{new Date(m.timestamp).toLocaleString('es-ES')}</p>
                           {m.operador && <p className="text-[10px] text-slate-500 mt-1">Operador: {m.operador}</p>}
                         </div>
@@ -458,14 +459,14 @@ export default function Trazabilidad() {
             <div className="flex flex-col sm:flex-row gap-4 bg-slate-900/60 p-4 border border-white/5 rounded-xl">
               <div className="flex-1">
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1.5">Finca</p>
-                <select value={timelineFinca} onChange={e => { setTimelineFinca(e.target.value); setTimelineParcela(''); }} className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#38bdf8]">
+                <select value={timelineFinca} onChange={e => { setTimelineFinca(e.target.value); setTimelineParcela(''); }} className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#6d9b7d]">
                   <option value="">-- Seleccionar --</option>
                   {FINCAS_NOMBRES.map(f => <option key={f} value={f}>{f}</option>)}
                 </select>
               </div>
               <div className="flex-1">
                 <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mb-1.5">Parcela / Sector</p>
-                <select disabled={!timelineFinca} value={timelineParcela} onChange={e => setTimelineParcela(e.target.value)} className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#38bdf8] disabled:opacity-50">
+                <select disabled={!timelineFinca} value={timelineParcela} onChange={e => setTimelineParcela(e.target.value)} className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-[#6d9b7d] disabled:opacity-50">
                   <option value="">-- Seleccionar --</option>
                   {parcelasTimeline.map(p => <option key={p.parcel_id} value={p.parcel_id}>{p.parcel_number}</option>)}
                 </select>
@@ -479,7 +480,7 @@ export default function Trazabilidad() {
                     <h3 className="text-lg font-black text-white uppercase tracking-wider">Trazabilidad del Sector</h3>
                     {renderMissing()}
                   </div>
-                  <button onClick={generarPDFTimeline} disabled={generandoPDF || !timelineData?.length} className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-[#38bdf8] hover:bg-sky-400 text-slate-900 font-black rounded-lg text-xs uppercase tracking-widest transition-colors disabled:opacity-50 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
+                  <button onClick={generarPDFTimeline} disabled={generandoPDF || !timelineData?.length} className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-[#6d9b7d] hover:bg-sky-400 text-slate-900 font-black rounded-lg text-xs uppercase tracking-widest transition-colors disabled:opacity-50 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
                     {generandoPDF ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileText className="w-4 h-4" />}
                     Descargar PDF
                   </button>
@@ -497,7 +498,7 @@ export default function Trazabilidad() {
                             {getIcon(ev.type)}
                             <span className="text-xs font-bold text-slate-300 uppercase tracking-widest">{ev.type}</span>
                           </div>
-                          <span className="text-[10px] text-[#38bdf8] font-mono bg-[#38bdf8]/10 border border-[#38bdf8]/20 px-2 py-1 rounded">
+                          <span className="text-[10px] text-[#6d9b7d] font-mono bg-[#6d9b7d]/10 border border-[#6d9b7d]/20 px-2 py-1 rounded">
                             {ev.date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                           </span>
                         </div>
@@ -537,7 +538,7 @@ export default function Trazabilidad() {
               <div><p className="text-[10px] text-slate-500 mb-1 uppercase font-bold">Cultivo</p><input type="text" value={altaCultivo} onChange={e => setAltaCultivo(e.target.value)} className="w-full bg-slate-800 rounded-lg border border-slate-700 px-3 py-2 text-sm text-white" /></div>
               <div><p className="text-[10px] text-slate-500 mb-1 uppercase font-bold">Lote</p><input type="text" value={altaLote} onChange={e => setAltaLote(e.target.value)} className="w-full bg-slate-800 rounded-lg border border-slate-700 px-3 py-2 text-sm text-white" /></div>
               <div><p className="text-[10px] text-slate-500 mb-1 uppercase font-bold">Peso Neto (Kg)</p><input type="number" step="0.1" value={altaPeso} onChange={e => setAltaPeso(e.target.value)} className="w-full bg-slate-800 rounded-lg border border-slate-700 px-3 py-2 text-sm text-white" /></div>
-              <button type="submit" className="w-full py-3 bg-[#38bdf8] text-slate-900 font-bold rounded-xl mt-4 uppercase tracking-widest text-xs hover:bg-[#38bdf8]/90 transition-colors">Generar Palot</button>
+              <button type="submit" className="w-full py-3 bg-[#6d9b7d] text-slate-900 font-bold rounded-xl mt-4 uppercase tracking-widest text-xs hover:bg-[#6d9b7d]/90 transition-colors">Generar Palot</button>
             </form>
           </div>
         </div>
@@ -560,7 +561,7 @@ export default function Trazabilidad() {
               </div>
               <div><p className="text-[10px] text-slate-500 mb-1 uppercase font-bold">Operador</p><input type="text" value={movOperador} onChange={e => setMovOperador(e.target.value)} className="w-full bg-slate-800 rounded-lg border border-slate-700 px-3 py-2 text-sm text-white" /></div>
               <div><p className="text-[10px] text-slate-500 mb-1 uppercase font-bold">Notas</p><textarea rows={3} value={movNotas} onChange={e => setMovNotas(e.target.value)} className="w-full bg-slate-800 rounded-lg border border-slate-700 px-3 py-2 text-sm text-white resize-none" /></div>
-              <button type="submit" className="w-full py-3 bg-[#38bdf8] text-slate-900 font-bold rounded-xl mt-4 uppercase tracking-widest text-xs hover:bg-[#38bdf8]/90 transition-colors">Guardar Movimiento</button>
+              <button type="submit" className="w-full py-3 bg-[#6d9b7d] text-slate-900 font-bold rounded-xl mt-4 uppercase tracking-widest text-xs hover:bg-[#6d9b7d]/90 transition-colors">Guardar Movimiento</button>
             </form>
           </div>
         </div>

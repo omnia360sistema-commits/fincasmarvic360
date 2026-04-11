@@ -5,6 +5,7 @@ import { Users, RefreshCw, Download, FileText } from 'lucide-react'
 import { formatHora, formatFechaCompleta } from '@/utils/dateFormat'
 import { generarPDFCorporativoBase, PDF_COLORS, pdfCorporateSection, pdfCorporateTable, PDF_MARGIN } from '@/utils/pdfUtils'
 import { SelectWithOther } from '@/components/base'
+import { toast } from '@/hooks/use-toast'
 import * as XLSX from 'xlsx'
 
 interface PresenciaRecord {
@@ -298,7 +299,7 @@ export default function PresenciaPanel() {
               value={filtroCuadrilla}
               onChange={(val) => setFiltroCuadrilla(val)}
               placeholder="Todas"
-              onCreateNew={() => {}}
+              onCreateNew={() => toast({ title: 'Cuadrilla nueva', description: 'Las cuadrillas se gestionan desde el módulo Personal.' })}
             />
           </div>
           

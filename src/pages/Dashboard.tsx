@@ -341,7 +341,7 @@ export default function Dashboard() {
                         const selected = FINCAS_COORDENADAS.find(f => f.nombre === e.target.value);
                         if (selected) setFincaClima(selected);
                       }}
-                      className="appearance-none text-sm font-bold text-slate-700 dark:text-slate-200 bg-transparent border-none p-0 pr-4 focus:ring-0 cursor-pointer outline-none hover:text-[#38bdf8] transition-colors z-10"
+                      className="appearance-none text-sm font-bold text-slate-700 dark:text-slate-200 bg-transparent border-none p-0 pr-4 focus:ring-0 cursor-pointer outline-none hover:text-[#6d9b7d] transition-colors z-10"
                     >
                       {FINCAS_COORDENADAS.map(f => (
                         <option key={f.nombre} value={f.nombre} className="text-slate-900">{f.nombre}</option>
@@ -351,7 +351,7 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="text-right">
-              <p className="text-3xl font-black text-[#38bdf8]">{Math.round(weather?.current?.temperature_2m || 0)}°</p>
+              <p className="text-3xl font-black text-[#6d9b7d]">{Math.round(weather?.current?.temperature_2m || 0)}°</p>
                 </div>
               </div>
               <div className="flex items-center gap-4 text-xs font-semibold text-slate-500 dark:text-slate-400 mb-5">
@@ -394,7 +394,7 @@ export default function Dashboard() {
             </div>
             <div className="space-y-3 overflow-y-auto flex-1 pr-2 custom-scrollbar">
               {isLoading ? <p className="text-xs text-slate-400">Cargando...</p> : data?.trabajosDelDia?.map(t => (
-                <div key={t.id} className="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 transition-colors hover:border-[#38bdf8]/30">
+                <div key={t.id} className="flex justify-between items-center p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-white/5 transition-colors hover:border-[#6d9b7d]/30">
                   <div className="min-w-0">
                     <p className="font-bold text-slate-800 dark:text-slate-100 text-xs truncate">{t.work_type}</p>
                     <p className="text-[10px] text-slate-500 truncate mt-0.5">{t.cuadrilla_nombre || 'Sin cuadrilla'} · Sec. {t.parcel_id}</p>

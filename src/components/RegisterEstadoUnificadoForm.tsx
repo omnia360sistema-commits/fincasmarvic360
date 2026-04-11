@@ -155,18 +155,15 @@ export default function RegisterEstadoUnificadoForm({
       toast({ title: 'Error', description: 'Selecciona el estado de la parcela', variant: 'destructive' })
       return
     }
-    if (!foto) {
-      toast({ title: 'Error', description: 'La foto es obligatoria', variant: 'destructive' })
-      return
-    }
+    // Modo piloto: foto opcional
 
     setSaving(true)
     const warnings: string[] = []
 
     try {
-      // 1. Subir foto
-      const foto_url = await uploadFoto(foto, activeParcelId)
-      if (!foto_url) warnings.push('foto')
+      // 1. Subir foto si existe
+      const foto_url = foto ? await uploadFoto(foto, activeParcelId) : null
+      if (foto && !foto_url) warnings.push('foto')
 
       // 2. Guardar estado + actualizar parcels
       const { error: errEstado } = await supabase
@@ -300,7 +297,7 @@ export default function RegisterEstadoUnificadoForm({
 
   // ── Render ────────────────────────────────────────
 
-  const inCls = `w-full bg-slate-800/60 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#38bdf8]/50 transition-colors`
+  const inCls = `w-full bg-slate-800/60 border border-white/10 rounded-lg px-3 py-2 text-xs text-white placeholder-slate-600 focus:outline-none focus:border-[#6d9b7d]/50 transition-colors`
 
   return (
     <div className="space-y-5">
@@ -334,9 +331,9 @@ export default function RegisterEstadoUnificadoForm({
           )}
         </div>
       ) : (
-        <div className="rounded-lg bg-slate-800/50 border border-[#38bdf8]/20 px-3 py-2">
+        <div className="rounded-lg bg-slate-800/50 border border-[#6d9b7d]/20 px-3 py-2">
           <p className="text-[9px] text-slate-500 uppercase tracking-wider">{propFarmName}</p>
-          <p className="text-sm font-black text-[#38bdf8]">{propParcelName ?? propParcelId}</p>
+          <p className="text-sm font-black text-[#6d9b7d]">{propParcelName ?? propParcelId}</p>
         </div>
       )}
 
@@ -351,7 +348,7 @@ export default function RegisterEstadoUnificadoForm({
               onClick={() => setEstado(e.value)}
               className={`py-2.5 rounded-xl text-xs font-semibold transition-colors ${
                 estado === e.value
-                  ? 'bg-[#38bdf8] text-slate-900'
+                  ? 'bg-[#6d9b7d] text-slate-900'
                   : 'bg-slate-800/60 border border-white/10 text-slate-300 hover:border-white/20'
               }`}
             >
@@ -561,10 +558,10 @@ export default function RegisterEstadoUnificadoForm({
         )}
       </div>
 
-      {/* ── FOTO OBLIGATORIA ── */}
+      {/* ── FOTO RECOMENDADA (piloto) ── */}
       <div>
         <p className="text-[9px] font-black text-slate-500 uppercase tracking-[0.25em] mb-2">
-          Foto <span className="text-[#38bdf8]">*</span>
+          Foto <span className="text-amber-500/70">(recomendada)</span>
         </p>
         {foto ? (
           <div className="flex items-center gap-3 p-3 bg-slate-800/60 rounded-xl border border-white/10">
@@ -576,7 +573,7 @@ export default function RegisterEstadoUnificadoForm({
             <button type="button" onClick={() => setFoto(null)} className="text-slate-500 hover:text-red-400 transition-colors text-lg">×</button>
           </div>
         ) : (
-          <label className="flex items-center gap-3 p-3 bg-slate-800/40 rounded-xl border border-dashed border-white/20 cursor-pointer hover:border-[#38bdf8]/40 transition-colors">
+          <label className="flex items-center gap-3 p-3 bg-slate-800/40 rounded-xl border border-dashed border-white/20 cursor-pointer hover:border-[#6d9b7d]/40 transition-colors">
             <Camera className="w-5 h-5 text-slate-500" />
             <span className="text-sm text-slate-400">Tomar foto o seleccionar</span>
             <input
@@ -600,10 +597,10 @@ export default function RegisterEstadoUnificadoForm({
         <button
           type="button"
           onClick={handleSubmit}
-          disabled={saving || !activeParcelId || !estado || !foto}
-          className="flex-1 py-2.5 rounded-lg bg-[#38bdf8]/20 border border-[#38bdf8]/40 text-[11px] font-black uppercase tracking-widest text-[#38bdf8] hover:bg-[#38bdf8]/30 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
+          disabled={saving || !activeParcelId || !estado}
+          className="flex-1 py-2.5 rounded-lg bg-[#6d9b7d]/20 border border-[#6d9b7d]/40 text-[11px] font-black uppercase tracking-widest text-[#6d9b7d] hover:bg-[#6d9b7d]/30 transition-colors disabled:opacity-40 flex items-center justify-center gap-2"
         >
-          {saving && <span className="w-3.5 h-3.5 border-2 border-[#38bdf8]/30 border-t-[#38bdf8] rounded-full animate-spin" />}
+          {saving && <span className="w-3.5 h-3.5 border-2 border-[#6d9b7d]/30 border-t-[#6d9b7d] rounded-full animate-spin" />}
           {saving ? 'Guardando...' : 'Guardar'}
         </button>
       </div>

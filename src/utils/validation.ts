@@ -5,6 +5,7 @@
  *   const errors = validateForm(rules, values)
  *   if (errors.length) { setError(errors[0]); return }
  */
+import { FOTOS_OPCIONALES } from '@/constants/modoPiloto'
 
 // ── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -32,6 +33,8 @@ export function validateForm(rules: ValidationRule[], values: FormValues): strin
         break
       }
       case 'foto_required': {
+        // En modo piloto las fotos son opcionales (warning no bloqueante)
+        if (FOTOS_OPCIONALES) break
         if (!val) errors.push(`La foto de ${rule.label} es obligatoria`)
         break
       }

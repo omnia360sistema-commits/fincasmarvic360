@@ -43,7 +43,7 @@ import { FormError } from '@/components/base/FormError';
 
 // ── Constantes ───────────────────────────────────────────────
 
-const INPUT = 'w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none';
+const INPUT = 'w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#6d9b7d]/50 focus:outline-none';
 
 const PRIORIDAD_STYLES: Record<Prioridad, { border: string; text: string; label: string }> = {
   alta:  { border: 'border-red-500',    text: 'text-red-400',    label: 'ALTA' },
@@ -148,7 +148,7 @@ const PanelDia = React.memo(function PanelDia({ fecha, onPrev, onNext, onCerrar,
         </button>
         <div className="text-center">
           <p className="text-[11px] font-black text-white uppercase tracking-widest">{fmtFecha(fecha)}</p>
-          {esHoy && <p className="text-[9px] text-[#38bdf8] font-black uppercase tracking-widest">Hoy</p>}
+          {esHoy && <p className="text-[9px] text-[#6d9b7d] font-black uppercase tracking-widest">Hoy</p>}
         </div>
         <button onClick={onNext} className="p-1.5 rounded-lg border border-white/10 text-slate-400 hover:text-white transition-colors">
           <ChevronRight className="w-4 h-4" />
@@ -294,7 +294,7 @@ const ModalTrabajoPlan = React.memo(function ModalTrabajoPlan({ fecha, editData,
       <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-md shadow-2xl flex flex-col max-h-[92vh]">
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-3 border-b border-white/10 shrink-0">
-          <Calendar className="w-4 h-4 text-[#38bdf8]" />
+          <Calendar className="w-4 h-4 text-[#6d9b7d]" />
           <p className="flex-1 text-[11px] font-black text-white uppercase tracking-wider">
             {isEdit ? 'Editar trabajo' : 'Nuevo trabajo planificado'}
           </p>
@@ -418,9 +418,9 @@ const ModalTrabajoPlan = React.memo(function ModalTrabajoPlan({ fecha, editData,
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Materiales previstos</label>
             <div className="flex gap-2">
               <input type="text" value={matNombre} onChange={e => setMatNombre(e.target.value)}
-                placeholder="Producto…" className="flex-1 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none" />
+                placeholder="Producto…" className="flex-1 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#6d9b7d]/50 focus:outline-none" />
               <input type="text" value={matCantidad} onChange={e => setMatCantidad(e.target.value)}
-                placeholder="Cant." className="w-20 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#38bdf8]/50 focus:outline-none" />
+                placeholder="Cant." className="w-20 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white focus:border-[#6d9b7d]/50 focus:outline-none" />
               <button type="button" onClick={addMaterial} className="px-3 py-2 rounded-lg bg-slate-700 text-white text-[10px] font-black hover:bg-slate-600 transition-colors">+</button>
             </div>
             {materiales.length > 0 && (
@@ -492,7 +492,7 @@ const ModalTrabajoPlan = React.memo(function ModalTrabajoPlan({ fecha, editData,
             className="flex-1 py-2 rounded-lg border border-white/10 text-[10px] font-black text-slate-400 hover:text-white transition-colors uppercase tracking-widest"
           >Cancelar</button>
           <button type="button" onClick={(e) => { void handleSubmit(onSubmit)(e); }} disabled={saving}
-            className="flex-1 py-2 rounded-lg bg-[#38bdf8] text-[10px] font-black uppercase tracking-widest text-black transition-colors disabled:opacity-40"
+            className="flex-1 py-2 rounded-lg bg-[#6d9b7d] text-[10px] font-black uppercase tracking-widest text-black transition-colors disabled:opacity-40"
           >
             {saving ? 'Guardando…' : isEdit ? 'Actualizar' : 'Guardar'}
           </button>
@@ -847,14 +847,14 @@ const ModalIncidencia = React.memo(function ModalIncidencia({ editData, onClose 
           )}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">
-              Foto {!isEdit && <span className="text-red-400">(obligatoria)</span>}
+              Foto <span className="text-amber-500/70">(recomendada)</span>
             </label>
             <PhotoAttachment value={foto ? URL.createObjectURL(foto) : editData?.foto_url} onChange={setFoto} />
           </div>
         </div>
         <div className="px-5 py-3 border-t border-white/10 flex gap-2 shrink-0">
           <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-white/10 text-[10px] font-black text-slate-400 hover:text-white uppercase tracking-widest">Cancelar</button>
-          <button onClick={handleSubmit} disabled={!titulo.trim() || (!isEdit && !foto) || saving}
+          <button onClick={handleSubmit} disabled={!titulo.trim() || saving}
             className="flex-1 py-2 rounded-lg bg-amber-500 text-[10px] font-black uppercase tracking-widest text-black disabled:opacity-40"
           >{saving ? 'Guardando…' : isEdit ? 'Actualizar' : 'Registrar'}</button>
         </div>
@@ -924,7 +924,7 @@ const ModalCierreResultado = React.memo(function ModalCierreResultado({ resultad
         <div className="px-5 py-3 border-t border-white/10 flex gap-2">
           <button onClick={onClose} className="flex-1 py-2 rounded-lg border border-white/10 text-[10px] font-black text-slate-400 hover:text-white uppercase tracking-widest">Cerrar</button>
           <button onClick={onVerMañana}
-            className="flex-1 py-2 rounded-lg bg-[#38bdf8] text-[10px] font-black uppercase tracking-widest text-black"
+            className="flex-1 py-2 rounded-lg bg-[#6d9b7d] text-[10px] font-black uppercase tracking-widest text-black"
           >Ver planning de mañana</button>
         </div>
       </div>
@@ -1065,7 +1065,7 @@ export default function Trabajos() {
 
       {/* HEADER */}
       <header className={`w-full ${isDark ? 'bg-slate-900/80 border-white/10' : 'bg-white/90 border-slate-200'} border-b pl-14 pr-4 py-2 flex items-center gap-3 z-50`}>
-        <button onClick={() => navigate('/dashboard')} className="flex items-center gap-1.5 text-slate-400 hover:text-[#38bdf8] transition-colors">
+        <button onClick={() => navigate('/dashboard')} className="flex items-center gap-1.5 text-slate-400 hover:text-[#6d9b7d] transition-colors">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-[9px] font-black uppercase tracking-widest">Dashboard</span>
         </button>
@@ -1086,9 +1086,9 @@ export default function Trabajos() {
           )}
           <div className="relative" ref={pdfMenuRef}>
             <button type="button" onClick={() => setPdfMenuOpen(o => !o)} disabled={generandoPdf}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#38bdf8]/20 bg-[#38bdf8]/5 hover:bg-[#38bdf8]/10 text-[#38bdf8] text-[9px] font-black uppercase tracking-widest transition-colors disabled:opacity-50"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#6d9b7d]/20 bg-[#6d9b7d]/5 hover:bg-[#6d9b7d]/10 text-[#6d9b7d] text-[9px] font-black uppercase tracking-widest transition-colors disabled:opacity-50"
             >
-              {generandoPdf ? <span className="w-3 h-3 border-2 border-[#38bdf8]/20 border-t-[#38bdf8] rounded-full animate-spin" /> : null}
+              {generandoPdf ? <span className="w-3 h-3 border-2 border-[#6d9b7d]/20 border-t-[#6d9b7d] rounded-full animate-spin" /> : null}
               PDF {pdfMenuOpen ? '▲' : '▼'}
             </button>
             {pdfMenuOpen && (
@@ -1107,7 +1107,7 @@ export default function Trabajos() {
         {/* KPIs */}
         <div className="grid grid-cols-3 gap-3 mb-5">
           {[
-            { label: 'Planificados hoy', value: trabajosDia.length,  color: '#38bdf8' },
+            { label: 'Planificados hoy', value: trabajosDia.length,  color: '#6d9b7d' },
             { label: 'Inc. abiertas',    value: incAbiertas,          color: incAbiertas > 0 ? '#ef4444' : '#34d399' },
             { label: 'Urgentes',         value: incUrgentes,          color: incUrgentes > 0 ? '#ef4444' : '#64748b' },
           ].map(k => (
@@ -1161,7 +1161,7 @@ export default function Trabajos() {
               </p>
               <button
               onClick={() => { setEditTrabajo(null); setModalTrabajo(true); }}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#38bdf8]/10 border border-[#38bdf8]/30 text-[#38bdf8] text-[9px] font-black uppercase tracking-widest hover:bg-[#38bdf8]/20 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#6d9b7d]/10 border border-[#6d9b7d]/30 text-[#6d9b7d] text-[9px] font-black uppercase tracking-widest hover:bg-[#6d9b7d]/20 transition-colors"
               >
                 <Plus className="w-3 h-3" />Nuevo trabajo
               </button>

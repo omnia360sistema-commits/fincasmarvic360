@@ -71,7 +71,7 @@ export const FormAnotacionesLibres = React.memo(({ parteId, personales, esHoy, o
           {esHoy && parteId && (
             <button
               onClick={() => { setFormC(initC()); setEditIdC(null); setModalOpen(true); }}
-              className="flex items-center gap-1 px-2.5 py-1 rounded border border-[#38bdf8]/30 bg-[#38bdf8]/5 hover:bg-[#38bdf8]/15 text-[#38bdf8] text-[10px] font-black uppercase tracking-widest transition-all"
+              className="flex items-center gap-1 px-2.5 py-1 rounded border border-[#6d9b7d]/30 bg-[#6d9b7d]/5 hover:bg-[#6d9b7d]/15 text-[#6d9b7d] text-[10px] font-black uppercase tracking-widest transition-all"
             >
               <Plus className="w-3 h-3" /> Añadir
             </button>
@@ -104,9 +104,9 @@ export const FormAnotacionesLibres = React.memo(({ parteId, personales, esHoy, o
             </div>
             <div className="p-5 space-y-4">
               <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Texto libre *</label><AudioInput value={formC.texto} onChange={v => setFormC(p => ({ ...p, texto: v }))} placeholder="Qué gestiona, decisiones tomadas, observaciones..." rows={5} /></div>
-              <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Con quién</label><input type="text" value={formC.con_quien} onChange={e => setFormC(p => ({ ...p, con_quien: e.target.value }))} placeholder="Técnico CAAE, proveedor, gestor..." className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:border-[#38bdf8]/50 outline-none" /></div>
+              <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Con quién</label><input type="text" value={formC.con_quien} onChange={e => setFormC(p => ({ ...p, con_quien: e.target.value }))} placeholder="Técnico CAAE, proveedor, gestor..." className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2.5 text-sm text-white placeholder-slate-600 focus:border-[#6d9b7d]/50 outline-none" /></div>
               <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Dónde</label><AudioInput value={formC.donde} onChange={v => setFormC(p => ({ ...p, donde: v }))} placeholder="Murcia, nave, oficina..." rows={1} /></div>
-              <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Foto (opcional)</label><label className="flex items-center gap-2 px-3 py-2.5 bg-slate-800 border border-white/10 rounded-lg cursor-pointer hover:border-[#38bdf8]/30 transition-colors"><Camera className="w-4 h-4 text-slate-500 shrink-0" /><span className="text-[11px] text-slate-400 truncate">{formC.foto?.name ?? 'Capturar / Subir'}</span><input type="file" accept="image/*" capture="environment" className="sr-only" onChange={e => { const f = e.target.files?.[0] ?? null; setFormC(p => ({ ...p, foto: f })) }} /></label></div>
+              <div><label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5">Foto (opcional)</label><label className="flex items-center gap-2 px-3 py-2.5 bg-slate-800 border border-white/10 rounded-lg cursor-pointer hover:border-[#6d9b7d]/30 transition-colors"><Camera className="w-4 h-4 text-slate-500 shrink-0" /><span className="text-[11px] text-slate-400 truncate">{formC.foto?.name ?? 'Capturar / Subir'}</span><input type="file" accept="image/*" capture="environment" className="sr-only" onChange={e => { const f = e.target.files?.[0] ?? null; setFormC(p => ({ ...p, foto: f })) }} /></label></div>
               <p className="text-[10px] text-slate-600">La fecha y hora se registran automáticamente.</p>
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setModalOpen(false)} className="flex-1 py-2.5 rounded-lg border border-white/10 text-slate-400 text-sm hover:border-white/20 transition-colors">Cancelar</button>

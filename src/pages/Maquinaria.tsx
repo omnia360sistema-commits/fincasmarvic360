@@ -29,6 +29,7 @@ import {
 } from '../utils/pdfUtils';
 import { FINCAS_NOMBRES as FINCAS } from '../constants/farms';
 import { SelectWithOther, AudioInput, PhotoAttachment, RecordActions } from '../components/base';
+import { useCatalogoLocal } from '@/hooks/useCatalogoLocal';
 import { supabase } from '../integrations/supabase/client';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -189,7 +190,9 @@ const ModalTractor = React.memo(function ModalTractor({
     setFotoPreview(file ? URL.createObjectURL(file) : null);
   }
 
-  const marcasExistentes = MARCAS_TRACTOR_BASE;
+  // Catálogo local de marcas (persistido en localStorage) + marcas base
+  const catMarcas = useCatalogoLocal('maquinaria_marcas_tractor', MARCAS_TRACTOR_BASE);
+  const marcasExistentes = catMarcas.opciones;
 
   async function handleSubmit() {
     if (!form.matricula.trim()) return;
@@ -270,7 +273,7 @@ const ModalTractor = React.memo(function ModalTractor({
                 options={marcasExistentes}
                 value={form.marca}
                 onChange={v => set('marca', v)}
-                onCreateNew={v => set('marca', v)}
+                onCreateNew={v => { catMarcas.addOpcion(v); set('marca', v); }}
                 placeholder="Seleccionar marca..."
               />
             </div>
@@ -427,8 +430,10 @@ const ModalApero = React.memo(function ModalApero({
   const { data: ubicaciones = [] } = useUbicaciones();
   const { data: aperosExistentes = [] } = useAperos();
 
+  // Catálogo local de tipos de apero + tipos base + tipos ya usados en DB
+  const catTiposApero = useCatalogoLocal('maquinaria_tipos_apero', TIPOS_APERO_BASE);
   const tiposExistentes = Array.from(
-    new Set([...TIPOS_APERO_BASE, ...aperosExistentes.map(a => a.tipo)])
+    new Set([...catTiposApero.opciones, ...aperosExistentes.map(a => a.tipo)])
   ).sort();
 
   const [form, setForm] = useState({
@@ -502,7 +507,7 @@ const ModalApero = React.memo(function ModalApero({
               options={tiposExistentes}
               value={form.tipo}
               onChange={v => set('tipo', v)}
-              onCreateNew={v => set('tipo', v)}
+              onCreateNew={v => { catTiposApero.addOpcion(v); set('tipo', v); }}
               placeholder="Seleccionar tipo..."
             />
           </div>
@@ -636,10 +641,12 @@ const ModalUso = React.memo(function ModalUso({
   const tiposOpciones = tiposDB.map(t => t.nombre);
 
   async function handleSubmit() {
-    if (!form.personal_id || !fotoFile) return;
+    if (!form.personal_id) return;
     setSaving(true);
     try {
-      const foto_url = await uploadImage(fotoFile, 'parcel-images', `maquinaria_uso/${Date.now()}`);
+      const foto_url = fotoFile
+        ? await uploadImage(fotoFile, 'parcel-images', `maquinaria_uso/${Date.now()}`)
+        : null;
       const personalSel = personal.find(p => p.id === form.personal_id);
       await addMut.mutateAsync({
         tractor_id:       form.tractor_id || null,
@@ -787,10 +794,10 @@ const ModalUso = React.memo(function ModalUso({
           </div>
 
           <div>
-            <FieldLabel>Foto *</FieldLabel>
+            <FieldLabel>Foto (recomendada)</FieldLabel>
             <PhotoAttachment value={fotoPreview} onChange={handleFoto} />
             {!fotoFile && (
-              <p className="text-[8px] text-amber-500/80 mt-1">La foto es obligatoria.</p>
+              <p className="text-[8px] text-amber-500/80 mt-1">Modo piloto: foto opcional, recomendada para trazabilidad.</p>
             )}
           </div>
         </div>
@@ -801,7 +808,7 @@ const ModalUso = React.memo(function ModalUso({
           </button>
           <button
             onClick={handleSubmit}
-            disabled={!form.personal_id || !fotoFile || saving}
+            disabled={!form.personal_id || saving}
             className="btn-primary flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest disabled:opacity-40"
           >
             {saving ? 'Guardando…' : 'Guardar'}
@@ -1514,7 +1521,7 @@ export default function Maquinaria() {
 
       {/* HEADER */}
       <header className="w-full bg-white/90 dark:bg-slate-900/80 border-b border-slate-200 dark:border-white/10 pl-14 pr-4 py-2 flex items-center gap-3 z-50">
-        <button onClick={() => navigate('/dashboard')} className="flex items-center gap-1.5 text-slate-400 hover:text-[#38bdf8] transition-colors">
+        <button onClick={() => navigate('/dashboard')} className="flex items-center gap-1.5 text-slate-400 hover:text-[#6d9b7d] transition-colors">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-[9px] font-black uppercase tracking-widest">Dashboard</span>
         </button>
@@ -1533,10 +1540,10 @@ export default function Maquinaria() {
               type="button"
               onClick={() => setPdfMenuOpen(o => !o)}
               disabled={generandoPdf}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#38bdf8]/20 bg-[#38bdf8]/5 hover:bg-[#38bdf8]/10 text-[#38bdf8] text-[9px] font-black uppercase tracking-widest transition-colors disabled:opacity-50"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#6d9b7d]/20 bg-[#6d9b7d]/5 hover:bg-[#6d9b7d]/10 text-[#6d9b7d] text-[9px] font-black uppercase tracking-widest transition-colors disabled:opacity-50"
             >
               {generandoPdf && (
-                <span className="w-3 h-3 border-2 border-[#38bdf8]/20 border-t-[#38bdf8] rounded-full animate-spin" />
+                <span className="w-3 h-3 border-2 border-[#6d9b7d]/20 border-t-[#6d9b7d] rounded-full animate-spin" />
               )}
               PDF {pdfMenuOpen ? '▲' : '▼'}
             </button>

@@ -110,7 +110,7 @@ export default function ParcelHistory({
             <TabsTrigger
               key={value}
               value={value}
-              className="flex-1 text-[9px] font-black uppercase tracking-wide rounded-md data-[state=active]:bg-[#38bdf8]/20 data-[state=active]:text-[#38bdf8] text-slate-500 px-1 py-1.5"
+              className="flex-1 text-[9px] font-black uppercase tracking-wide rounded-md data-[state=active]:bg-[#6d9b7d]/20 data-[state=active]:text-[#6d9b7d] text-slate-500 px-1 py-1.5"
             >
               {label}
             </TabsTrigger>
@@ -215,7 +215,7 @@ export default function ParcelHistory({
                   <span className="text-[11px] font-black text-white">
                     {t.numero_albaran ?? 'Sin albarán'}
                   </span>
-                  <span className="text-[11px] font-black text-[#38bdf8]">
+                  <span className="text-[11px] font-black text-[#6d9b7d]">
                     {(t.peso_neto_kg ?? 0).toLocaleString()} kg
                   </span>
                 </div>
@@ -350,8 +350,8 @@ export default function ParcelHistory({
                         <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
                         <XAxis dataKey="fecha" stroke="#64748b" fontSize={9} tickLine={false} axisLine={false} />
                         <YAxis stroke="#64748b" fontSize={9} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
-                        <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '6px', fontSize: '10px' }} itemStyle={{ color: '#38bdf8', fontWeight: 'bold' }} />
-                        <Line type="monotone" dataKey={chartParam} name={chartParamMap[chartParam]} stroke="#38bdf8" strokeWidth={2} dot={{ r: 3, fill: '#38bdf8', strokeWidth: 0 }} activeDot={{ r: 5 }} />
+                        <Tooltip contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '6px', fontSize: '10px' }} itemStyle={{ color: '#6d9b7d', fontWeight: 'bold' }} />
+                        <Line type="monotone" dataKey={chartParam} name={chartParamMap[chartParam]} stroke="#6d9b7d" strokeWidth={2} dot={{ r: 3, fill: '#6d9b7d', strokeWidth: 0 }} activeDot={{ r: 5 }} />
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
@@ -436,7 +436,7 @@ export default function ParcelHistory({
                   onClick={() => setFiltroTipo(t)}
                   className={`text-[9px] uppercase tracking-wide px-2 py-0.5 rounded-full border transition-colors ${
                     filtroTipo === t
-                      ? 'border-[#38bdf8] text-[#38bdf8] bg-[#38bdf8]/10'
+                      ? 'border-[#6d9b7d] text-[#6d9b7d] bg-[#6d9b7d]/10'
                       : 'border-slate-600 text-slate-400'
                   }`}
                 >
@@ -464,7 +464,7 @@ export default function ParcelHistory({
                   lat: f.latitud ?? null,
                   lng: f.longitud ?? null,
                 })}
-                className="relative aspect-square rounded-lg overflow-hidden border border-white/5 hover:border-[#38bdf8]/40 transition-colors"
+                className="relative aspect-square rounded-lg overflow-hidden border border-white/5 hover:border-[#6d9b7d]/40 transition-colors"
               >
                 <img
                   src={f.url_imagen ?? ''}
@@ -517,7 +517,7 @@ export default function ParcelHistory({
                 </span>
               )}
               {fotoModal.tipo && (
-                <span className="text-[10px] text-[#38bdf8] uppercase tracking-wide">
+                <span className="text-[10px] text-[#6d9b7d] uppercase tracking-wide">
                   {fotoModal.tipo}
                 </span>
               )}
@@ -557,7 +557,7 @@ function Row({
     <div className="flex items-start justify-between gap-2">
       <span className="text-[9px] text-slate-500 uppercase tracking-wide shrink-0">{label}</span>
       <span className={`text-[11px] font-semibold text-right ${
-        accent ? 'text-[#38bdf8]' : 'text-white'
+        accent ? 'text-[#6d9b7d]' : 'text-white'
       } ${capitalize ? 'capitalize' : ''}`}>
         {value}
       </span>
@@ -568,7 +568,7 @@ function Row({
 function Spinner() {
   return (
     <div className="py-6 flex justify-center">
-      <div className="w-4 h-4 border-2 border-[#38bdf8] border-t-transparent rounded-full animate-spin" />
+      <div className="w-4 h-4 border-2 border-[#6d9b7d] border-t-transparent rounded-full animate-spin" />
     </div>
   )
 }

@@ -18,6 +18,7 @@ import {
 } from '../hooks/useInventario';
 import { usePersonal } from '../hooks/usePersonal';
 import { SelectWithOther, AudioInput, PhotoAttachment, RecordActions } from '../components/base';
+import { useCatalogoLocal } from '../hooks/useCatalogoLocal';
 import { uploadImage, buildStoragePath } from '../utils/uploadImage';
 import type { Tables } from '../integrations/supabase/types';
 
@@ -83,6 +84,8 @@ async function loadImageInv(url: string): Promise<{ data: string; w: number; h: 
 // ─── Componente ──────────────────────────────────────────────────────────────
 
 export default function Inventario() {
+  const catUnidades = useCatalogoLocal('inventario_unidades', UNIDADES_FRECUENTES);
+  const catReceptores = useCatalogoLocal('inventario_receptores', []);
   const [mainTab,        setMainTab]        = useState<MainTab>('ubicaciones');
   const [hoveredId,      setHoveredId]      = useState<string | null>(null);
   const [now,            setNow]            = useState(new Date());
@@ -432,14 +435,14 @@ export default function Inventario() {
         <div className="flex items-center gap-3">
           <button
             onClick={abrirModal}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[#38bdf8]/30 bg-[#38bdf8]/5 hover:bg-[#38bdf8]/10 text-[#38bdf8] transition-all"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-[#6d9b7d]/30 bg-[#6d9b7d]/5 hover:bg-[#6d9b7d]/10 text-[#6d9b7d] transition-all"
           >
             <FileText className="w-3 h-3" />
             <span className="text-[9px] font-black uppercase tracking-widest">Informe Global</span>
           </button>
           <button
             onClick={() => navigate('/dashboard')}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-slate-800/60 hover:border-[#38bdf8]/50 hover:text-[#38bdf8] transition-all text-slate-500 dark:text-slate-400"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-slate-800/60 hover:border-[#6d9b7d]/50 hover:text-[#6d9b7d] transition-all text-slate-500 dark:text-slate-400"
           >
             <ArrowLeft className="w-3 h-3" />
             <span className="text-[9px] font-black uppercase tracking-widest">Volver</span>
@@ -449,7 +452,7 @@ export default function Inventario() {
             <span className="text-[10px] text-green-500 dark:text-green-400 font-bold uppercase tracking-widest">Online</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <Server className="w-3 h-3 text-[#38bdf8]" />
+            <Server className="w-3 h-3 text-[#6d9b7d]" />
             <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">{horaStr}</span>
           </div>
         </div>
@@ -467,7 +470,7 @@ export default function Inventario() {
             onClick={() => setMainTab(id)}
             className={`flex items-center gap-1.5 px-4 py-2 text-[11px] font-black uppercase tracking-widest border-b-2 transition-all ${
               mainTab === id
-                ? 'border-[#38bdf8] text-[#38bdf8]'
+                ? 'border-[#6d9b7d] text-[#6d9b7d]'
                 : 'border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
             }`}
           >
@@ -484,7 +487,7 @@ export default function Inventario() {
         {mainTab === 'ubicaciones' && (
           <div className="flex flex-col items-center">
             <div className="flex flex-col items-center mb-10 relative">
-              <div className="absolute w-[600px] h-[300px] bg-[#38bdf8]/10 rounded-full blur-[120px] opacity-50 pointer-events-none" />
+              <div className="absolute w-[600px] h-[300px] bg-[#6d9b7d]/10 rounded-full blur-[120px] opacity-50 pointer-events-none" />
               <img
                 src="/MARVIC_logo.png"
                 className="w-full max-w-[480px] opacity-90 relative z-10"
@@ -494,7 +497,7 @@ export default function Inventario() {
                     : 'drop-shadow(0 0 20px rgba(56,189,248,0.2))',
                 }}
               />
-              <div className="mt-4 h-px w-64 bg-gradient-to-r from-transparent via-[#38bdf8]/40 to-transparent" />
+              <div className="mt-4 h-px w-64 bg-gradient-to-r from-transparent via-[#6d9b7d]/40 to-transparent" />
               <p className="mt-3 text-[10px] tracking-[0.5em] uppercase font-black text-slate-400 dark:text-slate-500">
                 Inventario de Activos Físicos
               </p>
@@ -507,7 +510,7 @@ export default function Inventario() {
                 { label: 'Registros',   value: isLoadingTotal ? '…' : String(totalRegistros ?? 0), icon: Package },
               ].map(({ label, value, icon: Icon }) => (
                 <div key={label} className="bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-white/10 rounded-lg px-4 py-3 text-center shadow-sm dark:shadow-none">
-                  <Icon className="w-4 h-4 text-[#38bdf8] mx-auto mb-1" />
+                  <Icon className="w-4 h-4 text-[#6d9b7d] mx-auto mb-1" />
                   <p className="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">{label}</p>
                   <p className="text-xl font-black text-slate-900 dark:text-white mt-0.5">{value}</p>
                 </div>
@@ -516,12 +519,12 @@ export default function Inventario() {
 
             <div className="w-full max-w-3xl">
               <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.3em] mb-3 flex items-center gap-2">
-                <Warehouse className="w-3.5 h-3.5 text-[#38bdf8]" />
+                <Warehouse className="w-3.5 h-3.5 text-[#6d9b7d]" />
                 Acceso directo por ubicación
               </p>
               {isLoading ? (
                 <div className="flex items-center justify-center py-16">
-                  <span className="text-[11px] font-black text-[#38bdf8] uppercase tracking-widest animate-pulse">Cargando...</span>
+                  <span className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-widest animate-pulse">Cargando...</span>
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -533,18 +536,18 @@ export default function Inventario() {
                       onClick={() => navigate(`/inventario/${ub.id}`)}
                       className={`text-left p-3 rounded-lg border transition-all duration-200 ${
                         hoveredId === ub.id
-                          ? 'bg-[#38bdf8]/10 border-[#38bdf8]/50 shadow-[0_0_15px_rgba(56,189,248,0.1)]'
+                          ? 'bg-[#6d9b7d]/10 border-[#6d9b7d]/50 shadow-[0_0_15px_rgba(56,189,248,0.1)]'
                           : 'bg-white dark:bg-slate-900/50 border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 shadow-sm dark:shadow-none'
                       }`}
                     >
-                      <p className={`text-[10px] font-black uppercase tracking-wide transition-colors leading-tight ${hoveredId === ub.id ? 'text-[#38bdf8]' : 'text-slate-800 dark:text-white'}`}>
+                      <p className={`text-[10px] font-black uppercase tracking-wide transition-colors leading-tight ${hoveredId === ub.id ? 'text-[#6d9b7d]' : 'text-slate-800 dark:text-white'}`}>
                         {ub.nombre}
                       </p>
                       <div className="flex items-center gap-2 mt-1.5">
                         <Tag className="w-2.5 h-2.5 text-slate-400 dark:text-slate-500" />
                         <span className="text-[9px] text-slate-400 dark:text-slate-500">7 categorías</span>
                       </div>
-                      <div className={`mt-2 h-px transition-all ${hoveredId === ub.id ? 'bg-[#38bdf8]/40' : 'bg-slate-200 dark:bg-white/5'}`} />
+                      <div className={`mt-2 h-px transition-all ${hoveredId === ub.id ? 'bg-[#6d9b7d]/40' : 'bg-slate-200 dark:bg-white/5'}`} />
                       <div className="flex items-center gap-1 mt-1.5">
                         {(() => {
                           const count = conteos?.get(ub.id) ?? 0;
@@ -661,13 +664,13 @@ export default function Inventario() {
                   {/* Cabecera fila */}
                   <div className="flex items-center justify-between px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <button onClick={() => setExpandedProvId(expandedProvId === p.id ? null : p.id)} className="text-slate-400 hover:text-[#38bdf8] transition-colors">
+                      <button onClick={() => setExpandedProvId(expandedProvId === p.id ? null : p.id)} className="text-slate-400 hover:text-[#6d9b7d] transition-colors">
                         {expandedProvId === p.id ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                       </button>
                       <div>
                         <p className="text-sm font-bold text-slate-900 dark:text-white">{p.nombre}</p>
                         <p className="text-[10px] text-slate-400">
-                          {p.codigo_interno && <span className="font-mono mr-2 text-[#38bdf8]">{p.codigo_interno}</span>}
+                          {p.codigo_interno && <span className="font-mono mr-2 text-[#6d9b7d]">{p.codigo_interno}</span>}
                           {p.tipo ? TIPOS_PROVEEDOR_LABEL[p.tipo] ?? p.tipo : ''}
                           {p.telefono ? ` · ${p.telefono}` : ''}
                         </p>
@@ -753,7 +756,7 @@ export default function Inventario() {
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl">
             <div className="sticky top-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-white/10 px-5 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Filter className="w-3.5 h-3.5 text-[#38bdf8]" />
+                <Filter className="w-3.5 h-3.5 text-[#6d9b7d]" />
                 <span className="text-sm font-black uppercase tracking-widest text-slate-900 dark:text-white">Informe Global de Inventario</span>
               </div>
               <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white text-xl leading-none">×</button>
@@ -764,11 +767,11 @@ export default function Inventario() {
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">Desde</label>
-                    <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-[#38bdf8]/50 outline-none" />
+                    <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-[#6d9b7d]/50 outline-none" />
                   </div>
                   <div>
                     <label className="block text-[10px] text-slate-500 dark:text-slate-400 mb-1">Hasta</label>
-                    <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-[#38bdf8]/50 outline-none" />
+                    <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:border-[#6d9b7d]/50 outline-none" />
                   </div>
                 </div>
               </div>
@@ -776,7 +779,7 @@ export default function Inventario() {
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Ubicaciones ({selUbics.size}/{ubicaciones.length})</p>
                   <div className="flex gap-2">
-                    <button onClick={() => setSelUbics(new Set(ubicaciones.map(u => u.id)))} className="text-[9px] text-[#38bdf8] hover:underline font-bold uppercase">Todas</button>
+                    <button onClick={() => setSelUbics(new Set(ubicaciones.map(u => u.id)))} className="text-[9px] text-[#6d9b7d] hover:underline font-bold uppercase">Todas</button>
                     <button onClick={() => setSelUbics(new Set())} className="text-[9px] text-slate-400 hover:underline uppercase">Ninguna</button>
                   </div>
                 </div>
@@ -793,7 +796,7 @@ export default function Inventario() {
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Categorías ({selCats.size}/{categorias.length})</p>
                   <div className="flex gap-2">
-                    <button onClick={() => setSelCats(new Set(categorias.map(c => c.id)))} className="text-[9px] text-[#38bdf8] hover:underline font-bold uppercase">Todas</button>
+                    <button onClick={() => setSelCats(new Set(categorias.map(c => c.id)))} className="text-[9px] text-[#6d9b7d] hover:underline font-bold uppercase">Todas</button>
                     <button onClick={() => setSelCats(new Set())} className="text-[9px] text-slate-400 hover:underline uppercase">Ninguna</button>
                   </div>
                 </div>
@@ -894,10 +897,10 @@ export default function Inventario() {
                 <div>
                   <label className="block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">Unidad</label>
                   <SelectWithOther
-                    options={UNIDADES_FRECUENTES}
+                    options={catUnidades.opciones}
                     value={entradaUnidad}
                     onChange={v => setEntradaUnidad(v)}
-                    onCreateNew={v => setEntradaUnidad(v)}
+                    onCreateNew={v => { catUnidades.addOpcion(v); setEntradaUnidad(v); }}
                     placeholder="kg"
                   />
                 </div>
@@ -917,10 +920,10 @@ export default function Inventario() {
               <div>
                 <label className="block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">Receptor</label>
                 <SelectWithOther
-                  options={personal.filter(p => p.activo).map(p => p.nombre)}
+                  options={Array.from(new Set([...personal.filter(p => p.activo).map(p => p.nombre), ...catReceptores.opciones]))}
                   value={entradaReceptor}
                   onChange={v => setEntradaReceptor(v)}
-                  onCreateNew={v => setEntradaReceptor(v)}
+                  onCreateNew={v => { catReceptores.addOpcion(v); setEntradaReceptor(v); }}
                   placeholder="Seleccionar receptor"
                 />
               </div>
@@ -1009,7 +1012,7 @@ export default function Inventario() {
                 <button
                   type="button"
                   onClick={() => setProvActivo(v => !v)}
-                  className={`relative w-10 h-5 rounded-full transition-colors ${provActivo ? 'bg-[#38bdf8]' : 'bg-slate-400 dark:bg-slate-600'}`}
+                  className={`relative w-10 h-5 rounded-full transition-colors ${provActivo ? 'bg-[#6d9b7d]' : 'bg-slate-400 dark:bg-slate-600'}`}
                 >
                   <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${provActivo ? 'left-5' : 'left-0.5'}`} />
                 </button>
@@ -1052,10 +1055,10 @@ export default function Inventario() {
                 <div>
                   <label className="block text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 mb-1">Unidad</label>
                   <SelectWithOther
-                    options={UNIDADES_FRECUENTES}
+                    options={catUnidades.opciones}
                     value={precioUnidad}
                     onChange={v => setPrecioUnidad(v)}
-                    onCreateNew={v => setPrecioUnidad(v)}
+                    onCreateNew={v => { catUnidades.addOpcion(v); setPrecioUnidad(v); }}
                     placeholder="kg"
                   />
                 </div>

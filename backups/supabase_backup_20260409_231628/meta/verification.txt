@@ -1,4 +1,0 @@
-storage_files=32
-archive=/home/pedro/Escritorio/PC/fincasmarvic-main/backups/supabase_backup_20260409_231628.tar.gz
-archive_sha256=/home/pedro/Escritorio/PC/fincasmarvic-main/backups/supabase_backup_20260409_231628.tar.gz.sha256
-db_files_ok=true

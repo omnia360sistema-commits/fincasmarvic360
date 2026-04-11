@@ -16,6 +16,8 @@ import {
   CATEGORIA_LABELS, CATEGORIA_COLORS, TIPO_EXTERNO_LABELS,
 } from '../hooks/usePersonal';
 import { SelectWithOther, AudioInput, PhotoAttachment, RecordActions } from '@/components/base';
+import { useCatalogoLocal } from '@/hooks/useCatalogoLocal';
+import { toast } from '@/hooks/use-toast';
 import { uploadImage } from '../utils/uploadImage';
 import { FINCAS_NOMBRES } from '../constants/farms';
 
@@ -25,7 +27,7 @@ type TabType = 'operario_campo' | 'encargado' | 'conductor_maquinaria' | 'conduc
 
 const TABS: { id: TabType; label: string; color: string }[] = [
   { id: 'operario_campo',       label: 'Operarios',  color: '#22c55e' },
-  { id: 'encargado',            label: 'Encargados',  color: '#38bdf8' },
+  { id: 'encargado',            label: 'Encargados',  color: '#6d9b7d' },
   { id: 'conductor_maquinaria', label: 'Maquinaria',  color: '#fb923c' },
   { id: 'conductor_camion',     label: 'Camion',      color: '#a78bfa' },
   { id: 'externo',              label: 'Externa',     color: '#f472b6' },
@@ -173,6 +175,9 @@ function ModalPersonal({
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState('');
 
+  const catLicencias = useCatalogoLocal('personal_licencias', LICENCIAS_OPCIONES);
+  const catCarnets   = useCatalogoLocal('personal_carnets',   CARNET_OPCIONES);
+
   const color = CATEGORIA_COLORS[categoria];
 
   async function handleSubmit(e: React.FormEvent) {
@@ -294,7 +299,7 @@ function ModalPersonal({
                 options={FINCAS_NOMBRES}
                 value={fincaAsignada}
                 onChange={setFincaAsignada}
-                onCreateNew={v => setFincaAsignada(v)}
+                onCreateNew={() => toast({ title: 'Fincas fijas', description: 'Las fincas se gestionan desde el GeoJSON principal.' })}
                 placeholder="Seleccionar finca..."
               />
             </>
@@ -305,10 +310,10 @@ function ModalPersonal({
               <hr className="border-white/5" />
               <SelectWithOther
                 label="Licencias"
-                options={LICENCIAS_OPCIONES}
+                options={catLicencias.opciones}
                 value={licencias}
                 onChange={setLicencias}
-                onCreateNew={v => setLicencias(v)}
+                onCreateNew={v => { catLicencias.addOpcion(v); setLicencias(v); }}
                 placeholder="Tipo de licencia..."
               />
             </>
@@ -319,10 +324,10 @@ function ModalPersonal({
               <hr className="border-white/5" />
               <SelectWithOther
                 label="Tipo de carnet"
-                options={CARNET_OPCIONES}
+                options={catCarnets.opciones}
                 value={carnetTipo}
                 onChange={setCarnetTipo}
-                onCreateNew={v => setCarnetTipo(v)}
+                onCreateNew={v => { catCarnets.addOpcion(v); setCarnetTipo(v); }}
                 placeholder="Seleccionar carnet..."
               />
               <div>
@@ -897,7 +902,7 @@ export default function Personal() {
         <div className="grid grid-cols-5 gap-2">
           {[
             { label: 'Operarios',  cat: 'operario_campo' as CategoriaPersonal,       color: '#22c55e', externo: false },
-            { label: 'Encargados', cat: 'encargado' as CategoriaPersonal,             color: '#38bdf8', externo: false },
+            { label: 'Encargados', cat: 'encargado' as CategoriaPersonal,             color: '#6d9b7d', externo: false },
             { label: 'Maquinaria', cat: 'conductor_maquinaria' as CategoriaPersonal,  color: '#fb923c', externo: false },
             { label: 'Camion',     cat: 'conductor_camion' as CategoriaPersonal,      color: '#a78bfa', externo: false },
             { label: 'Externa',    cat: null,                                          color: '#f472b6', externo: true },

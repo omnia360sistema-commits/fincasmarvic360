@@ -4,6 +4,7 @@ import type { TablesInsert } from '@/integrations/supabase/types'
 import { logLiaEvento } from '@/utils/liaLogger'
 import { useAuth } from '@/context/AuthContext'
 import { useCreatedBy } from './useCreatedBy'
+import { toast } from '@/hooks/use-toast'
 /*
 ================================================
 1. PARTE POR FECHA — consulta el registro cabecera
@@ -59,6 +60,7 @@ export function useEnsureParteHoy() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -117,6 +119,7 @@ export function useAddEstadoFinca() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -169,6 +172,7 @@ export function useAddTrabajo() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -221,6 +225,7 @@ export function useAddPersonal() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -278,6 +283,7 @@ export function useAddResiduos() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -314,6 +320,7 @@ export function useUpdateParteDiario() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -345,6 +352,7 @@ export function useDeleteEntradaParte() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -399,6 +407,7 @@ export function useAddGanadero() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
@@ -441,81 +450,19 @@ export function useAddCierreJornada() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   })
 }
 
 /*
 ================================================
-15. CERRAR JORNADA — lógica completa de arrastre
+15. CERRAR JORNADA — ELIMINADO (canónico en useTrabajos.ts)
 ================================================
 */
-
-export function useCerrarJornada() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async ({ fecha, parteId }: { fecha: string; parteId: string }) => {
-      const { data: { user } } = await supabase.auth.getUser();
-      const currentUser = user?.email || 'sistema';
-      const { data, error } = await supabase.rpc('cerrar_jornada_atomica', {
-        p_fecha: fecha,
-        p_usuario: currentUser,
-      });
-      if (error) throw error;
-      
-      const res = data as unknown as Record<string, number>;
-      return {
-        ejecutados: res.ejecutados,
-        pendientes: res.pendientes,
-        arrastrados: res.arrastrados,
-        incidenciasArrastradas: res.incidenciasNuevasTrabajo
-      };
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['cierres_jornada'] })
-      qc.invalidateQueries({ queryKey: ['trabajos_registro'] })
-      qc.invalidateQueries({ queryKey: ['trabajos_incidencias'] })
-    },
-    onError: (error: Error) => {
-      console.error('[Hook Error]:', error.message);
-    },
-  })
-}
 
 /*
 ================================================
-16. UPDATE ESTADO TRABAJO — estado_planificacion + prioridad
+16. UPDATE ESTADO TRABAJO — ELIMINADO (canónico en useTrabajos.ts)
 ================================================
 */
-
-export function useUpdateEstadoTrabajo() {
-  const qc = useQueryClient()
-  return useMutation({
-    mutationFn: async ({
-      id,
-      estado_planificacion,
-      prioridad,
-    }: {
-      id: string
-      estado_planificacion: string
-      prioridad?: string
-    }) => {
-      const patch: { estado_planificacion: string; prioridad?: string } = { estado_planificacion }
-      if (prioridad) patch.prioridad = prioridad
-      const { data, error } = await supabase
-        .from('trabajos_registro')
-        .update(patch)
-        .eq('id', id)
-        .select()
-        .single()
-      if (error) throw error
-      return data
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['trabajos_registro'] })
-    },
-    onError: (error: Error) => {
-      console.error('[Hook Error]:', error.message);
-    },
-  })
-}

@@ -29,6 +29,7 @@ import Materiales from "./pages/Materiales";
 import Auditoria from "./pages/Auditoria";
 import Login from "./pages/Login";
 import { ErrorBoundary } from "./pages/ErrorBoundary";
+import { PWAUpdatePrompt } from "./components/PWAUpdatePrompt";
 
 const queryClient = new QueryClient();
 
@@ -83,6 +84,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <PWAUpdatePrompt />
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AuthProvider>
               <ErrorBoundary>

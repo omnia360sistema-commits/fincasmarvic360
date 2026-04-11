@@ -183,7 +183,7 @@ export default function UploadParcelPhoto({ parcelId, onClose }: Props) {
           className="w-full h-12 rounded-2xl text-base font-bold"
         >
           {uploading ? (
-            <><div className="w-4 h-4 border-2 border-[#38bdf8] border-t-transparent rounded-full animate-spin mr-2" /> Subiendo...</>
+            <><div className="w-4 h-4 border-2 border-[#6d9b7d] border-t-transparent rounded-full animate-spin mr-2" /> Subiendo...</>
           ) : (
             <><Upload className="w-4 h-4 mr-2" /> Subir foto</>
           )}

@@ -22,7 +22,7 @@ export const NavegadorFechas = React.memo(({
       </button>
       <span className="text-[11px] font-bold text-white min-w-[140px] text-center">
         {formatFechaNav(fecha)}
-        {esHoy && <span className="ml-1 text-[9px] text-[#38bdf8] font-black">HOY</span>}
+        {esHoy && <span className="ml-1 text-[9px] text-[#6d9b7d] font-black">HOY</span>}
       </span>
       <button
         onClick={onSiguiente}

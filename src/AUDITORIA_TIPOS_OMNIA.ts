@@ -49,7 +49,7 @@ export const TIPO_TRABAJO_CATEGORIA_LABELS: Record<TipoTrabajoCategoria, string>
 
 export const TIPO_TRABAJO_CATEGORIA_COLORS: Record<TipoTrabajoCategoria, string> = {
   [TipoTrabajoCategoria.OPERARIO_CAMPO]: '#22c55e',     // green
-  [TipoTrabajoCategoria.ENCARGADO]: '#38bdf8',          // sky
+  [TipoTrabajoCategoria.ENCARGADO]: '#6d9b7d',          // sky
   [TipoTrabajoCategoria.CONDUCTOR_MAQUINARIA]: '#fb923c', // orange
   [TipoTrabajoCategoria.CONDUCTOR_CAMION]: '#a78bfa',   // purple
 };

@@ -1,12 +1,14 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   ArrowLeft, AlertTriangle, CheckCircle2, Clock,
   Tractor, Truck, FileWarning, Leaf, ShieldAlert,
-  CalendarClock, Activity,
+  CalendarClock, Activity, FileText,
 } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
+import { PDFExportModal, type PDFExportParams } from '@/components/base'
+import { generarPDFCorporativoBase, pdfCorporateSection, pdfCorporateTable } from '@/utils/pdfUtils'
 
 // ── Tipos de alerta ───────────────────────────────────────────────────────────
 
@@ -169,10 +171,68 @@ const MODULO_ICON: Record<string, React.ElementType> = {
 export default function EstadoGeneral() {
   const navigate = useNavigate()
   const { data: alertas = [], isLoading, refetch } = useAlertas()
+  const [pdfOpen, setPdfOpen] = useState(false)
 
   const criticas = alertas.filter(a => a.severidad === 'critica').length
   const urgentes = alertas.filter(a => a.severidad === 'urgente').length
   const avisos   = alertas.filter(a => a.severidad === 'aviso').length
+
+  const handleExportPDF = async (_: PDFExportParams) => {
+    const filtered = _.filtros.solo_criticas
+      ? alertas.filter(a => a.severidad === 'critica')
+      : alertas
+
+    const porSeveridad = filtered.reduce((acc, a) => {
+      acc[a.severidad] = (acc[a.severidad] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    const porModulo = filtered.reduce((acc, a) => {
+      acc[a.modulo] = (acc[a.modulo] || 0) + 1
+      return acc
+    }, {} as Record<string, number>)
+
+    await generarPDFCorporativoBase({
+      titulo: 'Estado General del Sistema',
+      subtitulo: `Panel de alertas activas · ${new Date().toLocaleDateString('es-ES')}`,
+      fecha: new Date(),
+      filename: `estado_general_${new Date().toISOString().slice(0, 10)}.pdf`,
+      accentColor: [148, 163, 184], // slate
+      bloques: [
+        (ctx) => {
+          pdfCorporateSection(ctx, 'Resumen Ejecutivo')
+          ctx.kpiRow([
+            { label: 'Críticas', value: porSeveridad.critica ?? 0 },
+            { label: 'Urgentes', value: porSeveridad.urgente ?? 0 },
+            { label: 'Avisos', value: porSeveridad.aviso ?? 0 },
+            { label: 'Total', value: filtered.length },
+          ])
+          ctx.y += 2
+          ctx.writeLabel('Distribución por módulo')
+          Object.entries(porModulo).forEach(([mod, count]) => {
+            ctx.writeLine(`  ${mod}`, String(count))
+          })
+          ctx.y += 4
+        },
+        (ctx) => {
+          if (filtered.length === 0) return
+          pdfCorporateSection(ctx, 'Detalle de Alertas')
+          const rows = filtered.map(a => [
+            a.severidad.toUpperCase(),
+            a.modulo,
+            a.titulo,
+            a.detalle,
+          ])
+          pdfCorporateTable(
+            ctx,
+            ['Severidad', 'Módulo', 'Título', 'Detalle'],
+            [24, 28, 54, 76],
+            rows,
+          )
+        },
+      ],
+    })
+  }
 
   return (
     <div className="min-h-screen bg-[#020617] text-white flex flex-col">
@@ -187,15 +247,36 @@ export default function EstadoGeneral() {
           <span className="text-[10px] font-black uppercase tracking-widest">Volver</span>
         </button>
         <div className="w-px h-4 bg-white/10" />
-        <Activity className="w-4 h-4 text-[#38bdf8]" />
-        <span className="text-[10px] font-black uppercase tracking-widest text-[#38bdf8]">Estado General</span>
-        <button
-          onClick={() => refetch()}
-          className="ml-auto text-[9px] font-black text-slate-500 hover:text-white uppercase tracking-widest transition-colors"
-        >
-          Actualizar
-        </button>
+        <Activity className="w-4 h-4 text-[#6d9b7d]" />
+        <span className="text-[10px] font-black uppercase tracking-widest text-[#6d9b7d]">Estado General</span>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={() => setPdfOpen(true)}
+            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-500/20 border border-slate-500/40 text-slate-300 hover:bg-slate-500/30 transition-colors text-[9px] font-black uppercase tracking-widest"
+          >
+            <FileText className="w-3 h-3" />
+            <span className="hidden sm:inline">PDF</span>
+          </button>
+          <button
+            onClick={() => refetch()}
+            className="text-[9px] font-black text-slate-500 hover:text-white uppercase tracking-widest transition-colors"
+          >
+            Actualizar
+          </button>
+        </div>
       </header>
+
+      <PDFExportModal
+        open={pdfOpen}
+        onClose={() => setPdfOpen(false)}
+        title="Estado General"
+        subtitle="Panel de alertas activas del sistema"
+        accentColor="#94a3b8"
+        filtros={[
+          { key: 'solo_criticas', label: 'Solo alertas críticas', default: false },
+        ]}
+        onExport={handleExportPDF}
+      />
 
       <main className="flex-1 overflow-y-auto px-4 py-5 max-w-3xl w-full mx-auto space-y-5">
 
@@ -215,7 +296,7 @@ export default function EstadoGeneral() {
 
         {isLoading && (
           <div className="flex items-center justify-center py-16">
-            <span className="w-5 h-5 border-2 border-white/10 border-t-[#38bdf8] rounded-full animate-spin" />
+            <span className="w-5 h-5 border-2 border-white/10 border-t-[#6d9b7d] rounded-full animate-spin" />
           </div>
         )}
 
@@ -235,7 +316,7 @@ export default function EstadoGeneral() {
           return (
             <div key={sev}>
               <div className="flex items-center gap-2 mb-2">
-                <cfg.icon className="w-3.5 h-3.5" style={{ color: sev === 'critica' ? '#f87171' : sev === 'urgente' ? '#fbbf24' : '#38bdf8' }} />
+                <cfg.icon className="w-3.5 h-3.5" style={{ color: sev === 'critica' ? '#f87171' : sev === 'urgente' ? '#fbbf24' : '#6d9b7d' }} />
                 <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">
                   {cfg.label} — {grupo.length} alerta{grupo.length !== 1 ? 's' : ''}
                 </span>

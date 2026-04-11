@@ -20,7 +20,9 @@ import {
 } from '../hooks/useLogistica';
 import { usePersonal, Personal } from '../hooks/usePersonal';
 import { useUbicaciones } from '../hooks/useInventario';
+import { useCatalogoLocal } from '@/hooks/useCatalogoLocal';
 import { SelectWithOther, AudioInput, PhotoAttachment, RecordActions } from '@/components/base';
+import { toast } from '@/hooks/use-toast';
 import { uploadImage, buildStoragePath } from '../utils/uploadImage';
 import {
   generarPDFCorporativoBase,
@@ -126,6 +128,12 @@ const ModalCamion = React.memo(function ModalCamion({
   const updMut = useUpdateCamion();
   const isEdit = !!initial;
 
+  // Catálogos locales persistidos
+  const catMarcas = useCatalogoLocal('logistica_marcas_camion', MARCAS_CAMION);
+  const catModelos = useCatalogoLocal('logistica_modelos_camion', MODELOS_CAMION);
+  const catTipos = useCatalogoLocal('logistica_tipos_camion', TIPOS_CAMION);
+  const catEmpresas = useCatalogoLocal('logistica_empresas_transporte', EMPRESAS_TRANSP);
+
   const [form, setForm] = useState({
     matricula:                initial?.matricula ?? '',
     marca:                    initial?.marca ?? '',
@@ -213,11 +221,11 @@ const ModalCamion = React.memo(function ModalCamion({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={LABEL}>Marca</label>
-              <SelectWithOther options={MARCAS_CAMION} value={form.marca} onChange={v => set('marca', v)} onCreateNew={v => set('marca', v)} placeholder="Seleccionar marca" />
+              <SelectWithOther options={catMarcas.opciones} value={form.marca} onChange={v => set('marca', v)} onCreateNew={v => { catMarcas.addOpcion(v); set('marca', v); }} placeholder="Seleccionar marca" />
             </div>
             <div>
               <label className={LABEL}>Modelo</label>
-              <SelectWithOther options={MODELOS_CAMION} value={form.modelo} onChange={v => set('modelo', v)} onCreateNew={v => set('modelo', v)} placeholder="Seleccionar modelo" />
+              <SelectWithOther options={catModelos.opciones} value={form.modelo} onChange={v => set('modelo', v)} onCreateNew={v => { catModelos.addOpcion(v); set('modelo', v); }} placeholder="Seleccionar modelo" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -232,11 +240,11 @@ const ModalCamion = React.memo(function ModalCamion({
           </div>
           <div>
             <label className={LABEL}>Tipo</label>
-            <SelectWithOther options={TIPOS_CAMION} value={form.tipo} onChange={v => set('tipo', v)} onCreateNew={v => set('tipo', v)} placeholder="Seleccionar tipo" />
+            <SelectWithOther options={catTipos.opciones} value={form.tipo} onChange={v => set('tipo', v)} onCreateNew={v => { catTipos.addOpcion(v); set('tipo', v); }} placeholder="Seleccionar tipo" />
           </div>
           <div>
             <label className={LABEL}>Empresa de transporte</label>
-            <SelectWithOther options={EMPRESAS_TRANSP} value={form.empresa_transporte} onChange={v => set('empresa_transporte', v)} onCreateNew={v => set('empresa_transporte', v)} placeholder="Seleccionar empresa" />
+            <SelectWithOther options={catEmpresas.opciones} value={form.empresa_transporte} onChange={v => set('empresa_transporte', v)} onCreateNew={v => { catEmpresas.addOpcion(v); set('empresa_transporte', v); }} placeholder="Seleccionar empresa" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
@@ -277,7 +285,7 @@ const ModalCamion = React.memo(function ModalCamion({
                 options={ubicaciones.map(u => u.nombre)}
                 value={ubicaciones.find(u => u.id === form.ubicacion_id)?.nombre ?? ''}
                 onChange={v => { const u = ubicaciones.find(x => x.nombre === v); if (u) set('ubicacion_id', u.id); }}
-                onCreateNew={() => {}}
+                onCreateNew={() => toast({ title: "Valor no persistible", description: "Crea este registro desde su módulo correspondiente." })}
                 placeholder="Sin asignación"
               />
             </div>
@@ -317,6 +325,10 @@ const ModalVehiculo = React.memo(function ModalVehiculo({
   const addMut = useAddVehiculoEmpresa();
   const updMut = useUpdateVehiculoEmpresa();
   const isEdit = !!initial;
+
+  // Catálogos locales persistidos
+  const catMarcasVh = useCatalogoLocal('logistica_marcas_vehiculo', MARCAS_VH);
+  const catModelosVh = useCatalogoLocal('logistica_modelos_vehiculo', MODELOS_VH);
 
   const [form, setForm] = useState({
     matricula:             initial?.matricula ?? '',
@@ -398,11 +410,11 @@ const ModalVehiculo = React.memo(function ModalVehiculo({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={LABEL}>Marca</label>
-              <SelectWithOther options={MARCAS_VH} value={form.marca} onChange={v => set('marca', v)} onCreateNew={v => set('marca', v)} placeholder="Seleccionar marca" />
+              <SelectWithOther options={catMarcasVh.opciones} value={form.marca} onChange={v => set('marca', v)} onCreateNew={v => { catMarcasVh.addOpcion(v); set('marca', v); }} placeholder="Seleccionar marca" />
             </div>
             <div>
               <label className={LABEL}>Modelo</label>
-              <SelectWithOther options={MODELOS_VH} value={form.modelo} onChange={v => set('modelo', v)} onCreateNew={v => set('modelo', v)} placeholder="Seleccionar modelo" />
+              <SelectWithOther options={catModelosVh.opciones} value={form.modelo} onChange={v => set('modelo', v)} onCreateNew={v => { catModelosVh.addOpcion(v); set('modelo', v); }} placeholder="Seleccionar modelo" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -423,7 +435,7 @@ const ModalVehiculo = React.memo(function ModalVehiculo({
               options={conductores.map(c => c.nombre)}
               value={conductores.find(c => c.id === form.conductor_habitual_id)?.nombre ?? ''}
               onChange={v => { const c = conductores.find(x => x.nombre === v); set('conductor_habitual_id', c?.id ?? ''); }}
-              onCreateNew={() => {}}
+              onCreateNew={() => toast({ title: "Valor no persistible", description: "Crea este registro desde su módulo correspondiente." })}
               placeholder="Sin asignación"
             />
           </div>
@@ -456,7 +468,7 @@ const ModalVehiculo = React.memo(function ModalVehiculo({
                 options={ubicaciones.map(u => u.nombre)}
                 value={ubicaciones.find(u => u.id === form.ubicacion_id)?.nombre ?? ''}
                 onChange={v => { const u = ubicaciones.find(x => x.nombre === v); if (u) set('ubicacion_id', u.id); }}
-                onCreateNew={() => {}}
+                onCreateNew={() => toast({ title: "Valor no persistible", description: "Crea este registro desde su módulo correspondiente." })}
                 placeholder="Sin asignación"
               />
             </div>
@@ -500,7 +512,8 @@ const ModalViaje = React.memo(function ModalViaje({
   const updMut = useUpdateViaje();
   const isEdit = !!initial;
 
-  const destinos = [...FINCAS, ...DESTINOS_PRESET];
+  const catDestinos = useCatalogoLocal('logistica_destinos', [...FINCAS, ...DESTINOS_PRESET]);
+  const destinos = catDestinos.opciones;
 
   const [form, setForm] = useState({
     personal_id:           initial?.personal_id ?? '',
@@ -566,7 +579,7 @@ const ModalViaje = React.memo(function ModalViaje({
                 options={conductores.map(c => c.nombre)}
                 value={conductores.find(c => c.id === form.personal_id)?.nombre ?? ''}
                 onChange={v => { const c = conductores.find(x => x.nombre === v); set('personal_id', c?.id ?? ''); }}
-                onCreateNew={() => {}}
+                onCreateNew={() => toast({ title: "Valor no persistible", description: "Crea este registro desde su módulo correspondiente." })}
                 placeholder="Sin conductor"
               />
             </div>
@@ -576,7 +589,7 @@ const ModalViaje = React.memo(function ModalViaje({
                 options={todos.map(v => v.matricula + (v.marca ? ' · ' + v.marca : ''))}
                 value={todos.find(v => v.id === form.camion_id) ? (todos.find(v => v.id === form.camion_id)!.matricula + ((todos.find(v => v.id === form.camion_id) as Camion)?.marca ? ' · ' + (todos.find(v => v.id === form.camion_id) as Camion)?.marca : '')) : ''}
                 onChange={v => { const mat = v.split(' · ')[0]; const item = todos.find(x => x.matricula === mat); set('camion_id', item?.id ?? ''); }}
-                onCreateNew={() => {}}
+                onCreateNew={() => toast({ title: "Valor no persistible", description: "Crea este registro desde su módulo correspondiente." })}
                 placeholder="Sin vehículo"
               />
             </div>
@@ -607,7 +620,7 @@ const ModalViaje = React.memo(function ModalViaje({
               options={destinos}
               value={form.destino}
               onChange={v => set('destino', v)}
-              onCreateNew={v => set('destino', v)}
+              onCreateNew={v => { catDestinos.addOpcion(v); set('destino', v); }}
               placeholder="Seleccionar destino"
             />
           </div>
@@ -674,6 +687,9 @@ const ModalMantenimiento = React.memo(function ModalMantenimiento({
   const addMut = useAddMantenimientoCamion();
   const updMut = useUpdateMantenimientoCamion();
   const isEdit = !!initial;
+
+  // Catálogo local de talleres/proveedores de mantenimiento
+  const catTalleres = useCatalogoLocal('logistica_talleres', TALLERES);
 
   // vehiculo_tipo es solo UI para filtrar la lista
   const detectarTipo = (): 'camion' | 'vehiculo' => {
@@ -757,7 +773,7 @@ const ModalMantenimiento = React.memo(function ModalMantenimiento({
                 options={listaVehiculos.map(v => v.matricula + (v.marca ? ' · ' + v.marca : ''))}
                 value={listaVehiculos.find(v => v.id === form.camion_id) ? (listaVehiculos.find(v => v.id === form.camion_id)!.matricula + ((listaVehiculos.find(v => v.id === form.camion_id) as Camion)?.marca ? ' · ' + (listaVehiculos.find(v => v.id === form.camion_id) as Camion)?.marca : '')) : ''}
                 onChange={v => { const mat = v.split(' · ')[0]; const item = listaVehiculos.find(x => x.matricula === mat); set('camion_id', item?.id ?? ''); }}
-                onCreateNew={() => {}}
+                onCreateNew={() => toast({ title: "Valor no persistible", description: "Crea este registro desde su módulo correspondiente." })}
                 placeholder="Seleccionar vehículo"
               />
             </div>
@@ -781,7 +797,7 @@ const ModalMantenimiento = React.memo(function ModalMantenimiento({
           <AudioInput label="DESCRIPCIÓN" value={form.descripcion} onChange={v => set('descripcion', v)} rows={3} placeholder="Trabajo realizado, observaciones…" />
           <div>
             <label className={LABEL}>Taller / Proveedor</label>
-            <SelectWithOther options={TALLERES} value={form.proveedor} onChange={v => set('proveedor', v)} onCreateNew={v => set('proveedor', v)} placeholder="Seleccionar taller" />
+            <SelectWithOther options={catTalleres.opciones} value={form.proveedor} onChange={v => set('proveedor', v)} onCreateNew={v => { catTalleres.addOpcion(v); set('proveedor', v); }} placeholder="Seleccionar taller" />
           </div>
           <div>
             <label className={LABEL}>Coste (€)</label>
@@ -822,6 +838,9 @@ const ModalCombustible = React.memo(function ModalCombustible({
   const addMut = useAddCombustible();
   const updMut = useUpdateCombustible();
   const isEdit = !!initial;
+
+  // Catálogo local de gasolineras
+  const catGasolineras = useCatalogoLocal('logistica_gasolineras', GASOLINERAS);
 
   const detectarTipo = (): 'camion' | 'vehiculo' => {
     if (!initial?.vehiculo_id) return 'camion';
@@ -909,7 +928,7 @@ const ModalCombustible = React.memo(function ModalCombustible({
                 options={listaVehiculos.map(v => v.matricula + (v.marca ? ' · ' + v.marca : ''))}
                 value={listaVehiculos.find(v => v.id === form.vehiculo_id) ? (listaVehiculos.find(v => v.id === form.vehiculo_id)!.matricula + ((listaVehiculos.find(v => v.id === form.vehiculo_id) as Camion)?.marca ? ' · ' + (listaVehiculos.find(v => v.id === form.vehiculo_id) as Camion)?.marca : '')) : ''}
                 onChange={v => { const mat = v.split(' · ')[0]; const item = listaVehiculos.find(x => x.matricula === mat); set('vehiculo_id', item?.id ?? ''); }}
-                onCreateNew={() => {}}
+                onCreateNew={() => toast({ title: "Valor no persistible", description: "Crea este registro desde su módulo correspondiente." })}
                 placeholder="Seleccionar vehículo"
               />
             </div>
@@ -920,7 +939,7 @@ const ModalCombustible = React.memo(function ModalCombustible({
               options={conductores.map(c => c.nombre)}
               value={conductores.find(c => c.id === form.conductor_id)?.nombre ?? ''}
               onChange={v => { const c = conductores.find(x => x.nombre === v); set('conductor_id', c?.id ?? ''); }}
-              onCreateNew={() => {}}
+              onCreateNew={() => toast({ title: "Valor no persistible", description: "Crea este registro desde su módulo correspondiente." })}
               placeholder="Sin conductor"
             />
           </div>
@@ -940,7 +959,7 @@ const ModalCombustible = React.memo(function ModalCombustible({
           </div>
           <div>
             <label className={LABEL}>Gasolinera</label>
-            <SelectWithOther options={GASOLINERAS} value={form.gasolinera} onChange={v => set('gasolinera', v)} onCreateNew={v => set('gasolinera', v)} placeholder="Seleccionar gasolinera" />
+            <SelectWithOther options={catGasolineras.opciones} value={form.gasolinera} onChange={v => set('gasolinera', v)} onCreateNew={v => { catGasolineras.addOpcion(v); set('gasolinera', v); }} placeholder="Seleccionar gasolinera" />
           </div>
           <div>
             <label className={LABEL}>Foto — Ticket repostaje</label>
@@ -1179,7 +1198,7 @@ export default function Logistica() {
 
       {/* HEADER */}
       <header className={`w-full ${isDark ? 'bg-slate-900/80 border-white/10' : 'bg-white/90 border-slate-200'} border-b pl-14 pr-4 py-2 flex items-center gap-3 z-50`}>
-        <button onClick={() => navigate('/dashboard')} className="flex items-center gap-1.5 text-slate-400 hover:text-[#38bdf8] transition-colors">
+        <button onClick={() => navigate('/dashboard')} className="flex items-center gap-1.5 text-slate-400 hover:text-[#6d9b7d] transition-colors">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-[9px] font-black uppercase tracking-widest">Dashboard</span>
         </button>
@@ -1189,9 +1208,9 @@ export default function Logistica() {
         <div className="ml-auto flex items-center gap-2">
           <div className="relative" ref={pdfMenuRef}>
             <button type="button" onClick={() => setPdfMenuOpen(o => !o)} disabled={generandoPdf}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#38bdf8]/20 bg-[#38bdf8]/5 hover:bg-[#38bdf8]/10 text-[#38bdf8] text-[9px] font-black uppercase tracking-widest transition-colors disabled:opacity-50">
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[#6d9b7d]/20 bg-[#6d9b7d]/5 hover:bg-[#6d9b7d]/10 text-[#6d9b7d] text-[9px] font-black uppercase tracking-widest transition-colors disabled:opacity-50">
               {generandoPdf
-                ? <span className="w-3 h-3 border-2 border-[#38bdf8]/20 border-t-[#38bdf8] rounded-full animate-spin" />
+                ? <span className="w-3 h-3 border-2 border-[#6d9b7d]/20 border-t-[#6d9b7d] rounded-full animate-spin" />
                 : <FileText className="w-3 h-3" />}
               PDF
               <ChevronDown className={`w-3 h-3 transition-transform ${pdfMenuOpen ? 'rotate-180' : ''}`} />

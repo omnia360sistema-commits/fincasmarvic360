@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../integrations/supabase/client';
 import { logLiaEvento } from '@/utils/liaLogger';
 import { useCreatedBy } from './useCreatedBy';
+import { toast } from '@/hooks/use-toast';
 
 // ── Tipos ─────────────────────────────────────────────────────
 
@@ -178,6 +179,7 @@ export function useAddCamion() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -197,6 +199,7 @@ export function useUpdateCamion() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['camiones'] }),
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -216,6 +219,7 @@ export function useDeleteCamion() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -284,6 +288,7 @@ export function useAddVehiculoEmpresa() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -303,6 +308,7 @@ export function useUpdateVehiculoEmpresa() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['vehiculos_empresa'] }),
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -322,6 +328,7 @@ export function useDeleteVehiculoEmpresa() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -375,6 +382,7 @@ export function useAddViaje() {
     },
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -394,6 +402,7 @@ export function useUpdateViaje() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['logistica_viajes'] }),
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -410,6 +419,7 @@ export function useDeleteViaje() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['logistica_viajes'] }),
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -451,6 +461,7 @@ export function useAddMantenimientoCamion() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['logistica_mantenimiento'] }),
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -470,6 +481,7 @@ export function useUpdateMantenimientoCamion() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['logistica_mantenimiento'] }),
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -486,6 +498,7 @@ export function useDeleteMantenimiento() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['logistica_mantenimiento'] }),
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -528,6 +541,7 @@ export function useAddCombustible() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['logistica_combustible'] }),
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -547,6 +561,7 @@ export function useUpdateCombustible() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['logistica_combustible'] }),
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -563,6 +578,7 @@ export function useDeleteCombustible() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['logistica_combustible'] }),
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -599,6 +615,7 @@ export function useAddLogisticaSync() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['logistica_inventario_sync'] }),
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }
@@ -637,6 +654,7 @@ export function useAddTipoTrabajoLogistica() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['catalogo_tipos_trabajo', 'logistica'] }),
     onError: (error: Error) => {
       console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
     },
   });
 }

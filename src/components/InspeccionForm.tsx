@@ -59,13 +59,12 @@ export default function InspeccionForm({ parcelId, onClose }: Props) {
 
     if (!tipo)      { toast({ title: 'Error', description: 'Selecciona el tipo de inspección', variant: 'destructive' }); return }
     if (!resultado) { toast({ title: 'Error', description: 'Selecciona el resultado', variant: 'destructive' }); return }
-    if (!fotoFile)  { toast({ title: 'Error', description: 'La foto es obligatoria en inspecciones', variant: 'destructive' }); return }
+    // Modo piloto: foto opcional
 
     setSaving(true)
     try {
-      // Subir foto
-      const fotoUrl = await uploadImage(fotoFile, 'parcel-images', 'inspecciones')
-      if (!fotoUrl) throw new Error('Error al subir la foto')
+      // Subir foto si existe
+      const fotoUrl = fotoFile ? await uploadImage(fotoFile, 'parcel-images', 'inspecciones') : null
 
       // Guardar en fotos_campo con tipo=inspeccion
       const descripcionFinal = [
@@ -150,9 +149,9 @@ export default function InspeccionForm({ parcelId, onClose }: Props) {
           placeholder="Describe lo observado en la inspección..."
         />
 
-        {/* FOTO OBLIGATORIA */}
+        {/* FOTO RECOMENDADA (piloto) */}
         <PhotoAttachment
-          label="Foto de evidencia (obligatoria)"
+          label="Foto de evidencia (recomendada)"
           value={fotoPreview}
           onChange={(file) => {
             setFotoFile(file)
@@ -182,7 +181,7 @@ export default function InspeccionForm({ parcelId, onClose }: Props) {
           className="w-full h-12 rounded-2xl text-base font-bold"
         >
           {saving ? (
-            <><div className="w-4 h-4 border-2 border-[#38bdf8] border-t-transparent rounded-full animate-spin mr-2" /> Guardando...</>
+            <><div className="w-4 h-4 border-2 border-[#6d9b7d] border-t-transparent rounded-full animate-spin mr-2" /> Guardando...</>
           ) : (
             <><Upload className="w-4 h-4 mr-2" /> Guardar inspección</>
           )}

@@ -58,7 +58,7 @@ export default function ParcelDetailPanel({ parcel, open, onClose }: Props) {
           {/* HEADER */}
           <div className="flex items-start justify-between px-5 py-4 border-b border-white/10 shrink-0">
             <div>
-              <p className="text-[11px] font-black text-[#38bdf8] uppercase tracking-[0.3em]">
+              <p className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-[0.3em]">
                 Datos del Sector
               </p>
               <h2 className="text-lg font-black text-white uppercase tracking-tight leading-tight mt-0.5">
