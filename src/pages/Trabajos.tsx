@@ -21,7 +21,8 @@ import {
   EstadoPlanificacion, Prioridad, EstadoCampana,
 } from '../hooks/useTrabajos';
 import { useParcelas, useAddPlanting, useAddHarvest, useCropCatalog } from '../hooks/useParcelData';
-import { usePersonal, usePersonalExterno, useTiposTrabajoCatalogoPersonal } from '../hooks/usePersonal';
+import { usePersonal, usePersonalExterno, useTiposTrabajoCatalogoPersonal, useAddTipoTrabajoCatalogo } from '../hooks/usePersonal';
+import { useCatalogoLocal } from '@/hooks/useCatalogoLocal';
 import { useTractores, useAperos } from '../hooks/useMaquinaria';
 import { useProductosCatalogo } from '../hooks/useInventario';
 import { SelectWithOther, AudioInput, PhotoAttachment, RecordActions } from '@/components/base';
@@ -236,6 +237,7 @@ const ModalTrabajoPlan = React.memo(function ModalTrabajoPlan({ fecha, editData,
   const { data: tractores = [] } = useTractores();
   const { data: aperos    = [] } = useAperos(tractorId || undefined);
   const { data: tiposCat  = [] } = useTiposTrabajoCatalogoPersonal('');
+  const addTipoCat = useAddTipoTrabajoCatalogo();
 
   const addMut    = useAddTrabajoPlanificado();
   const updateMut = useUpdateTrabajoPlanificado();
@@ -356,7 +358,10 @@ const ModalTrabajoPlan = React.memo(function ModalTrabajoPlan({ fecha, editData,
               value={tipoTrabajo || ''}
               onChange={v => setValue('tipo_trabajo', v, { shouldValidate: true })}
               options={tiposOpciones}
-              onCreateNew={(newTipo) => setValue('tipo_trabajo', newTipo, { shouldValidate: true })}
+              onCreateNew={(newTipo) => {
+                addTipoCat.mutate({ nombre: newTipo, categoria: 'general' });
+                setValue('tipo_trabajo', newTipo, { shouldValidate: true });
+              }}
               placeholder="Seleccionar tipo…"
             />
             <FormError message={errors.tipo_trabajo?.message} />
@@ -605,7 +610,8 @@ const ModalCampana = React.memo(function ModalCampana({ editData, onClose }: { e
     } finally { setSaving(false); }
   };
 
-  const cultivosOpciones = cultivos.map(c => c.nombre_display);
+  const catCultivos = useCatalogoLocal('trabajos_cultivos', cultivos.map(c => c.nombre_display));
+  const cultivosOpciones = catCultivos.opciones;
 
   return (
     <div className="fixed inset-0 z-[300] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
@@ -630,7 +636,7 @@ const ModalCampana = React.memo(function ModalCampana({ editData, onClose }: { e
           )}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Cultivo *</label>
-            <SelectWithOther value={cultivo} onChange={setCultivo} onCreateNew={setCultivo} options={cultivosOpciones} placeholder="Seleccionar cultivo…" />
+            <SelectWithOther value={cultivo} onChange={setCultivo} onCreateNew={v => { catCultivos.addOpcion(v); setCultivo(v); }} options={cultivosOpciones} placeholder="Seleccionar cultivo…" />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>

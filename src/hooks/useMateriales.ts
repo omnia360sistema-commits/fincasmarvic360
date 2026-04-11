@@ -79,3 +79,24 @@ export function useAddMaterial() {
     }
   });
 }
+
+export function useDeleteMaterial() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from('inventario_registros')
+        .delete()
+        .eq('id', id);
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['materiales_stock'] });
+      toast({ title: 'Registro eliminado' });
+    },
+    onError: (err: Error) => {
+      toast({ title: 'Error al eliminar', description: err.message, variant: 'destructive' });
+    }
+  });
+}

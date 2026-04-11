@@ -1,9 +1,9 @@
 import React, { useState } from 'react'
 import { Package, Plus, Loader2, MapPin, X, Search, MinusCircle, FileText } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { useMaterialesStock, useAddMaterial, MaterialStockRow } from '@/hooks/useMateriales'
+import { useMaterialesStock, useAddMaterial, useDeleteMaterial, MaterialStockRow } from '@/hooks/useMateriales'
 import { useCategorias, useUbicaciones, useProductosCatalogo, useAddProductoCatalogo } from '@/hooks/useInventario'
-import { SelectWithOther, AudioInput, PDFExportModal, type PDFExportParams } from '@/components/base'
+import { SelectWithOther, AudioInput, PDFExportModal, RecordActions, type PDFExportParams } from '@/components/base'
 import { useCatalogoLocal } from '@/hooks/useCatalogoLocal'
 import { toast } from '@/hooks/use-toast'
 import { supabase } from '@/integrations/supabase/client'
@@ -21,6 +21,7 @@ export default function Materiales() {
 
   const mutAddMaterial = useAddMaterial()
   const mutAddProducto = useAddProductoCatalogo()
+  const mutDeleteMaterial = useDeleteMaterial()
 
   const [showModal, setShowModal] = useState(false)
   const [ubicacionId, setUbicacionId] = useState('')
@@ -202,6 +203,13 @@ export default function Materiales() {
             <button onClick={() => setConsumeItem(item)} className="mt-4 w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-teal-400 rounded-lg transition-colors border border-white/5 flex items-center justify-center gap-1.5">
               <MinusCircle className="w-3.5 h-3.5" /> Consumo Rápido
             </button>
+            <div className="mt-2 pt-2 border-t border-white/5">
+              <RecordActions
+                onEdit={() => setConsumeItem(item)}
+                onDelete={() => mutDeleteMaterial.mutate(item.id)}
+                confirmMessage="¿Eliminar este registro de material? Esta acción revertirá al stock anterior."
+              />
+            </div>
           </div>
         ))}
       </div>

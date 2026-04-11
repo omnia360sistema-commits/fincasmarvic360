@@ -3,12 +3,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { QrCode, Package, Thermometer, Plus, X, Search, MapPin, Truck, Box, FlaskConical, Sprout, Wrench, Droplets, Wheat, Activity, CalendarClock, Download, FileText, AlertCircle, Loader2 } from 'lucide-react'
 import {
   usePalots, useAddPalot, useCamarasAlmacen,
-  useMovimientosPalot, useAddMovimientoPalot, useLocalPalot
+  useMovimientosPalot, useAddMovimientoPalot, useLocalPalot,
+  useDeletePalot, useUpdatePalot
 } from '@/hooks/useTrazabilidad'
 import { useParcelas } from '@/hooks/useParcelData'
 import { supabase } from '@/integrations/supabase/client'
 import { useQuery } from '@tanstack/react-query'
 import SelectWithOther from '@/components/base/SelectWithOther'
+import RecordActions from '@/components/base/RecordActions'
 import { generarPDFCorporativoBase, PDF_COLORS } from '@/utils/pdfUtils'
 import { FINCAS_NOMBRES } from '@/constants/farms'
 import { toast } from '@/hooks/use-toast'
@@ -90,6 +92,12 @@ export default function Trazabilidad() {
 
   const mutAddPalot = useAddPalot()
   const mutAddMov = useAddMovimientoPalot()
+  const mutDeletePalot = useDeletePalot()
+  const mutUpdatePalot = useUpdatePalot()
+  const [editPalot, setEditPalot] = useState<PalotRow | null>(null)
+  const [editPeso, setEditPeso] = useState('')
+  const [editCultivo, setEditCultivo] = useState('')
+  const [editLote, setEditLote] = useState('')
 
   const { data: parcelas = [] } = useParcelas()
   const { data: cosechas = [] } = useQuery({
@@ -363,6 +371,18 @@ export default function Trazabilidad() {
                   <button onClick={() => setShowMovimiento(p.id)} className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-xs font-bold text-[#6d9b7d] rounded-lg transition-colors border border-white/5">
                     Registrar Movimiento
                   </button>
+                  <div className="mt-2 pt-2 border-t border-white/5">
+                    <RecordActions
+                      onEdit={() => {
+                        setEditPalot(p)
+                        setEditPeso(p.peso_kg != null ? String(p.peso_kg) : '')
+                        setEditCultivo(p.cultivo ?? '')
+                        setEditLote(p.lote ?? '')
+                      }}
+                      onDelete={() => mutDeletePalot.mutate(p.id)}
+                      confirmMessage="¿Eliminar este palot? Esta acción no puede deshacerse."
+                    />
+                  </div>
                 </div>
               ))}
             </div>
@@ -562,6 +582,45 @@ export default function Trazabilidad() {
               <div><p className="text-[10px] text-slate-500 mb-1 uppercase font-bold">Operador</p><input type="text" value={movOperador} onChange={e => setMovOperador(e.target.value)} className="w-full bg-slate-800 rounded-lg border border-slate-700 px-3 py-2 text-sm text-white" /></div>
               <div><p className="text-[10px] text-slate-500 mb-1 uppercase font-bold">Notas</p><textarea rows={3} value={movNotas} onChange={e => setMovNotas(e.target.value)} className="w-full bg-slate-800 rounded-lg border border-slate-700 px-3 py-2 text-sm text-white resize-none" /></div>
               <button type="submit" className="w-full py-3 bg-[#6d9b7d] text-slate-900 font-bold rounded-xl mt-4 uppercase tracking-widest text-xs hover:bg-[#6d9b7d]/90 transition-colors">Guardar Movimiento</button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── MODAL EDITAR PALOT ── */}
+      {editPalot && (
+        <div className="fixed inset-0 z-[2000] bg-black/80 flex items-center justify-center p-4 backdrop-blur-sm">
+          <div className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-lg font-black text-white">Editar Palot</h3>
+              <button onClick={() => setEditPalot(null)}><X className="w-5 h-5 text-slate-500 hover:text-white" /></button>
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault()
+                await mutUpdatePalot.mutateAsync({
+                  id: editPalot.id,
+                  peso_kg: editPeso ? parseFloat(editPeso) : null,
+                  cultivo: editCultivo || null,
+                  lote: editLote || null,
+                })
+                setEditPalot(null)
+              }}
+              className="space-y-4"
+            >
+              <div>
+                <p className="text-[10px] text-slate-500 mb-1 uppercase font-bold">Cultivo</p>
+                <input type="text" value={editCultivo} onChange={e => setEditCultivo(e.target.value)} className="w-full bg-slate-800 rounded-lg border border-slate-700 px-3 py-2 text-sm text-white" />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-500 mb-1 uppercase font-bold">Lote</p>
+                <input type="text" value={editLote} onChange={e => setEditLote(e.target.value)} className="w-full bg-slate-800 rounded-lg border border-slate-700 px-3 py-2 text-sm text-white" />
+              </div>
+              <div>
+                <p className="text-[10px] text-slate-500 mb-1 uppercase font-bold">Peso Neto (Kg)</p>
+                <input type="number" step="0.1" value={editPeso} onChange={e => setEditPeso(e.target.value)} className="w-full bg-slate-800 rounded-lg border border-slate-700 px-3 py-2 text-sm text-white" />
+              </div>
+              <button type="submit" className="w-full py-3 bg-[#6d9b7d] text-slate-900 font-bold rounded-xl mt-4 uppercase tracking-widest text-xs hover:bg-[#6d9b7d]/90 transition-colors">Guardar Cambios</button>
             </form>
           </div>
         </div>

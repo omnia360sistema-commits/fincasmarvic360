@@ -1,8 +1,12 @@
 import React, { useState } from 'react'
-import { ShieldCheck, Filter, Loader2, Wrench, Package, Truck, Users, FileText } from 'lucide-react'
+import { ShieldCheck, Filter, Loader2, Wrench, Package, Truck, Users, FileText, Trash2 } from 'lucide-react'
 import { useAuditTrail, AuditEntry } from '@/hooks/useAuditoria'
 import { PDFExportModal, type PDFExportParams } from '@/components/base'
 import { generarPDFCorporativoBase, pdfCorporateSection, pdfCorporateTable } from '@/utils/pdfUtils'
+import { AUDITORIA_EDITABLE } from '@/constants/modoPiloto'
+import { supabase } from '@/integrations/supabase/client'
+import { useQueryClient } from '@tanstack/react-query'
+import { toast } from '@/hooks/use-toast'
 
 const MODULO_ICON: Record<string, React.ElementType> = {
   'Trabajos': Wrench,
@@ -26,6 +30,31 @@ export default function Auditoria() {
   const [pdfOpen, setPdfOpen] = useState(false)
 
   const { data: trail = [], isLoading } = useAuditTrail({ fechaDesde, fechaHasta, modulo, usuario })
+  const qc = useQueryClient()
+
+  async function handleDeleteEntry(entry: AuditEntry) {
+    if (!AUDITORIA_EDITABLE) return
+    if (!window.confirm(`¿Eliminar el registro origen de este evento?\n\n${entry.modulo} — ${entry.accion}\n${entry.detalle}`)) return
+    const [prefix, id] = entry.id.split(/-(.*)/)
+    const tablaPorPrefijo: Record<string, string> = {
+      trab: 'trabajos_registro',
+      inv: 'inventario_movimientos',
+      log: 'logistica_viajes',
+      pers: 'personal',
+    }
+    const tabla = tablaPorPrefijo[prefix]
+    if (!tabla || !id) {
+      toast({ title: 'Error', description: 'No se puede identificar el registro origen', variant: 'destructive' })
+      return
+    }
+    const { error } = await supabase.from(tabla as 'trabajos_registro').delete().eq('id', id)
+    if (error) {
+      toast({ title: 'Error al eliminar', description: error.message, variant: 'destructive' })
+      return
+    }
+    qc.invalidateQueries({ queryKey: ['audit_trail'] })
+    toast({ title: 'Registro eliminado' })
+  }
 
   const handleExportPDF = async ({ desde, hasta, filtros }: PDFExportParams) => {
     // Filtrar el trail por rango seleccionado en el modal
@@ -91,7 +120,18 @@ export default function Auditoria() {
             <span className="text-[10px] text-slate-500 font-mono">{new Date(entry.timestamp).toLocaleString('es-ES')}</span>
           </div>
           <p className="text-xs text-slate-400">{entry.detalle}</p>
-          <p className="text-[10px] text-slate-600 mt-2">Usuario: {entry.usuario}</p>
+          <div className="flex items-center justify-between mt-2">
+            <p className="text-[10px] text-slate-600">Usuario: {entry.usuario}</p>
+            {AUDITORIA_EDITABLE && (
+              <button
+                type="button"
+                onClick={() => handleDeleteEntry(entry)}
+                className="flex items-center gap-1 text-[10px] text-red-500/70 hover:text-red-400 transition-colors"
+              >
+                <Trash2 className="w-3 h-3" /> Eliminar
+              </button>
+            )}
+          </div>
         </div>
       </div>
     )

@@ -76,6 +76,39 @@ export function useAddMovimientoPalot() {
   });
 }
 
+export function useDeletePalot() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('palots').delete().eq('id', id);
+      if (error) throw error;
+      return id;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['palots'] });
+      qc.invalidateQueries({ queryKey: ['trazabilidad_timeline'] });
+      toast({ title: 'Palot eliminado' });
+    },
+    onError: (err: Error) => toast({ title: 'Error al eliminar palot', description: err.message, variant: 'destructive' })
+  });
+}
+
+export function useUpdatePalot() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...patch }: { id: string } & Partial<TablesInsert<'palots'>>) => {
+      const { data, error } = await supabase.from('palots').update(patch).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['palots'] });
+      toast({ title: 'Palot actualizado' });
+    },
+    onError: (err: Error) => toast({ title: 'Error al actualizar palot', description: err.message, variant: 'destructive' })
+  });
+}
+
 export function useLocalPalot(qrCode: string) {
   return useQuery({
     queryKey: ['palot_qr', qrCode],
