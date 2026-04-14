@@ -50,7 +50,7 @@ export function useMovimientosPalot(palotId: string | null) {
     queryKey: ['movimientos_palot', palotId],
     queryFn: async () => {
       if (!palotId) return [];
-      const { data, error } = await supabase.from('movimientos_palot').select('*, camiones(matricula)').eq('palot_id', palotId).order('timestamp', { ascending: false });
+      const { data, error } = await supabase.from('movimientos_palot').select('*, camiones(matricula)').eq('palot_id', palotId).order('fecha', { ascending: false });
       if (error) throw error;
       return data ?? [];
     },

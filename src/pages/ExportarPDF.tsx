@@ -9,6 +9,7 @@ import {
 import { supabase } from '@/integrations/supabase/client'
 import { initPdf, PDF_COLORS, pdfCorporateSection, pdfCorporateTable, PDF_MARGIN } from '@/utils/pdfUtils'
 import { formatFechaLarga } from '@/utils/dateFormat'
+import { matchHarvestsToPlantings } from '@/utils/harvestPlantingMatch'
 import { FINCAS_NOMBRES as FINCAS } from '@/constants/farms'
 
 // ── Módulos seleccionables ────────────────────────────────────────────────────
@@ -426,11 +427,13 @@ async function generarPDFAgronomico(tipo: string, desde: string, hasta: string, 
     }
   }
   else if (tipo === 'produccion') {
-    const { data: harvests } = await supabase.from('harvests').select('*, plantings(variedad)').in('parcel_id', parcelIds).gte('date', desde).lte('date', hasta).order('date', { ascending: false })
-    const { data: tickets } = await supabase.from('tickets_pesaje').select('harvest_id, destino').in('harvest_id', (harvests || []).map(h => h.id))
+    const { data: rawHarvests } = await supabase.from('harvests').select('*').in('parcel_id', parcelIds).order('date', { ascending: false })
+    const { data: plantingsData } = await supabase.from('plantings').select('parcel_id, crop, variedad, date').in('parcel_id', parcelIds)
+    const harvests = matchHarvestsToPlantings(rawHarvests || [], plantingsData || [])
+    const { data: tickets } = await supabase.from('tickets_pesaje').select('harvest_id, destino').in('harvest_id', harvests.map(h => h.id))
     const ticketMap = new Map(tickets?.map(t => [t.harvest_id, t.destino]) || [])
     
-    if (!harvests?.length) { ctx.writeLabel('Sin cosechas en este período.'); ctx.footer(); doc.save(`Produccion.pdf`); return }
+    if (!harvests.length) { ctx.writeLabel('Sin cosechas en este período.'); ctx.footer(); doc.save(`Produccion.pdf`); return }
     const totalKg = harvests.reduce((acc, h) => acc + (h.production_kg || 0), 0)
     ctx.kpiRow([{ label: 'Total Cosechado', value: `${totalKg.toLocaleString()} Kg` }])
     ctx.separator()
@@ -440,7 +443,7 @@ async function generarPDFAgronomico(tipo: string, desde: string, hasta: string, 
       [30, 30, 25, 25, 20, 40],
       harvests.map(h => [
         parcelMap.get(h.parcel_id)?.parcel_number || h.parcel_id,
-        h.crop, (h as unknown as { plantings?: { variedad?: string } }).plantings?.variedad || '—',
+        h.crop, h.variedad || '—',
         h.date ? new Date(h.date).toLocaleDateString('es-ES') : '—',
         h.production_kg?.toLocaleString() || '0',
         ticketMap.get(h.id) || '—'

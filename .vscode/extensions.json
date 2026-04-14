@@ -1,6 +1,7 @@
 {
     "recommendations": [
         "ms-ceintl.vscode-language-pack-es",
-        "github.copilot-chat"
+        "github.copilot-chat",
+        "supabase.postgrestools"
     ]
 }

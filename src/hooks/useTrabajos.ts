@@ -95,18 +95,18 @@ export interface CierreJornada {
 
 // ── useRegistrosTrabajos ─────────────────────────────────────
 export function useRegistrosTrabajos(tipoBloque?: TipoBloque) {
-  return useQuery<TrabajoRegistro[]>({
+  return useQuery({
     queryKey: ['trabajos_registro', tipoBloque ?? 'all'],
     queryFn: async () => {
       let q = supabase
         .from('trabajos_registro')
-        .select('*')
+        .select('*, maquinaria_tractores(matricula, marca), maquinaria_aperos(tipo, descripcion)')
         .order('fecha', { ascending: false })
         .order('created_at', { ascending: false });
       if (tipoBloque) q = q.eq('tipo_bloque', tipoBloque);
       const { data, error } = await q;
       if (error) throw error;
-      return (data ?? []) as TrabajoRegistro[];
+      return data ?? [];
     },
     staleTime: 30000,
   });
@@ -260,18 +260,17 @@ export function useKPIsTrabajos() {
 
 // ── usePlanificacionDia ───────────────────────────────────────
 export function usePlanificacionDia(fecha: string) {
-  return useQuery<TrabajoRegistro[]>({
+  return useQuery({
     queryKey: ['planificacion_dia', fecha],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('trabajos_registro')
-        .select('*')
+        .select('*, maquinaria_tractores(matricula, marca), maquinaria_aperos(tipo, descripcion)')
         .eq('fecha_planificada', fecha)
         .order('created_at', { ascending: true });
       if (error) throw error;
-      // Ordenar por prioridad: alta=1, media=2, baja=3
       const orden: Record<string, number> = { alta: 1, media: 2, baja: 3 };
-      return ((data ?? []) as TrabajoRegistro[]).sort(
+      return (data ?? []).sort(
         (a, b) => (orden[a.prioridad ?? 'media'] ?? 2) - (orden[b.prioridad ?? 'media'] ?? 2)
       );
     },

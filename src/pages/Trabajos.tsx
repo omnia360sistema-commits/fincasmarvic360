@@ -37,6 +37,7 @@ import { FINCAS_NOMBRES as FINCAS } from '../constants/farms';
 import { TIPOS_TRABAJO } from '../constants/tiposTrabajo';
 import { uploadImage, buildStoragePath } from '../utils/uploadImage';
 import { formatFechaCorta } from '../utils/dateFormat';
+import ModalCierreTrabajo from '@/components/ModalCierreTrabajo';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -395,25 +396,31 @@ const ModalTrabajoPlan = React.memo(function ModalTrabajoPlan({ fecha, editData,
           {/* Tractor / Apero */}
           <div>
             <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Tractor</label>
-            <SelectWithOther
+            <select
               value={tractorId || ''}
-              onChange={v => { setValue('tractor_id', v, { shouldValidate: true }); setValue('apero_id', '', { shouldValidate: true }); }}
-              options={tractores.filter(t => t.activo).map(t => t.id)}
-              onCreateNew={(newTractor) => setValue('tractor_id', newTractor, { shouldValidate: true })}
-              placeholder="Sin tractor"
-            />
+              onChange={e => { setValue('tractor_id', e.target.value || null, { shouldValidate: true }); setValue('apero_id', '', { shouldValidate: true }); }}
+              className={INPUT}
+            >
+              <option value="">Sin tractor</option>
+              {tractores.filter(t => t.activo).map(t => (
+                <option key={t.id} value={t.id}>{t.matricula} — {t.marca}</option>
+              ))}
+            </select>
             <FormError message={errors.tractor_id?.message} />
           </div>
           {tractorId && (
             <div>
               <label className="block text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Apero</label>
-              <SelectWithOther
+              <select
                 value={aperoId || ''}
-                onChange={v => setValue('apero_id', v, { shouldValidate: true })}
-                options={aperos.filter(a => a.activo).map(a => a.id)}
-                onCreateNew={(newApero) => setValue('apero_id', newApero, { shouldValidate: true })}
-                placeholder="Sin apero"
-              />
+                onChange={e => setValue('apero_id', e.target.value || null, { shouldValidate: true })}
+                className={INPUT}
+              >
+                <option value="">Sin apero</option>
+                {aperos.filter(a => a.activo).map(a => (
+                  <option key={a.id} value={a.id}>{a.tipo} — {a.descripcion}</option>
+                ))}
+              </select>
               <FormError message={errors.apero_id?.message} />
             </div>
           )}
@@ -508,9 +515,9 @@ const ModalTrabajoPlan = React.memo(function ModalTrabajoPlan({ fecha, editData,
 });
 
 // ── Tarjeta Trabajo Planificado ───────────────────────────────
-const TarjetaTrabajoPlan = React.memo(function TarjetaTrabajoPlan({ t, onEdit }: { t: TrabajoRegistro; onEdit: (t: TrabajoRegistro) => void }) {
+const TarjetaTrabajoPlan = React.memo(function TarjetaTrabajoPlan({ t, onEdit, onCerrar }: { t: TrabajoRegistro; onEdit: (t: TrabajoRegistro) => void; onCerrar: (t: TrabajoRegistro) => void }) {
   const deleteMut = useDeleteTrabajo();
-  const isDark = true;
+  const yaEjecutado = t.estado_planificacion === 'ejecutado' || t.estado_planificacion === 'cancelado';
 
   return (
     <div className={`p-3 rounded-lg border border-white/10 bg-slate-800/40 space-y-2`}>
@@ -519,17 +526,43 @@ const TarjetaTrabajoPlan = React.memo(function TarjetaTrabajoPlan({ t, onEdit }:
           <BadgePrioridad p={t.prioridad} />
           <BadgeEstado e={t.estado_planificacion} />
         </div>
-        <RecordActions
-          onEdit={() => onEdit(t)}
-          onDelete={() => deleteMut.mutate(t.id)} 
-          confirmMessage="Eliminar este trabajo"
-        />
+        <div className="flex items-center gap-1 shrink-0">
+          {!yaEjecutado && (
+            <button
+              onClick={() => onCerrar(t)}
+              className="px-2 py-1 rounded bg-green-600/20 border border-green-500/30 text-[8px] font-black uppercase tracking-widest text-green-400 hover:bg-green-600/30 transition-colors"
+            >
+              Ejecutar
+            </button>
+          )}
+          <RecordActions
+            onEdit={() => onEdit(t)}
+            onDelete={() => deleteMut.mutate(t.id)} 
+            confirmMessage="Eliminar este trabajo"
+          />
+        </div>
       </div>
       <p className="text-[11px] font-bold text-white leading-tight">{t.tipo_trabajo}</p>
       <div className="flex flex-wrap gap-3">
         {t.finca && (
           <span className="flex items-center gap-1 text-[9px] text-slate-400">
             <MapPin className="w-2.5 h-2.5" />{t.finca}{t.parcel_id ? ` · ${t.parcel_id}` : ''}
+          </span>
+        )}
+        {(t as unknown as { maquinaria_tractores?: { matricula: string; marca: string } }).maquinaria_tractores && (
+          <span className="flex items-center gap-1 text-[9px] text-slate-400">
+            <Tractor className="w-2.5 h-2.5" />
+            {(t as unknown as { maquinaria_tractores: { matricula: string; marca: string } }).maquinaria_tractores.matricula}
+            {' — '}
+            {(t as unknown as { maquinaria_tractores: { matricula: string; marca: string } }).maquinaria_tractores.marca}
+          </span>
+        )}
+        {(t as unknown as { maquinaria_aperos?: { tipo: string; descripcion: string } }).maquinaria_aperos && (
+          <span className="flex items-center gap-1 text-[9px] text-slate-400">
+            <Layers className="w-2.5 h-2.5" />
+            {(t as unknown as { maquinaria_aperos: { tipo: string; descripcion: string } }).maquinaria_aperos.tipo}
+            {' — '}
+            {(t as unknown as { maquinaria_aperos: { tipo: string; descripcion: string } }).maquinaria_aperos.descripcion}
           </span>
         )}
         {(t.hora_inicio || t.hora_fin) && (
@@ -955,6 +988,7 @@ export default function Trabajos() {
   const [editCampana,       setEditCampana]       = useState<PlanificacionCampana | null>(null);
   const [modalIncidencia,   setModalIncidencia]   = useState(false);
   const [editIncidencia,    setEditIncidencia]    = useState<TrabajoIncidencia | null>(null);
+  const [trabajoCierre,     setTrabajoCierre]     = useState<TrabajoRegistro | null>(null);
   const [filtroInc,         setFiltroInc]         = useState<FiltroInc>('todas');
   const [cierreResultado,   setCierreResultado]   = useState<CierreResultado | null>(null);
   const [pdfMenuOpen,       setPdfMenuOpen]       = useState(false);
@@ -1002,6 +1036,9 @@ export default function Trabajos() {
 
   const handleEditIncidencia = useCallback((i: TrabajoIncidencia) => { setEditIncidencia(i); setModalIncidencia(true); }, []);
   const handleCloseIncidencia = useCallback(() => { setModalIncidencia(false); setEditIncidencia(null); }, []);
+
+  const handleCerrarTrabajo = useCallback((t: TrabajoRegistro) => { setTrabajoCierre(t); }, []);
+  const handleCloseCierreTrabajo = useCallback(() => { setTrabajoCierre(null); }, []);
 
   const handleCloseCierre = useCallback(() => setCierreResultado(null), []);
   const handleVerManana = useCallback(() => {
@@ -1185,7 +1222,8 @@ export default function Trabajos() {
                   <TarjetaTrabajoPlan
                     key={t.id}
                     t={t}
-                  onEdit={handleEditTrabajo}
+                    onEdit={handleEditTrabajo}
+                    onCerrar={handleCerrarTrabajo}
                   />
                 ))}
               </div>
@@ -1281,6 +1319,12 @@ export default function Trabajos() {
           resultado={cierreResultado}
         onClose={handleCloseCierre}
         onVerMañana={handleVerManana}
+        />
+      )}
+      {trabajoCierre && (
+        <ModalCierreTrabajo
+          trabajo={trabajoCierre}
+          onClose={handleCloseCierreTrabajo}
         />
       )}
     </div>

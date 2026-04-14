@@ -12,31 +12,6 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.1"
   }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       ai_proposal_validations: {
@@ -1743,6 +1718,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_logistica_mant_camion"
+            columns: ["camion_id"]
+            isOneToOne: false
+            referencedRelation: "camiones"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "logistica_mantenimiento_company_id_fkey"
             columns: ["company_id"]
             isOneToOne: false
@@ -2225,6 +2207,7 @@ export type Database = {
       }
       movimientos_palot: {
         Row: {
+          camion_id: string | null
           company_id: string | null
           created_at: string | null
           destino: string | null
@@ -2237,6 +2220,7 @@ export type Database = {
           tipo_movimiento: string | null
         }
         Insert: {
+          camion_id?: string | null
           company_id?: string | null
           created_at?: string | null
           destino?: string | null
@@ -2249,6 +2233,7 @@ export type Database = {
           tipo_movimiento?: string | null
         }
         Update: {
+          camion_id?: string | null
           company_id?: string | null
           created_at?: string | null
           destino?: string | null
@@ -2261,6 +2246,13 @@ export type Database = {
           tipo_movimiento?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "fk_movimientos_palot_camion"
+            columns: ["camion_id"]
+            isOneToOne: false
+            referencedRelation: "camiones"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "movimientos_palot_company_id_fkey"
             columns: ["company_id"]
@@ -3081,6 +3073,108 @@ export type Database = {
           },
         ]
       }
+      plantaciones_transformadas: {
+        Row: {
+          bandejas: string | null
+          ciclo_real: string | null
+          ciclo_teorico: string | null
+          codigo_cultivo: string | null
+          cultivo_id: string | null
+          fecha_plantacion: string | null
+          finca_normalizada: string | null
+          lote: string | null
+          marco_plantacion: string | null
+          municipio: string | null
+          num_plantas: string | null
+          numero_albaran: string | null
+          observaciones: string | null
+          parcel_id: string | null
+          parcela_catastral: string | null
+          poligono: string | null
+          prevision_recolection: string | null
+          primera_oportunidad_cosecha: string | null
+          producto: string | null
+          productor: string | null
+          recinto: string | null
+          recoleccion_real: string | null
+          rendimiento_real: string | null
+          rendimiento_teorico: string | null
+          sector_original: string | null
+          sem_oportunidad_cosecha: string | null
+          semillero: string | null
+          superficie_m2: string | null
+          tipo: string | null
+          tipo_match: string | null
+          variedad: string | null
+        }
+        Insert: {
+          bandejas?: string | null
+          ciclo_real?: string | null
+          ciclo_teorico?: string | null
+          codigo_cultivo?: string | null
+          cultivo_id?: string | null
+          fecha_plantacion?: string | null
+          finca_normalizada?: string | null
+          lote?: string | null
+          marco_plantacion?: string | null
+          municipio?: string | null
+          num_plantas?: string | null
+          numero_albaran?: string | null
+          observaciones?: string | null
+          parcel_id?: string | null
+          parcela_catastral?: string | null
+          poligono?: string | null
+          prevision_recolection?: string | null
+          primera_oportunidad_cosecha?: string | null
+          producto?: string | null
+          productor?: string | null
+          recinto?: string | null
+          recoleccion_real?: string | null
+          rendimiento_real?: string | null
+          rendimiento_teorico?: string | null
+          sector_original?: string | null
+          sem_oportunidad_cosecha?: string | null
+          semillero?: string | null
+          superficie_m2?: string | null
+          tipo?: string | null
+          tipo_match?: string | null
+          variedad?: string | null
+        }
+        Update: {
+          bandejas?: string | null
+          ciclo_real?: string | null
+          ciclo_teorico?: string | null
+          codigo_cultivo?: string | null
+          cultivo_id?: string | null
+          fecha_plantacion?: string | null
+          finca_normalizada?: string | null
+          lote?: string | null
+          marco_plantacion?: string | null
+          municipio?: string | null
+          num_plantas?: string | null
+          numero_albaran?: string | null
+          observaciones?: string | null
+          parcel_id?: string | null
+          parcela_catastral?: string | null
+          poligono?: string | null
+          prevision_recolection?: string | null
+          primera_oportunidad_cosecha?: string | null
+          producto?: string | null
+          productor?: string | null
+          recinto?: string | null
+          recoleccion_real?: string | null
+          rendimiento_real?: string | null
+          rendimiento_teorico?: string | null
+          sector_original?: string | null
+          sem_oportunidad_cosecha?: string | null
+          semillero?: string | null
+          superficie_m2?: string | null
+          tipo?: string | null
+          tipo_match?: string | null
+          variedad?: string | null
+        }
+        Relationships: []
+      }
       plantings: {
         Row: {
           company_id: string | null
@@ -3317,6 +3411,108 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      raw_plantaciones_csv: {
+        Row: {
+          " 1ª OPORTUNIDAD COSECHA": string | null
+          " SEM 1ª OPORTUNIDAD COSECHA": string | null
+          BANDEJAS: string | null
+          "CICLO REAL": string | null
+          "CICLO TEORICO": string | null
+          "CÓDIGO CULTIVO": string | null
+          DIFERENCIA: string | null
+          Escandallo: string | null
+          FECHA: string | null
+          FINCA: string | null
+          LOTE: string | null
+          MARCO: string | null
+          MUNICIPIO: string | null
+          "Nº Plantas": string | null
+          NºAlbarán: string | null
+          OBSERVACIONES: string | null
+          PARCELA: string | null
+          POLIGONO: string | null
+          "PREVISION RECOLECCION": string | null
+          PRODUCTO: string | null
+          PRODUCTOR: string | null
+          RECINTO: string | null
+          "RECO. REAL": string | null
+          "REND. TEORICO": string | null
+          "REND.REAL": string | null
+          Sector: string | null
+          SEM: string | null
+          Semillero: string | null
+          SUPERFICIE: string | null
+          TIPO: string | null
+          VARIEDAD: string | null
+        }
+        Insert: {
+          " 1ª OPORTUNIDAD COSECHA"?: string | null
+          " SEM 1ª OPORTUNIDAD COSECHA"?: string | null
+          BANDEJAS?: string | null
+          "CICLO REAL"?: string | null
+          "CICLO TEORICO"?: string | null
+          "CÓDIGO CULTIVO"?: string | null
+          DIFERENCIA?: string | null
+          Escandallo?: string | null
+          FECHA?: string | null
+          FINCA?: string | null
+          LOTE?: string | null
+          MARCO?: string | null
+          MUNICIPIO?: string | null
+          "Nº Plantas"?: string | null
+          NºAlbarán?: string | null
+          OBSERVACIONES?: string | null
+          PARCELA?: string | null
+          POLIGONO?: string | null
+          "PREVISION RECOLECCION"?: string | null
+          PRODUCTO?: string | null
+          PRODUCTOR?: string | null
+          RECINTO?: string | null
+          "RECO. REAL"?: string | null
+          "REND. TEORICO"?: string | null
+          "REND.REAL"?: string | null
+          Sector?: string | null
+          SEM?: string | null
+          Semillero?: string | null
+          SUPERFICIE?: string | null
+          TIPO?: string | null
+          VARIEDAD?: string | null
+        }
+        Update: {
+          " 1ª OPORTUNIDAD COSECHA"?: string | null
+          " SEM 1ª OPORTUNIDAD COSECHA"?: string | null
+          BANDEJAS?: string | null
+          "CICLO REAL"?: string | null
+          "CICLO TEORICO"?: string | null
+          "CÓDIGO CULTIVO"?: string | null
+          DIFERENCIA?: string | null
+          Escandallo?: string | null
+          FECHA?: string | null
+          FINCA?: string | null
+          LOTE?: string | null
+          MARCO?: string | null
+          MUNICIPIO?: string | null
+          "Nº Plantas"?: string | null
+          NºAlbarán?: string | null
+          OBSERVACIONES?: string | null
+          PARCELA?: string | null
+          POLIGONO?: string | null
+          "PREVISION RECOLECCION"?: string | null
+          PRODUCTO?: string | null
+          PRODUCTOR?: string | null
+          RECINTO?: string | null
+          "RECO. REAL"?: string | null
+          "REND. TEORICO"?: string | null
+          "REND.REAL"?: string | null
+          Sector?: string | null
+          SEM?: string | null
+          Semillero?: string | null
+          SUPERFICIE?: string | null
+          TIPO?: string | null
+          VARIEDAD?: string | null
+        }
+        Relationships: []
       }
       registros_estado_parcela: {
         Row: {
@@ -4514,9 +4710,6 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {
       ai_proposal_category: ["analysis", "planning", "report"],

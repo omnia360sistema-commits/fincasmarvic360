@@ -9,6 +9,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { RecordActions } from '@/components/base'
 import { toast } from '@/hooks/use-toast'
 import { FINCAS_NOMBRES as FINCAS } from '@/constants/farms'
+import { matchHarvestsToPlantings } from '@/utils/harvestPlantingMatch'
 
 // Tipado temporal para la tabla nueva
 type ERPExportacion = {
@@ -108,22 +109,26 @@ export default function IntegracionERP() {
   const exportarProduccion = async (formato: 'csv' | 'json') => {
     setLoadingProd(true)
     try {
-      // Obtener cosechas
-      const query = supabase.from('harvests').select('*, plantings(variedad), tickets_pesaje(numero_albaran, destino, peso_neto_kg)')
+      const { data: rawHarvests, error } = await supabase.from('harvests')
+        .select('*, tickets_pesaje(numero_albaran, destino, peso_neto_kg)')
         .gte('date', fechaInicio).lte('date', fechaFin)
-      
-      const { data, error } = await query
       if (error) throw error
 
-      // Formatear datos
-      const exportData = (data || []).map(h => {
+      const parcelIds = [...new Set((rawHarvests || []).map(h => h.parcel_id).filter(Boolean))]
+      const { data: plantingsData } = await supabase.from('plantings')
+        .select('parcel_id, crop, variedad, date')
+        .in('parcel_id', parcelIds.length > 0 ? parcelIds : ['__none__'])
+
+      const harvests = matchHarvestsToPlantings(rawHarvests || [], plantingsData || [])
+
+      const exportData = harvests.map(h => {
         const tickets = Array.isArray(h.tickets_pesaje) ? h.tickets_pesaje : [h.tickets_pesaje].filter(Boolean)
-        const ticket = tickets.length > 0 ? tickets[0] : null
+        const ticket = tickets.length > 0 ? tickets[0] as { numero_albaran?: string; destino?: string; peso_neto_kg?: number } : null
         
         return {
           parcela: h.parcel_id,
           cultivo: h.crop,
-          variedad: (h as unknown as { plantings?: { variedad?: string } }).plantings?.variedad || '',
+          variedad: h.variedad || '',
           fecha_cosecha: h.date,
           kg_neto: ticket?.peso_neto_kg || h.production_kg || 0,
           destino: ticket?.destino || '',
