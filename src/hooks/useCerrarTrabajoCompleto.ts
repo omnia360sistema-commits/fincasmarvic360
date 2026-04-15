@@ -1,10 +1,18 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json, TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+
+function serializarJsonColumna<T>(value: T): Json {
+  return JSON.parse(JSON.stringify(value)) as Json;
+}
 import { toast } from '@/hooks/use-toast';
 import { useCreatedBy } from './useCreatedBy';
 import { getAccionCierre, puedeAvanzarEstado } from '@/constants/cierreTrabajoMap';
 import type { AccionCierre } from '@/constants/cierreTrabajoMap';
-import { buildNotasConsumoInventarioPorTrabajo } from '@/utils/costeTrabajo';
+import { buildNotasConsumoInventarioPorTrabajo, calcularCosteTrabajo } from '@/utils/costeTrabajo';
+import { TARIFA_EUR_HORA_OPERARIO, TARIFA_EUR_HORA_TRACTOR } from '@/constants/tarifasCosteTrabajo';
+
+const SNAPSHOT_VERSION = 1;
 
 export interface DatosCierreTrabajo {
   trabajoId: string;
@@ -157,7 +165,7 @@ export function useCerrarTrabajoCompleto() {
 
       // 4. Marcar trabajo como ejecutado (al final, cuando todo lo anterior OK)
 
-      const updatePayload: Record<string, unknown> = {
+      const updatePayload: TablesUpdate<'trabajos_registro'> = {
         estado_planificacion: 'ejecutado',
       };
       if (datos.horaInicio) updatePayload.hora_inicio = datos.horaInicio;
@@ -171,7 +179,58 @@ export function useCerrarTrabajoCompleto() {
         .eq('id', datos.trabajoId);
       if (errTrabajo) throw new Error(`Error cerrando trabajo: ${errTrabajo.message}`);
 
-      return resultado;
+      // 5. Snapshot de coste (no revierte el cierre si falla)
+      let snapshotGuardado = false;
+      let snapshotError: string | null = null;
+      try {
+        const coste = await calcularCosteTrabajo(datos.trabajoId, {
+          crop: datos.datosCosecha?.crop ?? datos.datosPlantacion?.crop ?? null,
+        });
+        if (coste) {
+          const produccionKg = coste.produccionKgTotal;
+          const costeTotalCalc = coste.costeTotal;
+          const costePorKg =
+            produccionKg != null &&
+            produccionKg > 0 &&
+            Number.isFinite(costeTotalCalc)
+              ? Number((costeTotalCalc / produccionKg).toFixed(4))
+              : null;
+
+          const snapshotPayload: TablesInsert<'trabajos_coste_snapshot'> = {
+            trabajo_id: datos.trabajoId,
+            version_calculo: SNAPSHOT_VERSION,
+            calculado_por: createdBy,
+            calculado_en: new Date().toISOString(),
+            horas: coste.horas,
+            num_operarios: coste.numOperarios,
+            tractor_id: coste.tractorId,
+            apero_id: coste.aperoId,
+            tarifa_tractor_eur_h: TARIFA_EUR_HORA_TRACTOR,
+            tarifa_operario_eur_h: TARIFA_EUR_HORA_OPERARIO,
+            coste_materiales: Number(coste.costeMateriales.toFixed(2)),
+            coste_maquinaria: Number(coste.costeMaquinaria.toFixed(2)),
+            coste_mano_obra: Number(coste.costeManoObra.toFixed(2)),
+            produccion_kg_total: coste.produccionKgTotal,
+            coste_por_kg: costePorKg,
+            lineas_materiales: serializarJsonColumna(coste.lineasMateriales),
+            produccion_vinculada: serializarJsonColumna(coste.produccionVinculada),
+          };
+
+          const { error: errSnap } = await supabase
+            .from('trabajos_coste_snapshot')
+            .upsert(snapshotPayload, { onConflict: 'trabajo_id' });
+
+          if (errSnap) {
+            snapshotError = errSnap.message;
+          } else {
+            snapshotGuardado = true;
+          }
+        }
+      } catch (e: unknown) {
+        snapshotError = e instanceof Error ? e.message : String(e);
+      }
+
+      return { ...resultado, snapshotGuardado, snapshotError };
     },
 
     onSuccess: (resultado) => {
@@ -198,8 +257,19 @@ export function useCerrarTrabajoCompleto() {
       if (resultado.plantingId) msgs.push('Plantación registrada');
       if (resultado.estadoActualizado) msgs.push('Estado de parcela actualizado');
       if (resultado.movimientos > 0) msgs.push(`${resultado.movimientos} material(es) consumido(s)`);
+      if (resultado.snapshotGuardado) msgs.push('Coste registrado');
 
       toast({ title: msgs[0], description: msgs.slice(1).join(' · ') || undefined });
+
+      if (resultado.snapshotError) {
+        toast({
+          title: 'Trabajo cerrado, pero el snapshot de coste falló',
+          description: resultado.snapshotError,
+          variant: 'destructive',
+        });
+      } else if (resultado.snapshotGuardado) {
+        qc.invalidateQueries({ queryKey: ['trabajos_coste_snapshot'] });
+      }
     },
 
     onError: (error: Error) => {

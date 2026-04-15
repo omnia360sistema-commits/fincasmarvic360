@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Map as MapIcon, ChevronRight, ArrowLeft, Activity } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
@@ -7,6 +8,13 @@ export default function FarmSelector() {
   const navigate  = useNavigate();
   const { theme } = useTheme();
   const isDark    = theme === 'dark';
+
+  const resumenFincas = useMemo(() => {
+    const n = FINCAS.length;
+    const totalHa = FINCAS.reduce((s, f) => s + f.ha, 0);
+    const totalSectores = FINCAS.reduce((s, f) => s + f.sectores, 0);
+    return { n, totalHa, totalSectores };
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-white flex flex-col transition-colors duration-300">
@@ -40,8 +48,8 @@ export default function FarmSelector() {
               style={{ filter: isDark ? 'brightness(0) invert(1)' : 'none' }}
             />
             <div className="h-px flex-1 bg-gradient-to-r from-[#22c55e]/30 to-transparent" />
-            <span className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-400 dark:text-slate-500">
-              7 Fincas · 211.94 ha
+            <span className="text-[9px] font-black uppercase tracking-[0.4em] text-slate-400 dark:text-slate-500 [font-variant-numeric:tabular-nums]">
+              {resumenFincas.n} fincas · {resumenFincas.totalHa.toFixed(2)} ha · {resumenFincas.totalSectores} sectores
             </span>
           </div>
 

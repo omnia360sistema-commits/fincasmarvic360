@@ -35,6 +35,8 @@ export function useParcelTickets(parcelId: string | null) {
     queryKey: ['parcel_tickets', parcelId],
     queryFn: async () => {
       if (!parcelId) return []
+      // harvests!inner: tickets sin cosecha enlazada no aparecen (evita filas huérfanas en esta vista por parcela).
+      // Si en piloto hiciera falta listar tickets rotos, valorar harvests(...) sin inner y filtrar en UI.
       const { data, error } = await supabase.from('tickets_pesaje').select(`*, harvests!inner(parcel_id, crop, date), camiones(matricula, empresa_transporte)`).eq('harvests.parcel_id', parcelId).order('created_at', { ascending: false })
       if (error) throw error; return data ?? []
     },

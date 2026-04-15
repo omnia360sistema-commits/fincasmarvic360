@@ -17,7 +17,7 @@ import {
   usePlanificacionCampana, useAddPlanificacionCampana,
   useUpdatePlanificacionCampana, useDeletePlanificacionCampana,
   useCerrarJornada,
-  TipoBloque, TrabajoRegistro, TrabajoIncidencia, PlanificacionCampana,
+  TipoBloque, TrabajoRegistro, TrabajoRegistroPlanificado, TrabajoIncidencia, PlanificacionCampana,
   EstadoPlanificacion, Prioridad, EstadoCampana,
 } from '../hooks/useTrabajos';
 import { useParcelas, useAddPlanting, useAddHarvest, useCropCatalog } from '../hooks/useParcelData';
@@ -515,7 +515,7 @@ const ModalTrabajoPlan = React.memo(function ModalTrabajoPlan({ fecha, editData,
 });
 
 // ── Tarjeta Trabajo Planificado ───────────────────────────────
-const TarjetaTrabajoPlan = React.memo(function TarjetaTrabajoPlan({ t, onEdit, onCerrar }: { t: TrabajoRegistro; onEdit: (t: TrabajoRegistro) => void; onCerrar: (t: TrabajoRegistro) => void }) {
+const TarjetaTrabajoPlan = React.memo(function TarjetaTrabajoPlan({ t, onEdit, onCerrar }: { t: TrabajoRegistroPlanificado; onEdit: (t: TrabajoRegistroPlanificado) => void; onCerrar: (t: TrabajoRegistroPlanificado) => void }) {
   const deleteMut = useDeleteTrabajo();
   const yaEjecutado = t.estado_planificacion === 'ejecutado' || t.estado_planificacion === 'cancelado';
 
@@ -549,20 +549,20 @@ const TarjetaTrabajoPlan = React.memo(function TarjetaTrabajoPlan({ t, onEdit, o
             <MapPin className="w-2.5 h-2.5" />{t.finca}{t.parcel_id ? ` · ${t.parcel_id}` : ''}
           </span>
         )}
-        {(t as unknown as { maquinaria_tractores?: { matricula: string; marca: string } }).maquinaria_tractores && (
+        {(t.maquinaria_tractores?.matricula || t.maquinaria_tractores?.marca) && (
           <span className="flex items-center gap-1 text-[9px] text-slate-400">
             <Tractor className="w-2.5 h-2.5" />
-            {(t as unknown as { maquinaria_tractores: { matricula: string; marca: string } }).maquinaria_tractores.matricula}
+            {t.maquinaria_tractores?.matricula ?? '—'}
             {' — '}
-            {(t as unknown as { maquinaria_tractores: { matricula: string; marca: string } }).maquinaria_tractores.marca}
+            {t.maquinaria_tractores?.marca ?? '—'}
           </span>
         )}
-        {(t as unknown as { maquinaria_aperos?: { tipo: string; descripcion: string } }).maquinaria_aperos && (
+        {(t.maquinaria_aperos?.tipo || t.maquinaria_aperos?.descripcion) && (
           <span className="flex items-center gap-1 text-[9px] text-slate-400">
             <Layers className="w-2.5 h-2.5" />
-            {(t as unknown as { maquinaria_aperos: { tipo: string; descripcion: string } }).maquinaria_aperos.tipo}
+            {t.maquinaria_aperos?.tipo ?? '—'}
             {' — '}
-            {(t as unknown as { maquinaria_aperos: { tipo: string; descripcion: string } }).maquinaria_aperos.descripcion}
+            {t.maquinaria_aperos?.descripcion ?? '—'}
           </span>
         )}
         {(t.hora_inicio || t.hora_fin) && (

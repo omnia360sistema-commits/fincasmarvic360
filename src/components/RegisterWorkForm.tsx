@@ -70,11 +70,11 @@ export default function RegisterWorkForm({
         date,
         work_type:   workType,
         cuadrilla_id: cuadrillaId || null,
-        workers:     workers ? parseInt(workers) : null,
-        hours:       hours ? parseFloat(hours) : null,
+        workers_count: workers ? parseInt(workers, 10) : null,
+        hours_worked: hours ? parseFloat(hours) : null,
         hora_entrada: horaEntradaISO,
         hora_salida:  horaSalidaISO,
-        description: description || null,
+        notas: description || null,
       },
       {
         onSuccess: () => {

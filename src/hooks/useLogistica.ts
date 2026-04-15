@@ -1,8 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../integrations/supabase/client';
+import type { Database, TablesInsert, TablesUpdate } from '../integrations/supabase/types';
+import { LOGISTICA_MANTENIMIENTO_SELECT } from '@/utils/logisticaMantenimiento';
 import { logLiaEvento } from '@/utils/liaLogger';
 import { useCreatedBy } from './useCreatedBy';
 import { toast } from '@/hooks/use-toast';
+
+type LogisticaMantenimientoRow = Database['public']['Tables']['logistica_mantenimiento']['Row'];
 
 // ── Tipos ─────────────────────────────────────────────────────
 
@@ -68,19 +72,13 @@ export interface Viaje {
   created_by:            string | null;
 }
 
-export interface MantenimientoCamion {
-  id:          string;
-  camion_id:   string | null;
-  tipo:        string;
-  descripcion: string | null;
-  fecha:       string;
-  coste_euros: number | null;
-  proveedor:   string | null;
-  foto_url:    string | null;
-  foto_url_2:  string | null;
-  created_at:  string;
-  created_by:  string | null;
-}
+/** Fila de BD + joins opcionales para listados (sin lógica por `vehiculo_tipo`). */
+export type MantenimientoCamion = LogisticaMantenimientoRow & {
+  camiones?: { matricula: string | null } | null;
+  vehiculos_empresa?: { matricula: string | null } | null;
+};
+
+export type MantenimientoCamionInsert = TablesInsert<'logistica_mantenimiento'>;
 
 export interface Combustible {
   id:            string;
@@ -432,9 +430,11 @@ export function useMantenimientoCamion(camionId?: string) {
     queryFn: async () => {
       let q = supabase
         .from('logistica_mantenimiento')
-        .select('*')
+        .select(LOGISTICA_MANTENIMIENTO_SELECT)
         .order('fecha', { ascending: false });
-      if (camionId) q = q.eq('camion_id', camionId);
+      if (camionId) {
+        q = q.or(`camion_id.eq.${camionId},vehiculo_empresa_id.eq.${camionId}`);
+      }
       const { data, error } = await q;
       if (error) throw error;
       return (data ?? []) as MantenimientoCamion[];
@@ -449,10 +449,10 @@ export function useAddMantenimientoCamion() {
   const createdBy = useCreatedBy();
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: Omit<MantenimientoCamion, 'id' | 'created_at'>) => {
+    mutationFn: async (payload: MantenimientoCamionInsert) => {
       const { data, error } = await supabase
         .from('logistica_mantenimiento')
-        .insert([{ ...payload, created_by: createdBy }])
+        .insert([{ ...payload, created_by: payload.created_by ?? createdBy }])
         .select()
         .single();
       if (error) throw error;
@@ -471,7 +471,7 @@ export function useAddMantenimientoCamion() {
 export function useUpdateMantenimientoCamion() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...patch }: Partial<MantenimientoCamion> & { id: string }) => {
+    mutationFn: async ({ id, ...patch }: TablesUpdate<'logistica_mantenimiento'> & { id: string }) => {
       const { error } = await supabase
         .from('logistica_mantenimiento')
         .update(patch)

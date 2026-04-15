@@ -49,6 +49,7 @@ export interface LineaMaterialCoste {
   productoId: string | null;
   nombreProducto: string | null;
   cantidad: number;
+  unidad: string | null;
   precioUnitario: number;
   subtotal: number;
 }
@@ -63,6 +64,8 @@ export interface ResultadoCosteTrabajo {
   trabajoId: string;
   horas: number;
   tractorAsignado: boolean;
+  tractorId: string | null;
+  aperoId: string | null;
   numOperarios: number;
   costeMateriales: number;
   costeMaquinaria: number;
@@ -85,7 +88,7 @@ export async function calcularCosteTrabajo(
   const { data: trabajo, error: errT } = await supabase
     .from('trabajos_registro')
     .select(
-      'id, hora_inicio, hora_fin, tractor_id, num_operarios, parcel_id, fecha, tipo_trabajo'
+      'id, hora_inicio, hora_fin, tractor_id, apero_id, num_operarios, parcel_id, fecha, tipo_trabajo'
     )
     .eq('id', trabajoId)
     .maybeSingle();
@@ -107,6 +110,7 @@ export async function calcularCosteTrabajo(
       `
       id,
       cantidad,
+      unidad,
       producto_id,
       notas,
       inventario_productos_catalogo ( nombre, precio_unitario )
@@ -137,6 +141,7 @@ export async function calcularCosteTrabajo(
       productoId: row.producto_id,
       nombreProducto,
       cantidad: cant,
+      unidad: (row as { unidad?: string | null }).unidad ?? null,
       precioUnitario: pu,
       subtotal,
     });
@@ -177,6 +182,8 @@ export async function calcularCosteTrabajo(
     trabajoId,
     horas,
     tractorAsignado,
+    tractorId: trabajo.tractor_id ?? null,
+    aperoId: (trabajo as { apero_id?: string | null }).apero_id ?? null,
     numOperarios,
     costeMateriales,
     costeMaquinaria,

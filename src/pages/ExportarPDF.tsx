@@ -7,10 +7,12 @@ import {
   BarChart3, Droplets, ShieldCheck, Sprout, Trash2
 } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
+import type { Tables } from '@/integrations/supabase/types'
 import { initPdf, PDF_COLORS, pdfCorporateSection, pdfCorporateTable, PDF_MARGIN } from '@/utils/pdfUtils'
 import { formatFechaLarga } from '@/utils/dateFormat'
 import { matchHarvestsToPlantings } from '@/utils/harvestPlantingMatch'
 import { FINCAS_NOMBRES as FINCAS } from '@/constants/farms'
+import { LOGISTICA_MANTENIMIENTO_SELECT } from '@/utils/logisticaMantenimiento'
 
 // ── Módulos seleccionables ────────────────────────────────────────────────────
 
@@ -66,6 +68,14 @@ async function cargarTrabajos(desde: string, hasta: string) {
   return { registros: regRes.data ?? [], incidencias: incRes.data ?? [] }
 }
 
+function horasTrabajadasDesdeParte(horaInicio: string | null, horaFin: string | null): number | undefined {
+  if (!horaInicio || !horaFin) return undefined
+  const t0 = new Date(horaInicio).getTime()
+  const t1 = new Date(horaFin).getTime()
+  if (!Number.isFinite(t0) || !Number.isFinite(t1) || t1 <= t0) return undefined
+  return Math.round(((t1 - t0) / (1000 * 60 * 60)) * 100) / 100
+}
+
 async function cargarMaquinaria(desde: string, hasta: string) {
   const [usoRes, mantRes] = await Promise.all([
     supabase.from('trabajos_registro')
@@ -75,10 +85,13 @@ async function cargarMaquinaria(desde: string, hasta: string) {
     supabase.from('maquinaria_mantenimiento').select('*, maquinaria_tractores(matricula)').gte('fecha', desde).lte('fecha', hasta).order('fecha').limit(200),
   ])
   
-  const usos = (usoRes.data ?? []).map((u: any) => ({
+  type TrabajoRegistroUsoPdf = Tables<'trabajos_registro'> & {
+    maquinaria_tractores?: { matricula: string | null; marca: string | null } | null
+  }
+  const usos = (usoRes.data ?? []).map((u: TrabajoRegistroUsoPdf) => ({
     ...u,
     tractorista: u.nombres_operarios,
-    horas_trabajadas: u.horas_reales,
+    horas_trabajadas: horasTrabajadasDesdeParte(u.hora_inicio, u.hora_fin),
     gasolina_litros: 0
   })) as Array<{
     maquinaria_tractores?: { matricula: string };
@@ -101,7 +114,13 @@ async function cargarMaquinaria(desde: string, hasta: string) {
 async function cargarLogistica(desde: string, hasta: string) {
   const [viajesRes, mantRes] = await Promise.all([
     supabase.from('logistica_viajes').select('*').gte('hora_salida', desde).lte('hora_salida', hasta + 'T23:59:59').order('hora_salida').limit(300),
-    supabase.from('logistica_mantenimiento').select('*, camiones(matricula)').gte('fecha', desde).lte('fecha', hasta).order('fecha').limit(100),
+    supabase
+      .from('logistica_mantenimiento')
+      .select(LOGISTICA_MANTENIMIENTO_SELECT)
+      .gte('fecha', desde)
+      .lte('fecha', hasta)
+      .order('fecha')
+      .limit(100),
   ])
   return { viajes: viajesRes.data ?? [], mantenimientos: mantRes.data ?? [] }
 }
@@ -279,7 +298,7 @@ async function generarPDFGlobal(
           ['FECHA ALTA', 'NOMBRE', 'DNI/NIF', 'CATEGORÍA', 'TELÉFONO'],
           [25, 45, 25, 45, 30],
           personal.map(p => [
-            p.fecha_alta ? new Date(p.fecha_alta).toLocaleDateString('es-ES') : (p.created_at ? new Date(p.created_at).toLocaleDateString('es-ES') : '—'),
+            p.created_at ? new Date(p.created_at).toLocaleDateString('es-ES') : '—',
             p.nombre, p.dni ?? '—', p.categoria.replace(/_/g, ' ').toUpperCase(), p.telefono ?? '—'
           ])
         )
@@ -477,13 +496,40 @@ async function generarPDFAgronomico(tipo: string, desde: string, hasta: string, 
     )
   }
   else if (tipo === 'hidrica') {
-    const [rRiego, rCosecha] = await Promise.all([
-      supabase.from('registros_riego').select('parcel_id, litros_aplicados').in('parcel_id', parcelIds).gte('fecha_inicio', `${desde}T00:00:00`).lte('fecha_inicio', `${hasta}T23:59:59`),
-      supabase.from('harvests').select('parcel_id, production_kg').in('parcel_id', parcelIds).gte('date', desde).lte('date', hasta)
-    ])
+    const { data: zonasRiego } = await supabase.from('sistema_riego_zonas').select('id, parcel_id').in('parcel_id', parcelIds)
+    const zonaToParcel = new Map((zonasRiego ?? []).map(z => [z.id, z.parcel_id]))
+    const zonaIds = [...zonaToParcel.keys()]
+
+    const { data: cosechaRows } = await supabase
+      .from('harvests')
+      .select('parcel_id, production_kg')
+      .in('parcel_id', parcelIds)
+      .gte('date', desde)
+      .lte('date', hasta)
+
+    let registrosRiegoRows: { zona_id: string | null; volumen_m3: number | null; fecha: string | null }[] = []
+    if (zonaIds.length > 0) {
+      const { data } = await supabase
+        .from('registros_riego')
+        .select('zona_id, volumen_m3, fecha')
+        .in('zona_id', zonaIds)
+        .gte('fecha', desde)
+        .lte('fecha', hasta)
+      registrosRiegoRows = data ?? []
+    }
+
     const litrosMap = new Map<string, number>(); const kgMap = new Map<string, number>()
-    rRiego.data?.forEach(r => { if(r.parcel_id) litrosMap.set(r.parcel_id, (litrosMap.get(r.parcel_id)||0) + (r.litros_aplicados||0)) })
-    rCosecha.data?.forEach(r => { kgMap.set(r.parcel_id, (kgMap.get(r.parcel_id)||0) + (r.production_kg||0)) })
+    registrosRiegoRows.forEach(r => {
+      const pid = r.zona_id ? zonaToParcel.get(r.zona_id) : null
+      if (!pid) return
+      const m3 = Number(r.volumen_m3) || 0
+      const litros = m3 * 1000
+      litrosMap.set(pid, (litrosMap.get(pid) || 0) + litros)
+    })
+    cosechaRows?.forEach(r => {
+      if (!r.parcel_id) return
+      kgMap.set(r.parcel_id, (kgMap.get(r.parcel_id) || 0) + (r.production_kg || 0))
+    })
     
     const filas: string[][] = []
     let totalL = 0; let totalKg = 0;

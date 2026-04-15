@@ -358,7 +358,7 @@ export default function FarmMap() {
               const { data: trabajos } = await supabase.from('work_records').select('*, cuadrillas(nombre)').eq('parcel_id', informeSector).gte('date', informeFechaInicio).lte('date', informeFechaFin).order('date', { ascending: false })
               ctx.writeLabel('TRABAJOS', 11)
               if (!trabajos?.length) { ctx.writeLine('Estado', 'Sin registros en el periodo.') }
-              else trabajos.forEach(r => { ctx.writeLine(`Fecha: ${r.date}`, `Tipo: ${r.work_type}`); if(r.description) ctx.writeLine('Notas', r.description); ctx.separator() })
+              else trabajos.forEach(r => { ctx.writeLine(`Fecha: ${r.date ?? '—'}`, `Tipo: ${r.work_type ?? '—'}`); if (r.notas) ctx.writeLine('Notas', r.notas); ctx.separator() })
             } else {
               ctx.writeLine('Estado', 'Reporte consolidado de sectores');
             }

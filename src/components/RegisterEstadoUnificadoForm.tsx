@@ -201,7 +201,6 @@ export default function RegisterEstadoUnificadoForm({
             date:          cosechaFecha,
             crop:          cosechaCultivo,
             production_kg: cosechaKg ? parseFloat(cosechaKg) : null,
-            notes:         null,
           })
         } catch { warnings.push('cosecha') }
       }
@@ -254,16 +253,24 @@ export default function RegisterEstadoUnificadoForm({
             zonaId = newZona.id;
           }
           
+          const inicio = new Date(riegoFechaInicio)
+          const fechaStr = inicio.toISOString().slice(0, 10)
+          let duracion_minutos: number | null = null
+          if (riegoFechaFin) {
+            const ms = new Date(riegoFechaFin).getTime() - inicio.getTime()
+            if (ms > 0) duracion_minutos = Math.round(ms / 60000)
+          }
+          const litros = num(riegoLitros)
+          const volumen_m3 = litros != null && litros > 0 ? litros / 1000 : null
+          const notasRiego = [riegoNotas, riegoOrigen ? `Origen: ${riegoOrigen}` : ''].filter(Boolean).join(' · ') || null
+
           await mutAddRiego.mutateAsync({
-            parcel_id: activeParcelId,
             zona_id: zonaId,
-            fecha_inicio: new Date(riegoFechaInicio).toISOString(),
-            fecha_fin: riegoFechaFin ? new Date(riegoFechaFin).toISOString() : null,
-            litros_aplicados: num(riegoLitros),
+            fecha: fechaStr,
+            volumen_m3,
+            duracion_minutos,
             presion_bar: num(riegoPresion),
-            origen_agua: riegoOrigen || null,
-            notas: riegoNotas || null,
-            operador: null
+            notas: notasRiego,
           })
         } catch { warnings.push('riego') }
       }

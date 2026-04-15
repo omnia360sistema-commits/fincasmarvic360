@@ -55,7 +55,7 @@ function useDashboardData() {
         work_type: w.work_type,
         parcel_id: w.parcel_id,
         cuadrilla_nombre: (w as unknown as { cuadrillas?: { nombre: string } }).cuadrillas?.nombre,
-        hours: w.hours,
+        hours_worked: w.hours_worked,
         enCurso: presencia.some(p => p.work_record_id === w.id)
       }));
 
@@ -72,8 +72,8 @@ function useDashboardData() {
       const usos = usosRaw as unknown as { tractor_id: string; finca: string | null }[] | null;
 
       const { data: posiciones } = await supabase.from('vehicle_positions')
-        .select('vehicle_id, parcel_id_detectada, timestamp')
-        .eq('vehicle_tipo', 'tractor').gte('timestamp', hace4horas).order('timestamp', { ascending: true });
+        .select('vehicle_id, latitude, longitude, timestamp')
+        .eq('vehicle_type', 'tractor').gte('timestamp', hace4horas).order('timestamp', { ascending: true });
 
       const activeMachineryMap = new Map<string, { id: string, matricula: string, ubicacion: string, tipo: string }>();
       for (const u of usos || []) {
@@ -83,7 +83,11 @@ function useDashboardData() {
       }
       for (const p of posiciones || []) {
         if (p.vehicle_id && trMap.has(p.vehicle_id)) {
-          activeMachineryMap.set(p.vehicle_id, { id: p.vehicle_id, matricula: trMap.get(p.vehicle_id) || '—', ubicacion: p.parcel_id_detectada ? `Sector ${p.parcel_id_detectada}` : 'En movimiento', tipo: 'gps' });
+          const gpsLabel =
+            p.latitude != null && p.longitude != null
+              ? `GPS ${p.latitude.toFixed(5)}, ${p.longitude.toFixed(5)}`
+              : 'En movimiento'
+          activeMachineryMap.set(p.vehicle_id, { id: p.vehicle_id, matricula: trMap.get(p.vehicle_id) || '—', ubicacion: gpsLabel, tipo: 'gps' });
         }
       }
       const maquinariaActiva = Array.from(activeMachineryMap.values());
@@ -254,7 +258,7 @@ export default function Dashboard() {
                   t.work_type ?? '—',
                   t.cuadrilla_nombre || '—',
                   t.parcel_id || '—',
-                  t.hours ? String(t.hours) : '—',
+                  t.hours_worked != null ? String(t.hours_worked) : '—',
                   t.enCurso ? 'En curso' : 'Completado/Pendiente'
                 ])
               );
@@ -404,7 +408,7 @@ export default function Dashboard() {
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"/> Activo
                     </span>
                   ) : (
-                    <span className="shrink-0 ml-2 text-[10px] font-bold text-slate-400">{t.hours ? `${t.hours}h` : 'Fin'}</span>
+                    <span className="shrink-0 ml-2 text-[10px] font-bold text-slate-400">{t.hours_worked != null ? `${t.hours_worked}h` : 'Fin'}</span>
                   )}
                 </div>
               ))}

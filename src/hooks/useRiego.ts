@@ -8,7 +8,7 @@ export function useZonasRiego(parcelId?: string | null) {
   return useQuery({
     queryKey: ['sistema_riego_zonas', parcelId],
     queryFn: async () => {
-      let query = supabase.from('sistema_riego_zonas').select('*').eq('activo', true)
+      let query = supabase.from('sistema_riego_zonas').select('*').eq('activa', true)
       if (parcelId) query = query.eq('parcel_id', parcelId)
       
       const { data, error } = await query.order('created_at', { ascending: true })
@@ -41,12 +41,15 @@ export function useRegistrosRiego(parcelId?: string | null, desde?: string, hast
   return useQuery({
     queryKey: ['registros_riego', parcelId, desde, hasta],
     queryFn: async () => {
-      let query = supabase.from('registros_riego').select('*, sistema_riego_zonas(nombre_zona)')
-      if (parcelId) query = query.eq('parcel_id', parcelId)
-      if (desde) query = query.gte('fecha_inicio', desde)
-      if (hasta) query = query.lte('fecha_inicio', hasta)
-      
-      const { data, error } = await query.order('fecha_inicio', { ascending: false })
+      // Sin !inner: registros con zona huérfana o FK rota siguen visibles (embed null); la UI debe usar ?.
+      let query = supabase
+        .from('registros_riego')
+        .select('*, sistema_riego_zonas(parcel_id, nombre_zona)')
+      if (parcelId) query = query.eq('sistema_riego_zonas.parcel_id', parcelId)
+      if (desde) query = query.gte('fecha', desde)
+      if (hasta) query = query.lte('fecha', hasta)
+
+      const { data, error } = await query.order('fecha', { ascending: false })
       if (error) throw error
       return data ?? []
     },
@@ -100,10 +103,13 @@ export function useConsumoPorParcela(parcelId: string | null, desde?: string, ha
     queryKey: ['consumo_riego_semana', parcelId, desde, hasta],
     queryFn: async () => {
       if (!parcelId) return []
-      let query = supabase.from('registros_riego').select('fecha_inicio, litros_aplicados').eq('parcel_id', parcelId)
-      if (desde) query = query.gte('fecha_inicio', desde)
-      if (hasta) query = query.lte('fecha_inicio', hasta)
-      
+      let query = supabase
+        .from('registros_riego')
+        .select('fecha, volumen_m3, sistema_riego_zonas(parcel_id)')
+        .eq('sistema_riego_zonas.parcel_id', parcelId)
+      if (desde) query = query.gte('fecha', desde)
+      if (hasta) query = query.lte('fecha', hasta)
+
       const { data, error } = await query
       if (error) throw error
       return data ?? []

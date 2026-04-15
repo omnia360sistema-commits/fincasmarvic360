@@ -270,13 +270,12 @@ export function useProductosCatalogo(categoriaId: string | null) {
 }
 
 export function useAddProductoCatalogo() {
-  const createdBy = useCreatedBy()
   const qc = useQueryClient()
   return useMutation({
     mutationFn: async (record: TablesInsert<'inventario_productos_catalogo'>) => {
       const { data, error } = await supabase
         .from('inventario_productos_catalogo')
-        .insert({ ...record, created_by: createdBy })
+        .insert(record)
         .select()
         .single()
       if (error) throw error

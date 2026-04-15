@@ -10,6 +10,8 @@ import { supabase } from '@/integrations/supabase/client'
 import { FINCAS_NOMBRES as FINCAS } from '@/constants/farms'
 import { PDFExportModal, type PDFExportParams } from '@/components/base'
 import { generarPDFCorporativoBase, pdfCorporateSection, pdfCorporateTable } from '@/utils/pdfUtils'
+import { horasEntreMarcasISO } from '@/utils/horasTrabajo'
+import type { Tables } from '@/integrations/supabase/types'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -45,7 +47,7 @@ function useHistoricos(fechaDesde: string, fechaHasta: string) {
           .limit(200),
         supabase
           .from('trabajos_registro')
-          .select('id, fecha, hora_inicio, tipo_trabajo, finca, nombres_operarios, horas_reales, tractor_id')
+          .select('id, fecha, hora_inicio, hora_fin, tipo_trabajo, finca, nombres_operarios, tractor_id')
           .not('tractor_id', 'is', null)
           .gte('fecha', fechaDesde)
           .lte('fecha', fechaHasta)
@@ -100,15 +102,20 @@ function useHistoricos(fechaDesde: string, fechaHasta: string) {
       }
 
       // Maquinaria uso
-      for (const u of (usoRes.data as any[]) ?? []) {
+      for (const u of (usoRes.data ?? []) as Pick<
+        Tables<'trabajos_registro'>,
+        'id' | 'fecha' | 'hora_inicio' | 'hora_fin' | 'tipo_trabajo' | 'finca' | 'nombres_operarios' | 'tractor_id'
+      >[]) {
+        const horasMaq = horasEntreMarcasISO(u.hora_inicio, u.hora_fin)
+        const horasLbl = horasMaq != null && horasMaq > 0 ? `${horasMaq}h` : null
         entradas.push({
           id:        `maq-${u.id}`,
           modulo:    'maquinaria',
-          fecha:     u.fecha,
+          fecha:     u.fecha ?? '',
           hora:      u.hora_inicio ? u.hora_inicio.slice(11, 16) : undefined,
           tipo:      'Uso maquinaria',
           titulo:    u.tipo_trabajo ?? 'Uso',
-          subtitulo: [u.nombres_operarios, u.horas_reales ? `${u.horas_reales}h` : null].filter(Boolean).join(' · ') || undefined,
+          subtitulo: [u.nombres_operarios, horasLbl].filter(Boolean).join(' · ') || undefined,
           finca:     u.finca ?? undefined,
           url:       '/maquinaria',
         })

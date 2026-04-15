@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '../integrations/supabase/client';
-import type { Json } from '../integrations/supabase/types';
+import type { Database, Json } from '../integrations/supabase/types';
 import { logLiaEvento } from '@/utils/liaLogger';
 import { toast } from '@/hooks/use-toast';
 import { useCreatedBy } from './useCreatedBy';
@@ -19,6 +19,21 @@ export type TipoBloque =
   | 'maquinaria_agricola'
   | 'mano_obra_interna'
   | 'mano_obra_externa';
+
+const TIPO_BLOQUE_VALUES: readonly TipoBloque[] = [
+  'logistica',
+  'maquinaria_agricola',
+  'mano_obra_interna',
+  'mano_obra_externa',
+];
+
+/** Normaliza texto de BD a la unión usada en la app; valores desconocidos → fallback seguro. */
+export function normalizeTipoBloque(raw: string | null | undefined): TipoBloque {
+  if (raw != null && (TIPO_BLOQUE_VALUES as readonly string[]).includes(raw)) {
+    return raw as TipoBloque;
+  }
+  return 'maquinaria_agricola';
+}
 
 export type EstadoIncidencia = 'abierta' | 'en_proceso' | 'resuelta';
 export type EstadoPlanificacion = 'borrador' | 'confirmado' | 'ejecutado' | 'pendiente' | 'cancelado';
@@ -49,6 +64,46 @@ export interface TrabajoRegistro {
   tractor_id:            string | null;
   apero_id:              string | null;
   materiales_previstos:  Json | null;
+}
+
+type TrabajoRegistroDbRow = Database['public']['Tables']['trabajos_registro']['Row'] & {
+  maquinaria_tractores?: { matricula: string | null; marca: string | null } | null;
+  maquinaria_aperos?: { tipo: string | null; descripcion: string | null } | null;
+};
+
+/** Fila de planificación del día: dominio de app + joins de maquinaria (solo lectura UI). */
+export type TrabajoRegistroPlanificado = TrabajoRegistro & {
+  maquinaria_tractores?: { matricula: string | null; marca: string | null } | null;
+  maquinaria_aperos?: { tipo: string | null; descripcion: string | null } | null;
+};
+
+function toTrabajoRegistroPlanificado(row: TrabajoRegistroDbRow): TrabajoRegistroPlanificado {
+  return {
+    id: row.id,
+    tipo_bloque: normalizeTipoBloque(row.tipo_bloque),
+    fecha: row.fecha ?? '',
+    hora_inicio: row.hora_inicio,
+    hora_fin: row.hora_fin,
+    finca: row.finca,
+    parcel_id: row.parcel_id,
+    tipo_trabajo: row.tipo_trabajo,
+    num_operarios: row.num_operarios,
+    nombres_operarios: row.nombres_operarios,
+    foto_url: row.foto_url,
+    notas: row.notas,
+    created_at: row.created_at ?? new Date().toISOString(),
+    created_by: row.created_by,
+    estado_planificacion: row.estado_planificacion as EstadoPlanificacion | null,
+    prioridad: row.prioridad as Prioridad | null,
+    fecha_planificada: row.fecha_planificada,
+    fecha_original: row.fecha_original,
+    recursos_personal: row.recursos_personal,
+    tractor_id: row.tractor_id,
+    apero_id: row.apero_id,
+    materiales_previstos: row.materiales_previstos,
+    maquinaria_tractores: row.maquinaria_tractores ?? null,
+    maquinaria_aperos: row.maquinaria_aperos ?? null,
+  };
 }
 
 export interface TrabajoIncidencia {
@@ -262,7 +317,7 @@ export function useKPIsTrabajos() {
 export function usePlanificacionDia(fecha: string) {
   return useQuery({
     queryKey: ['planificacion_dia', fecha],
-    queryFn: async () => {
+    queryFn: async (): Promise<TrabajoRegistroPlanificado[]> => {
       const { data, error } = await supabase
         .from('trabajos_registro')
         .select('*, maquinaria_tractores(matricula, marca), maquinaria_aperos(tipo, descripcion)')
@@ -270,9 +325,11 @@ export function usePlanificacionDia(fecha: string) {
         .order('created_at', { ascending: true });
       if (error) throw error;
       const orden: Record<string, number> = { alta: 1, media: 2, baja: 3 };
-      return (data ?? []).sort(
-        (a, b) => (orden[a.prioridad ?? 'media'] ?? 2) - (orden[b.prioridad ?? 'media'] ?? 2)
-      );
+      return (data ?? [])
+        .sort(
+          (a, b) => (orden[a.prioridad ?? 'media'] ?? 2) - (orden[b.prioridad ?? 'media'] ?? 2)
+        )
+        .map((row) => toTrabajoRegistroPlanificado(row as TrabajoRegistroDbRow));
     },
     staleTime: 30000,
     enabled: !!fecha,

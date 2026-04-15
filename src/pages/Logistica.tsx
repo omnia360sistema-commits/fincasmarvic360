@@ -32,6 +32,8 @@ import {
   PDF_MARGIN,
 } from '../utils/pdfUtils';
 import { FINCAS_NOMBRES as FINCAS } from '../constants/farms';
+import type { TablesInsert, TablesUpdate } from '@/integrations/supabase/types';
+import { getVehiculoLabel } from '@/utils/logisticaMantenimiento';
 
 // ── Tipos ─────────────────────────────────────────────────────
 
@@ -691,16 +693,14 @@ const ModalMantenimiento = React.memo(function ModalMantenimiento({
   // Catálogo local de talleres/proveedores de mantenimiento
   const catTalleres = useCatalogoLocal('logistica_talleres', TALLERES);
 
-  // vehiculo_tipo es solo UI para filtrar la lista
-  const detectarTipo = (): 'camion' | 'vehiculo' => {
-    if (!initial?.camion_id) return 'camion';
-    if (camiones.find(c => c.id === initial.camion_id)) return 'camion';
-    return 'vehiculo';
-  };
+  const tipoVehiculoInicial = (): 'camion' | 'vehiculo_empresa' =>
+    initial?.vehiculo_empresa_id ? 'vehiculo_empresa' : 'camion';
 
-  const [vehiculoTipo, setVehiculoTipo] = useState<'camion' | 'vehiculo'>(detectarTipo);
+  const [tipoVehiculo, setTipoVehiculo] = useState<'camion' | 'vehiculo_empresa'>(tipoVehiculoInicial);
+  const [selectedId, setSelectedId] = useState(
+    () => initial?.vehiculo_empresa_id ?? initial?.camion_id ?? '',
+  );
   const [form, setForm] = useState({
-    camion_id:   initial?.camion_id ?? '',
     tipo:        initial?.tipo ?? '',
     descripcion: initial?.descripcion ?? '',
     fecha:       initial?.fecha ? initial.fecha.slice(0, 10) : new Date().toISOString().slice(0, 10),
@@ -715,17 +715,24 @@ const ModalMantenimiento = React.memo(function ModalMantenimiento({
   const foto1Preview = useMemo(() => foto1 ? URL.createObjectURL(foto1) : (initial?.foto_url ?? null), [foto1, initial?.foto_url]);
   const foto2Preview = useMemo(() => foto2 ? URL.createObjectURL(foto2) : (initial?.foto_url_2 ?? null), [foto2, initial?.foto_url_2]);
 
-  const listaVehiculos = vehiculoTipo === 'camion' ? camiones : vehiculos;
+  const listaVehiculos = tipoVehiculo === 'camion' ? camiones : vehiculos;
 
   const tiposOpciones = tiposMant.map(t => t.nombre);
 
   const handleSubmit = async () => {
+    if (!selectedId) {
+      toast({ title: 'Vehículo requerido', description: 'Selecciona un camión o vehículo de empresa.', variant: 'destructive' });
+      return;
+    }
     setUploading(true);
     try {
       const fotoUrl1 = foto1 ? await uploadImage(foto1, 'parcel-images', buildStoragePath('mant-logistica', foto1)) ?? null : (initial?.foto_url ?? null);
       const fotoUrl2 = foto2 ? await uploadImage(foto2, 'parcel-images', buildStoragePath('mant-logistica', foto2)) ?? null : (initial?.foto_url_2 ?? null);
-      const payload = {
-        camion_id:   form.camion_id || null,
+      const camion_id = tipoVehiculo === 'camion' ? (selectedId || null) : null;
+      const vehiculo_empresa_id = tipoVehiculo === 'vehiculo_empresa' ? (selectedId || null) : null;
+      const base: TablesInsert<'logistica_mantenimiento'> = {
+        camion_id,
+        vehiculo_empresa_id,
         tipo:        form.tipo || 'Revisión periódica',
         descripcion: form.descripcion || null,
         fecha:       form.fecha,
@@ -733,12 +740,22 @@ const ModalMantenimiento = React.memo(function ModalMantenimiento({
         proveedor:   form.proveedor || null,
         foto_url:    fotoUrl1,
         foto_url_2:  fotoUrl2,
-        created_by:  user?.email ?? 'sistema',
       };
       if (isEdit && initial) {
-        await updMut.mutateAsync({ id: initial.id, ...payload });
+        const patch: TablesUpdate<'logistica_mantenimiento'> = {
+          camion_id,
+          vehiculo_empresa_id,
+          tipo:        base.tipo,
+          descripcion: base.descripcion,
+          fecha:       base.fecha,
+          coste_euros: base.coste_euros,
+          proveedor:   base.proveedor,
+          foto_url:    base.foto_url,
+          foto_url_2:  base.foto_url_2,
+        };
+        await updMut.mutateAsync({ id: initial.id, ...patch });
       } else {
-        await addMut.mutateAsync(payload);
+        await addMut.mutateAsync(base);
       }
       onClose();
     } finally {
@@ -762,17 +779,28 @@ const ModalMantenimiento = React.memo(function ModalMantenimiento({
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={LABEL}>Tipo de vehículo</label>
-              <select value={vehiculoTipo} onChange={e => { setVehiculoTipo(e.target.value as 'camion' | 'vehiculo'); set('camion_id', ''); }} className={INPUT}>
+              <select
+                value={tipoVehiculo}
+                onChange={e => {
+                  const v = e.target.value as 'camion' | 'vehiculo_empresa';
+                  setTipoVehiculo(v);
+                  setSelectedId('');
+                }}
+                className={INPUT}
+              >
                 <option value="camion">Camión</option>
-                <option value="vehiculo">Vehículo empresa</option>
+                <option value="vehiculo_empresa">Vehículo empresa</option>
               </select>
             </div>
             <div>
               <label className={LABEL}>Vehículo</label>
               <SelectWithOther
                 options={listaVehiculos.map(v => v.matricula + (v.marca ? ' · ' + v.marca : ''))}
-                value={listaVehiculos.find(v => v.id === form.camion_id) ? (listaVehiculos.find(v => v.id === form.camion_id)!.matricula + ((listaVehiculos.find(v => v.id === form.camion_id) as Camion)?.marca ? ' · ' + (listaVehiculos.find(v => v.id === form.camion_id) as Camion)?.marca : '')) : ''}
-                onChange={v => { const mat = v.split(' · ')[0]; const item = listaVehiculos.find(x => x.matricula === mat); set('camion_id', item?.id ?? ''); }}
+                value={(() => {
+                  const sel = listaVehiculos.find(v => v.id === selectedId);
+                  return sel ? `${sel.matricula}${sel.marca ? ` · ${sel.marca}` : ''}` : '';
+                })()}
+                onChange={v => { const mat = v.split(' · ')[0]; const item = listaVehiculos.find(x => x.matricula === mat); setSelectedId(item?.id ?? ''); }}
                 onCreateNew={() => toast({ title: "Valor no persistible", description: "Crea este registro desde su módulo correspondiente." })}
                 placeholder="Seleccionar vehículo"
               />
@@ -1085,7 +1113,7 @@ export default function Logistica() {
           pdfCorporateSection(ctx, 'Mantenimientos');
           if (mants.length === 0) { ctx.checkPage(8); ctx.doc.setFontSize(9); ctx.doc.setTextColor(100,116,139); ctx.doc.text('Sin mantenimientos.', PDF_MARGIN, ctx.y); ctx.y += 6; return; }
           pdfCorporateTable(ctx, ['FECHA', 'VEHÍCULO', 'TIPO', 'DESCRIPCIÓN', 'COSTE €', 'PROVEEDOR'], [22, 22, 24, 50, 20, 44],
-            mants.map(m => [fmtFechaCorta(m.fecha), matriculaVehiculo(camiones, vehiculos, m.camion_id), m.tipo, m.descripcion ?? '—', m.coste_euros != null ? m.coste_euros.toFixed(2) : '—', m.proveedor ?? '—']));
+            mants.map(m => [fmtFechaCorta(m.fecha), getVehiculoLabel(m, { camiones, vehiculos }), m.tipo, m.descripcion ?? '—', m.coste_euros != null ? m.coste_euros.toFixed(2) : '—', m.proveedor ?? '—']));
         },
       ],
     });
@@ -1136,7 +1164,7 @@ export default function Logistica() {
         pdfCorporateSection(ctx, 'Mantenimientos');
         if (mants.length === 0) { ctx.checkPage(8); ctx.doc.setFontSize(9); ctx.doc.setTextColor(100,116,139); ctx.doc.text('Sin mantenimientos.', PDF_MARGIN, ctx.y); ctx.y += 6; return; }
         pdfCorporateTable(ctx, ['FECHA', 'VEHÍCULO', 'TIPO', 'COSTE €', 'PROVEEDOR'], [26, 28, 32, 22, 74],
-          mants.map(m => [fmtFechaCorta(m.fecha), matriculaVehiculo(camiones, vehiculos, m.camion_id), m.tipo, m.coste_euros != null ? m.coste_euros.toFixed(2) : '—', m.proveedor ?? '—']));
+          mants.map(m => [fmtFechaCorta(m.fecha), getVehiculoLabel(m, { camiones, vehiculos }), m.tipo, m.coste_euros != null ? m.coste_euros.toFixed(2) : '—', m.proveedor ?? '—']));
       }],
     });
   }
@@ -1568,7 +1596,7 @@ export default function Logistica() {
                           <span className="text-[8px] text-slate-500 shrink-0">{fmtFecha(m.fecha)}</span>
                         </div>
                         <div className="flex items-center gap-3 flex-wrap">
-                          <span className="text-[9px] text-slate-400">{matriculaVehiculo(camiones, vehiculos, m.camion_id)}</span>
+                          <span className="text-[9px] text-slate-400">{getVehiculoLabel(m, { camiones, vehiculos })}</span>
                           {m.descripcion && <span className="text-[9px] text-slate-400">{m.descripcion}</span>}
                           {m.proveedor   && <span className="text-[9px] text-slate-500">· {m.proveedor}</span>}
                           {m.coste_euros != null && <span className="text-[9px] text-purple-300 font-black">{m.coste_euros.toFixed(2)}€</span>}
@@ -1667,6 +1695,7 @@ export default function Logistica() {
       )}
       {(modalAddMant || editMant) && (
         <ModalMantenimiento
+          key={editMant?.id ?? 'nuevo-mantenimiento'}
           initial={editMant ?? undefined}
           camiones={camiones}
           vehiculos={vehiculos}

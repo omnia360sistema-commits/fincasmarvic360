@@ -8,12 +8,14 @@ import {
 } from '@/hooks/useTrazabilidad'
 import { useParcelas } from '@/hooks/useParcelData'
 import { supabase } from '@/integrations/supabase/client'
+import type { Tables } from '@/integrations/supabase/types'
 import { useQuery } from '@tanstack/react-query'
 import SelectWithOther from '@/components/base/SelectWithOther'
 import RecordActions from '@/components/base/RecordActions'
 import { generarPDFCorporativoBase, PDF_COLORS } from '@/utils/pdfUtils'
 import { FINCAS_NOMBRES } from '@/constants/farms'
 import { toast } from '@/hooks/use-toast'
+import { horasTrabajoLabel } from '@/utils/horasTrabajo'
 
 const ESTADOS_PALOT = {
   en_campo: 'bg-green-500/20 text-green-400 border-green-500/30',
@@ -42,15 +44,19 @@ interface DbRow {
   crop?: string;
   variedad?: string;
   tipo_trabajo?: string;
+  work_type?: string;
   cuadrillas?: { nombre?: string };
   nombres_operarios?: string;
-  hours?: number;
-  horas_reales?: number;
-  litros_aplicados?: number;
+  hours_worked?: number | null;
+  horas_calculadas?: number | null;
+  hora_entrada?: string | null;
+  hora_salida?: string | null;
+  volumen_m3?: number | null;
+  tipo_movimiento?: string | null;
   ndvi?: number;
   clorofila?: number;
   production_kg?: number;
-  qr_code?: string;
+  numero_palot?: string;
   peso_kg?: number;
   tipo?: string;
   camiones?: { matricula?: string };
@@ -58,7 +64,7 @@ interface DbRow {
 
 interface PalotRow {
   id: string;
-  qr_code: string;
+  numero_palot: string;
   estado: string;
   cultivo?: string | null;
   lote?: string | null;
@@ -126,7 +132,6 @@ export default function Trazabilidad() {
         { data: suelo },
         { data: plantaciones },
         { data: trabajos },
-        { data: riegos },
         { data: sensores },
         { data: cosechas },
         { data: palots }
@@ -134,14 +139,20 @@ export default function Trazabilidad() {
         supabase.from('analisis_suelo').select('*').eq('parcel_id', timelineParcela),
         supabase.from('plantings').select('*').eq('parcel_id', timelineParcela),
         supabase.from('work_records').select('*, cuadrillas(nombre)').eq('parcel_id', timelineParcela),
-        supabase.from('registros_riego').select('*').eq('parcel_id', timelineParcela),
         supabase.from('lecturas_sensor_planta').select('*').eq('parcel_id', timelineParcela),
         supabase.from('harvests').select('*').eq('parcel_id', timelineParcela),
         supabase.from('palots').select('*').eq('parcel_id', timelineParcela)
       ])
 
+      const { data: zonasTimeline } = await supabase.from('sistema_riego_zonas').select('id').eq('parcel_id', timelineParcela)
+      const zonaIdsTimeline = (zonasTimeline ?? []).map(z => z.id)
+      const { data: riegos } =
+        zonaIdsTimeline.length > 0
+          ? await supabase.from('registros_riego').select('*').in('zona_id', zonaIdsTimeline)
+          : { data: [] as Tables<'registros_riego'>[] }
+
       const palotIds = (palots || []).map(p => p.id)
-      let movimientos: any[] = []
+      let movimientos: (Tables<'movimientos_palot'> & { camiones?: { matricula: string | null } | null })[] = []
       if (palotIds.length > 0) {
         const { data: movs } = await supabase.from('movimientos_palot').select('*, camiones(matricula)').in('palot_id', palotIds)
         movimientos = movs || []
@@ -152,7 +163,9 @@ export default function Trazabilidad() {
       ;((suelo ?? []) as DbRow[]).forEach(e => events.push({ id: e.id, type: 'suelo', date: new Date(e.fecha || e.created_at || 0), data: e }))
       ;((plantaciones ?? []) as DbRow[]).forEach(e => events.push({ id: e.id, type: 'plantacion', date: new Date(e.date || e.created_at || 0), data: e }))
       ;((trabajos ?? []) as DbRow[]).forEach(e => events.push({ id: e.id, type: 'trabajo', date: new Date(e.date || e.created_at || 0), data: e }))
-      ;((riegos ?? []) as DbRow[]).forEach(e => events.push({ id: e.id, type: 'riego', date: new Date(e.fecha_inicio || 0), data: e }))
+      ;((riegos ?? []) as DbRow[]).forEach(e =>
+        events.push({ id: e.id, type: 'riego', date: new Date(e.fecha || e.created_at || 0), data: e })
+      )
       ;((sensores ?? []) as DbRow[]).forEach(e => events.push({ id: e.id, type: 'sensor', date: new Date(e.fecha || e.created_at || 0), data: e }))
       ;((cosechas ?? []) as DbRow[]).forEach(e => events.push({ id: e.id, type: 'cosecha', date: new Date(e.date || e.created_at || 0), data: e }))
       ;((palots ?? []) as DbRow[]).forEach(e => events.push({ id: e.id, type: 'palot', date: new Date(e.created_at || 0), data: e }))
@@ -197,13 +210,31 @@ export default function Trazabilidad() {
               let detail = ''
 
               if (ev.type === 'suelo') { detail = `pH: ${e.ph ?? '-'} | EC: ${e.conductividad_ec ?? '-'} | MO: ${e.materia_organica ?? '-'}%` }
-              else if (ev.type === 'plantacion') { detail = `Cultivo: ${e.crop} | Variedad: ${e.variedad || 'N/D'}` }
-              else if (ev.type === 'trabajo') { detail = `${e.tipo_trabajo} | ${e.cuadrillas?.nombre || e.nombres_operarios || 'Sin operarios'} | ${e.hours || e.horas_reales || 0}h` }
-              else if (ev.type === 'riego') { detail = `${e.litros_aplicados || 0} L aplicados` }
+              else if (ev.type === 'plantacion') { detail = `Cultivo: ${e.crop ?? '—'} | Variedad: ${e.variedad || 'N/D'}` }
+              else if (ev.type === 'trabajo') {
+                const tipo = e.work_type ?? e.tipo_trabajo ?? '—';
+                const horas = horasTrabajoLabel({
+                  hours_worked: e.hours_worked,
+                  horas_calculadas: e.horas_calculadas,
+                  hora_entrada: e.hora_entrada,
+                  hora_salida: e.hora_salida,
+                });
+                detail = `${tipo} | ${e.cuadrillas?.nombre || e.nombres_operarios || 'Sin operarios'} | ${horas}`;
+              }
+              else if (ev.type === 'riego') {
+                const m3 = Number(e.volumen_m3) || 0
+                detail = m3 > 0 ? `${Math.round(m3 * 1000).toLocaleString()} L (~${m3.toFixed(2)} m³)` : 'Sin volumen registrado'
+              }
               else if (ev.type === 'sensor') { detail = `NDVI: ${e.ndvi ?? '-'} | SPAD: ${e.clorofila ?? '-'}` }
               else if (ev.type === 'cosecha') { detail = `${e.production_kg || 0} kg recolectados` }
-              else if (ev.type === 'palot') { detail = `QR: ${e.qr_code.split('-')[0]} | Peso: ${e.peso_kg || 0} kg` }
-              else if (ev.type === 'movimiento') { detail = `${e.tipo.replace('_', ' ')} | Vehículo: ${e.camiones?.matricula || 'N/D'}` }
+              else if (ev.type === 'palot') {
+                const codigo = e.numero_palot ?? '';
+                detail = `Nº: ${codigo ? codigo.split('-')[0] : '—'} | Peso: ${e.peso_kg || 0} kg`;
+              }
+              else if (ev.type === 'movimiento') {
+                const tipoMov = (e.tipo_movimiento ?? e.tipo ?? '').replace(/_/g, ' ')
+                detail = `${tipoMov} | Vehículo: ${e.camiones?.matricula || 'N/D'}`
+              }
 
               ctx.entryHeader(label[0] || 'E', label, dStr)
               ctx.writeLine('Detalle', detail)
@@ -236,13 +267,36 @@ export default function Trazabilidad() {
     const e = ev.data;
     switch (ev.type) {
       case 'suelo': return <><span className="font-bold text-slate-300">Análisis:</span> pH {e.ph ?? '-'} | EC {e.conductividad_ec ?? '-'}</>;
-      case 'plantacion': return <><span className="font-bold text-slate-300">Plantación:</span> {e.crop} ({e.variedad || 'Sin variedad'})</>;
-      case 'trabajo': return <><span className="font-bold text-slate-300">Trabajo:</span> {e.tipo_trabajo} | {e.cuadrillas?.nombre || e.nombres_operarios || '-'} | {e.hours || e.horas_reales || 0}h</>;
-      case 'riego': return <><span className="font-bold text-slate-300">Riego:</span> {e.litros_aplicados || 0} L</>;
+      case 'plantacion': return <><span className="font-bold text-slate-300">Plantación:</span> {e.crop ?? '—'} ({e.variedad || 'Sin variedad'})</>;
+      case 'trabajo': {
+        const tipo = e.work_type ?? e.tipo_trabajo ?? '—';
+        const horas = horasTrabajoLabel({
+          hours_worked: e.hours_worked,
+          horas_calculadas: e.horas_calculadas,
+          hora_entrada: e.hora_entrada,
+          hora_salida: e.hora_salida,
+        });
+        return <><span className="font-bold text-slate-300">Trabajo:</span> {tipo} | {e.cuadrillas?.nombre || e.nombres_operarios || '-'} | {horas}</>;
+      }
+      case 'riego': {
+        const m3 = Number(e.volumen_m3) || 0
+        return (
+          <>
+            <span className="font-bold text-slate-300">Riego:</span>{' '}
+            {m3 > 0 ? `${Math.round(m3 * 1000).toLocaleString()} L (~${m3.toFixed(2)} m³)` : 'Sin volumen'}
+          </>
+        )
+      }
       case 'sensor': return <><span className="font-bold text-slate-300">Sensor:</span> NDVI {e.ndvi ?? '-'} | SPAD {e.clorofila ?? '-'}</>;
       case 'cosecha': return <><span className="font-bold text-slate-300">Cosecha:</span> {e.production_kg || 0} kg</>;
-      case 'palot': return <><span className="font-bold text-slate-300">Palot Creado:</span> QR: {e.qr_code.split('-')[0]} | {e.peso_kg || 0} kg</>;
-      case 'movimiento': return <><span className="font-bold text-slate-300">Movimiento:</span> {e.tipo.replace('_', ' ')} | {e.camiones?.matricula || '-'}</>;
+      case 'palot': {
+        const codigo = e.numero_palot ?? '';
+        return <><span className="font-bold text-slate-300">Palot creado:</span> Nº {codigo ? codigo.split('-')[0] : '—'} | {e.peso_kg || 0} kg</>;
+      }
+      case 'movimiento': {
+        const tipoMov = (e.tipo_movimiento ?? e.tipo ?? '').replace(/_/g, ' ')
+        return <><span className="font-bold text-slate-300">Movimiento:</span> {tipoMov} | {e.camiones?.matricula || '-'}</>
+      }
       default: return null;
     }
   }
@@ -354,8 +408,8 @@ export default function Trazabilidad() {
                 <div key={p.id} className="bg-slate-900/60 border border-white/5 p-4 rounded-xl relative overflow-hidden group hover:border-[#6d9b7d]/30 transition-colors">
                   <div className="flex justify-between items-start mb-3">
                     <div>
-                      <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">QR CODE</p>
-                      <p className="text-xs font-mono text-slate-300">{p.qr_code.split('-')[0]}</p>
+                      <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">Nº palot</p>
+                      <p className="text-xs font-mono text-slate-300">{p.numero_palot.split('-')[0]}</p>
                     </div>
                     <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border uppercase tracking-wider ${ESTADOS_PALOT[p.estado as keyof typeof ESTADOS_PALOT]}`}>
                       {p.estado?.replace('_', ' ')}
@@ -438,7 +492,7 @@ export default function Trazabilidad() {
                   <div className="flex justify-between items-center border-b border-white/5 pb-4 mb-4">
                     <div>
                       <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">FICHA DE PALOT</p>
-                      <p className="text-sm font-mono text-[#6d9b7d]">{palotEscaneado.qr_code}</p>
+                      <p className="text-sm font-mono text-[#6d9b7d]">{palotEscaneado.numero_palot}</p>
                     </div>
                     <span className={`text-[10px] font-bold px-2.5 py-1 rounded-md border uppercase tracking-wider ${ESTADOS_PALOT[palotEscaneado.estado as keyof typeof ESTADOS_PALOT]}`}>
                       {palotEscaneado.estado?.replace('_', ' ')}

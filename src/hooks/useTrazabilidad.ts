@@ -20,9 +20,10 @@ export function usePalots(parcelId?: string | null, estado?: string) {
 export function useAddPalot() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (payload: Omit<TablesInsert<'palots'>, 'qr_code'>) => {
+    mutationFn: async (payload: Omit<TablesInsert<'palots'>, 'numero_palot'>) => {
       const qr_code = `PLT-${Date.now().toString().slice(-6)}-${Math.floor(Math.random() * 1000)}`;
-      const { data, error } = await supabase.from('palots').insert([{ ...payload, qr_code }]).select().single();
+      const numero_palot = qr_code;
+      const { data, error } = await supabase.from('palots').insert([{ ...payload, numero_palot }]).select().single();
       if (error) throw error;
       return data;
     },
@@ -114,7 +115,7 @@ export function useLocalPalot(qrCode: string) {
     queryKey: ['palot_qr', qrCode],
     queryFn: async () => {
       if (!qrCode) return null;
-      const { data, error } = await supabase.from('palots').select('*, parcels(parcel_number)').ilike('qr_code', `${qrCode}%`).maybeSingle();
+      const { data, error } = await supabase.from('palots').select('*, parcels(parcel_number)').ilike('numero_palot', `${qrCode}%`).maybeSingle();
       if (error && error.code !== 'PGRST116') throw error;
       return data ?? null;
     },

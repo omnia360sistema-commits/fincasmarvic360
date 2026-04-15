@@ -127,8 +127,8 @@ export default function ParcelHistory({
               <Card key={r.id}>
                 <Row label="Tipo"         value={r.work_type} capitalize />
                 <Row label="Fecha"        value={r.date} />
-                <Row label="Trabajadores" value={`${r.workers || 0}`} />
-                <Row label="Horas"        value={`${r.hours || 0} h`} />
+                <Row label="Trabajadores" value={`${r.workers_count ?? 0}`} />
+                <Row label="Horas"        value={`${r.hours_worked ?? 0} h`} />
                 {cuadrilla?.nombre && (
                   <Row label="Cuadrilla" value={cuadrilla.nombre} accent />
                 )}
@@ -138,7 +138,7 @@ export default function ParcelHistory({
                     value={`${new Date(r.hora_entrada).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} → ${new Date(r.hora_salida).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}`}
                   />
                 )}
-                {r.description && <Row label="Nota" value={r.description} />}
+                {r.notas && <Row label="Nota" value={r.notas} />}
               </Card>
             );
           })}
@@ -299,16 +299,22 @@ export default function ParcelHistory({
         <TabsContent value="riego" className="space-y-2 mt-0">
           {!riegos?.length && <Empty />}
           {riegos?.map(r => {
-            const zona = (r as unknown as { sistema_riego_zonas?: { nombre_zona: string } }).sistema_riego_zonas;
+            const zona = (r as { sistema_riego_zonas?: { nombre_zona: string | null } | null }).sistema_riego_zonas
             const zonaNombre = zona?.nombre_zona ?? '—'
+            const fechaReg = r.fecha ? new Date(r.fecha).toLocaleString('es-ES') : '—'
+            const m3 = r.volumen_m3 != null ? Number(r.volumen_m3) : null
+            const volLabel = m3 != null && m3 > 0
+              ? `${m3.toLocaleString(undefined, { maximumFractionDigits: 3 })} m³ (~${Math.round(m3 * 1000).toLocaleString()} L)`
+              : null
             return (
               <Card key={r.id}>
-                <Row label="Zona"     value={zonaNombre} accent />
-                <Row label="Inicio"   value={new Date(r.fecha_inicio).toLocaleString('es-ES')} />
-                {r.fecha_fin && <Row label="Fin" value={new Date(r.fecha_fin).toLocaleString('es-ES')} />}
-                {r.litros_aplicados != null && <Row label="Litros" value={`${r.litros_aplicados.toLocaleString()} L`} />}
+                <Row label="Zona" value={zonaNombre} accent />
+                <Row label="Fecha" value={fechaReg} />
+                {r.duracion_minutos != null && (
+                  <Row label="Duración" value={`${r.duracion_minutos} min`} />
+                )}
+                {volLabel && <Row label="Volumen" value={volLabel} />}
                 {r.presion_bar != null && <Row label="Presión" value={`${r.presion_bar} bar`} />}
-                {r.origen_agua && <Row label="Origen" value={r.origen_agua} />}
                 {r.notas && <Row label="Notas" value={r.notas} />}
               </Card>
             )
