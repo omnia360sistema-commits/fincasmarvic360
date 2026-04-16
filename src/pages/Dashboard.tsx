@@ -303,7 +303,7 @@ export default function Dashboard() {
     <div className="min-h-screen flex flex-col relative overflow-y-auto bg-slate-50 dark:bg-[#020617] transition-colors pb-10">
       
       {/* Controles superiores absolutos */}
-      <div className="fixed top-4 right-4 z-[60] flex items-center gap-3">
+      <div className="fixed z-[60] flex items-center gap-3 top-[max(1rem,env(safe-area-inset-top))] right-[max(1rem,env(safe-area-inset-right))]">
         {user && (
           <div className="hidden sm:flex items-center gap-3 mr-4">
             <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{user.email}</span>

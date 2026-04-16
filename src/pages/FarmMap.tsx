@@ -39,7 +39,7 @@ function getSueloColor(param: string, val: number | null | undefined): string {
 function MapLegend({ activeMenu, sueloParam }: { activeMenu: string | null, sueloParam: string }) {
   if (activeMenu === 'suelo') {
     return (
-      <div className="absolute bottom-8 left-4 z-[1000] bg-white/90 dark:bg-slate-900/80 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 space-y-1.5 shadow-lg">
+      <div className="absolute z-[1000] bg-white/90 dark:bg-slate-900/80 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 space-y-1.5 shadow-lg max-md:bottom-[5.5rem] max-md:left-2 max-md:max-w-[min(92vw,280px)] md:bottom-8 md:left-4">
         <p className="text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1 border-b border-slate-200 dark:border-white/10 pb-1">Capa: {sueloParam}</p>
         <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-sm shrink-0 bg-[#22c55e]" /><span className="text-[10px] text-slate-700 dark:text-slate-300 font-medium">Óptimo</span></div>
         <div className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-sm shrink-0 bg-[#eab308]" /><span className="text-[10px] text-slate-700 dark:text-slate-300 font-medium">Alerta / Precaución</span></div>
@@ -50,7 +50,7 @@ function MapLegend({ activeMenu, sueloParam }: { activeMenu: string | null, suel
   }
   const entries = Object.entries(STATUS_COLORS) as [ParcelStatus, string][]
   return (
-    <div className="absolute bottom-8 left-4 z-[1000] bg-white/90 dark:bg-slate-900/80 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 space-y-1 shadow-lg">
+    <div className="absolute z-[1000] bg-white/90 dark:bg-slate-900/80 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 space-y-1 shadow-lg max-md:bottom-[5.5rem] max-md:left-2 max-md:max-w-[min(92vw,280px)] md:bottom-8 md:left-4">
       {entries.map(([status, color]) => (
         <div key={status} className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: color }} />
@@ -395,13 +395,20 @@ export default function FarmMap() {
 
   const closeModal = () => setActiveModal(null)
 
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map) return
+    const id = window.setTimeout(() => map.invalidateSize(), 320)
+    return () => window.clearTimeout(id)
+  }, [activeMenu])
+
   return (
     <div className="h-screen w-screen relative overflow-hidden bg-slate-50 dark:bg-[#020617] transition-colors">
 
       <div ref={mapContainerRef} className="h-full w-full z-0" />
 
       {/* PANEL IDENTIDAD */}
-      <div className="absolute top-4 left-4 z-[1000] bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 rounded-lg px-4 py-3 min-w-[200px] shadow-lg">
+      <div className="absolute z-[1000] bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-white/10 rounded-lg px-4 py-3 shadow-lg max-md:top-14 max-md:left-3 max-md:right-14 max-md:min-w-0 md:top-4 md:left-4 md:right-auto md:min-w-[200px]">
         <p className="text-[10px] font-black text-[#6d9b7d] uppercase tracking-[0.3em] mb-1">Marvic 360</p>
         <p className="text-base font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none">{decodedFarm}</p>
         <div className="flex items-center gap-2 mt-2">
@@ -414,13 +421,13 @@ export default function FarmMap() {
       {/* BOTÓN VOLVER */}
       <button
         onClick={() => navigate(-1)}
-        className="absolute top-4 left-[220px] z-[1000] w-8 h-8 rounded-lg border border-slate-200 dark:border-white/10 flex items-center justify-center bg-white/90 dark:bg-slate-900/90 hover:border-[#6d9b7d]/40 shadow-lg transition-colors"
+        className="absolute z-[1000] w-8 h-8 rounded-lg border border-slate-200 dark:border-white/10 flex items-center justify-center bg-white/90 dark:bg-slate-900/90 hover:border-[#6d9b7d]/40 shadow-lg transition-colors max-md:top-[max(0.75rem,env(safe-area-inset-top))] max-md:left-14 md:top-4 md:left-[220px]"
       >
         <ArrowLeft className="w-4 h-4 text-slate-500 dark:text-slate-400" />
       </button>
 
       {/* MENÚ VERTICAL DERECHA */}
-      <div className="absolute top-4 right-4 z-[1000] flex flex-col gap-1">
+      <div className="absolute z-[1000] flex flex-col gap-1 max-md:top-14 max-md:right-3 max-md:max-h-[min(38vh,320px)] max-md:overflow-y-auto max-md:pr-0.5 md:top-4 md:right-4 md:max-h-none md:overflow-visible">
         {MENU_ITEMS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
@@ -449,7 +456,7 @@ export default function FarmMap() {
 
       {/* PANEL — SECTORES */}
       {activeMenu === 'sectores' && (
-        <div className="absolute top-4 right-52 bottom-10 z-[999] w-72 bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl">
+        <div className="absolute z-[999] bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl max-md:inset-x-3 max-md:top-14 max-md:bottom-[5.5rem] max-md:w-auto max-md:max-h-[min(70vh,calc(100dvh-8rem))] md:top-4 md:right-52 md:bottom-10 md:left-auto md:w-72 md:max-h-none">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 shrink-0">
             <span className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-widest">Sectores</span>
             <button onClick={() => setActiveMenu(null)}><X className="w-4 h-4 text-slate-400 hover:text-slate-700 dark:text-slate-500 dark:hover:text-white" /></button>
@@ -497,7 +504,7 @@ export default function FarmMap() {
 
       {/* PANEL — CAPA SUELO */}
       {activeMenu === 'suelo' && (
-        <div className="absolute top-4 right-52 bottom-10 z-[999] w-72 bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl">
+        <div className="absolute z-[999] bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl max-md:inset-x-3 max-md:top-14 max-md:bottom-[5.5rem] max-md:w-auto max-md:max-h-[min(70vh,calc(100dvh-8rem))] md:top-4 md:right-52 md:bottom-10 md:left-auto md:w-72 md:max-h-none">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 shrink-0 bg-slate-50 dark:bg-slate-800/50">
             <span className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-widest flex items-center gap-2">
               <Layers className="w-3.5 h-3.5" /> Capa Agronómica
@@ -530,7 +537,7 @@ export default function FarmMap() {
 
       {/* PANEL — REGISTRAR */}
       {activeMenu === 'registrar' && (
-        <div className="absolute top-4 right-52 bottom-10 z-[999] w-72 bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl">
+        <div className="absolute z-[999] bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl max-md:inset-x-3 max-md:top-14 max-md:bottom-[5.5rem] max-md:w-auto max-md:max-h-[min(70vh,calc(100dvh-8rem))] md:top-4 md:right-52 md:bottom-10 md:left-auto md:w-72 md:max-h-none">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 shrink-0">
             <div>
               <span className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-widest">Registrar</span>
@@ -569,7 +576,7 @@ export default function FarmMap() {
 
       {/* PANEL — ANÁLISIS */}
       {activeMenu === 'analisis' && (
-        <div className="absolute top-4 right-52 bottom-10 z-[999] w-72 bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl">
+        <div className="absolute z-[999] bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl max-md:inset-x-3 max-md:top-14 max-md:bottom-[5.5rem] max-md:w-auto max-md:max-h-[min(70vh,calc(100dvh-8rem))] md:top-4 md:right-52 md:bottom-10 md:left-auto md:w-72 md:max-h-none">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 shrink-0">
             <div>
               <span className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-widest">Análisis</span>
@@ -613,7 +620,7 @@ export default function FarmMap() {
 
       {/* PANEL — HISTÓRICO */}
       {activeMenu === 'historico' && (
-        <div className="absolute top-4 right-52 bottom-10 z-[999] w-[480px] bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl">
+        <div className="absolute z-[999] bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl max-md:inset-x-3 max-md:top-14 max-md:bottom-[5.5rem] max-md:w-auto max-md:max-h-[min(70vh,calc(100dvh-8rem))] md:top-4 md:right-52 md:bottom-10 md:left-auto md:w-[480px] md:max-h-none">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 shrink-0">
             <div>
               <span className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-widest">Histórico</span>
@@ -635,7 +642,7 @@ export default function FarmMap() {
 
       {/* PANEL — TRAZABILIDAD / ALERTAS */}
       {['trazabilidad', 'alertas'].includes(activeMenu ?? '') && (
-        <div className="absolute top-4 right-52 bottom-10 z-[999] w-72 bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl">
+        <div className="absolute z-[999] bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-lg flex flex-col overflow-hidden shadow-2xl max-md:inset-x-3 max-md:top-14 max-md:bottom-[5.5rem] max-md:w-auto max-md:max-h-[min(70vh,calc(100dvh-8rem))] md:top-4 md:right-52 md:bottom-10 md:left-auto md:w-72 md:max-h-none">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-white/10 shrink-0">
             <span className="text-[11px] font-black text-[#6d9b7d] uppercase tracking-widest">
               {MENU_ITEMS.find(m => m.id === activeMenu)?.label}
@@ -661,7 +668,7 @@ export default function FarmMap() {
 
       {/* TOOLTIP */}
       {tooltipParcel && !activeModal && (
-        <div className="absolute bottom-14 left-1/2 -translate-x-1/2 z-[1001]">
+        <div className="absolute left-1/2 -translate-x-1/2 z-[1001] max-md:bottom-[4.75rem] md:bottom-14">
           <SectorTooltip
             parcel={tooltipParcel}
             onClose={() => { setTooltipParcel(null); setSelectedParcel(null) }}
@@ -670,7 +677,7 @@ export default function FarmMap() {
       )}
 
       {/* BARRA INFERIOR */}
-      <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-white/90 dark:bg-slate-900/90 border-t border-slate-200 dark:border-white/10 px-4 py-1.5 flex items-center gap-6">
+      <div className="absolute bottom-0 left-0 right-0 z-[1000] bg-white/90 dark:bg-slate-900/90 border-t border-slate-200 dark:border-white/10 px-3 py-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 max-md:pb-[max(0.35rem,env(safe-area-inset-bottom))] md:px-4 md:gap-6 md:py-1.5">
         <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">
           Finca: <span className="text-slate-900 dark:text-white">{decodedFarm}</span>
         </span>
@@ -699,7 +706,7 @@ export default function FarmMap() {
       {/* BOTÓN LOCALIZAR */}
       <button
         onClick={() => mapRef.current?.locate({ setView: true, maxZoom: 16 })}
-        className="absolute bottom-10 right-4 z-[1000] w-10 h-10 rounded-full border border-slate-200 dark:border-white/10 flex items-center justify-center bg-white/90 dark:bg-slate-900/90 hover:border-[#6d9b7d]/40 shadow-lg transition-colors"
+        className="absolute z-[1000] w-10 h-10 rounded-full border border-slate-200 dark:border-white/10 flex items-center justify-center bg-white/90 dark:bg-slate-900/90 hover:border-[#6d9b7d]/40 shadow-lg transition-colors max-md:bottom-[5.5rem] max-md:right-3 md:bottom-10 md:right-4"
       >
         <LocateFixed className="w-4 h-4 text-[#6d9b7d]" />
       </button>

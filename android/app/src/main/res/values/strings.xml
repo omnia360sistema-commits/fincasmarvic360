@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Marvic 360</string>
+    <string name="title_activity_main">Marvic 360</string>
+    <string name="package_name">com.agricola.marvic360</string>
+    <string name="custom_url_scheme">com.agricola.marvic360</string>
+</resources>

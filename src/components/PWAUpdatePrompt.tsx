@@ -40,7 +40,7 @@ export function PWAUpdatePrompt() {
     <>
       {/* Banner offline */}
       {offline && (
-        <div className="fixed top-0 left-0 right-0 z-[100] bg-orange-600 text-white text-sm py-2 px-4 flex items-center justify-center gap-2 shadow-lg">
+        <div className="fixed top-0 left-0 right-0 z-[100] bg-orange-600 text-white text-sm pt-[env(safe-area-inset-top)] pb-2 px-4 flex items-center justify-center gap-2 shadow-lg">
           <WifiOff className="w-4 h-4" />
           <span>Sin conexión — trabajando en modo offline</span>
         </div>
@@ -48,7 +48,7 @@ export function PWAUpdatePrompt() {
 
       {/* Prompt de actualización */}
       {needRefresh && (
-        <div className="fixed bottom-4 left-4 right-4 z-[100] max-w-md mx-auto bg-slate-900 border border-sky-400/40 rounded-xl shadow-2xl p-4">
+        <div className="fixed left-4 right-4 z-[100] max-w-md mx-auto bg-slate-900 border border-sky-400/40 rounded-xl shadow-2xl p-4 bottom-[max(1rem,env(safe-area-inset-bottom))]">
           <div className="flex items-start gap-3">
             <div className="p-2 bg-sky-400/10 rounded-lg">
               <RefreshCw className="w-5 h-5 text-sky-400" />

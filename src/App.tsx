@@ -30,6 +30,7 @@ import Auditoria from "./pages/Auditoria";
 import Login from "./pages/Login";
 import { ErrorBoundary } from "./pages/ErrorBoundary";
 import { PWAUpdatePrompt } from "./components/PWAUpdatePrompt";
+import { StabilityProvider } from "@/stability";
 
 const queryClient = new QueryClient();
 
@@ -87,9 +88,11 @@ const App = () => (
           <PWAUpdatePrompt />
           <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AuthProvider>
-              <ErrorBoundary>
-                <AppRoutes />
-              </ErrorBoundary>
+              <StabilityProvider>
+                <ErrorBoundary>
+                  <AppRoutes />
+                </ErrorBoundary>
+              </StabilityProvider>
             </AuthProvider>
           </BrowserRouter>
         </TooltipProvider>

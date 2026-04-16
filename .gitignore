@@ -23,12 +23,19 @@ dist-ssr
 *.sln
 *.sw?
 
-# Android / Capacitor — no forman parte del stack web
-android/
+# Android / Capacitor — secretos y artefactos locales
 ios/
 *.tar.gz
 *.tar.bz2
-capacitor.config.ts
+android/.gradle/
+android/.idea/
+android/**/build/
+android/local.properties
+android/app/release/
+android/app/src/main/assets/public/
+android/keystore.properties
+*.jks
+*.keystore
 
 # Supabase CLI temp — contiene project-ref y metadatos de sesión
 supabase/.temp/

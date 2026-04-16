@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
 import { Building2, Plus, Camera, X } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import type { Tables } from '@/integrations/supabase/types'
@@ -8,7 +8,9 @@ import { ESTADOS_PARCELA } from '@/constants/estadosParcela'
 import { FINCAS_NOMBRES as FINCAS } from '@/constants/farms'
 import { uploadImage } from '@/utils/uploadImage'
 import { formatHora } from '@/utils/dateFormat'
+import { toast } from '@/hooks/use-toast'
 import { EntradaRow, EmptyState } from './Shared'
+import { useFormDraft } from '@/stability'
 
 type FormA = {
   finca: string; parcel_id: string; estado: string
@@ -42,6 +44,66 @@ export const FormEstadoFinca = React.memo(({ parteId, estadosFinca, esHoy, onDel
 
   const addEstadoFinca = useAddEstadoFinca()
 
+  const draftScope =
+    parteId && modalOpen
+      ? `parte_estado_finca:${parteId}:${editIdA ?? 'new'}`
+      : 'parte_estado_finca:__closed__'
+
+  const snapshot = useMemo(
+    () => ({
+      finca: formA.finca,
+      parcel_id: formA.parcel_id,
+      estado: formA.estado,
+      num_operarios: formA.num_operarios,
+      nombres_operarios: formA.nombres_operarios,
+      notas: formA.notas,
+      editIdA,
+    }),
+    [
+      formA.finca,
+      formA.parcel_id,
+      formA.estado,
+      formA.num_operarios,
+      formA.nombres_operarios,
+      formA.notas,
+      editIdA,
+    ]
+  )
+
+  const hydrateDraft = useCallback(
+    (d: {
+      finca: string
+      parcel_id: string
+      estado: string
+      num_operarios: string
+      nombres_operarios: string
+      notas: string
+      editIdA: string | null
+    }) => {
+      setFormA((prev) => ({
+        ...prev,
+        finca: d.finca,
+        parcel_id: d.parcel_id,
+        estado: d.estado,
+        num_operarios: d.num_operarios,
+        nombres_operarios: d.nombres_operarios,
+        notas: d.notas,
+        foto1: null,
+        foto2: null,
+      }))
+      setEditIdA(d.editIdA ?? null)
+    },
+    []
+  )
+
+  const { clearDraft } = useFormDraft({
+    scope: draftScope,
+    type: 'parte_estado_finca',
+    enabled: modalOpen && !!parteId,
+    snapshot,
+    hydrate: hydrateDraft,
+  })
+
   const editar = useCallback((e: Tables<'parte_estado_finca'>) => {
     setEditIdA(e.id)
     setFormA({
@@ -55,6 +117,15 @@ export const FormEstadoFinca = React.memo(({ parteId, estadosFinca, esHoy, onDel
 
   async function submitA() {
     if (!parteId || !formA.finca) return
+    const hasNewPhotos = !!(formA.foto1 || formA.foto2)
+    if (hasNewPhotos && typeof navigator !== 'undefined' && !navigator.onLine) {
+      toast({
+        title: 'Sin conexión',
+        description: 'No se pueden enviar fotos sin conexión. Conéctate y vuelve a guardar.',
+        variant: 'destructive',
+      })
+      return
+    }
     setSaving(true)
     try {
       const numOp = parseInt(formA.num_operarios)
@@ -82,6 +153,7 @@ export const FormEstadoFinca = React.memo(({ parteId, estadosFinca, esHoy, onDel
         const foto_url_2 = formA.foto2 ? await uploadFoto(formA.foto2, parteId) : null
         await addEstadoFinca.mutateAsync({ ...patch, foto_url, foto_url_2 })
       }
+      await clearDraft()
       setModalOpen(false); setFormA(initA()); setEditIdA(null)
     } finally { setSaving(false) }
   }

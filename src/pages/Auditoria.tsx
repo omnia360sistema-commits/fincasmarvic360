@@ -138,8 +138,8 @@ export default function Auditoria() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen p-4 pb-10 max-w-4xl mx-auto w-full text-slate-200">
-      <div className="flex items-center gap-3 mb-6 shrink-0">
+    <div className="flex flex-col min-h-screen pt-4 pb-10 pr-4 pl-14 md:p-4 md:pb-10 max-w-4xl mx-auto w-full text-slate-200">
+      <div className="flex flex-col gap-3 mb-6 shrink-0 max-md:items-stretch md:flex-row md:items-center">
         <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center border border-amber-500/30">
           <ShieldCheck className="w-5 h-5 text-amber-400" />
         </div>

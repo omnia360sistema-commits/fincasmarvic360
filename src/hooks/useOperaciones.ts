@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
 import type { TablesInsert } from '@/integrations/supabase/types'
 import type { ParcelStatus } from '@/types/farm'
@@ -104,15 +104,28 @@ export function useFarmParcelStatuses(parcelIds: string[]) {
   })
 }
 
-export function useInsertWorkRecord() {
+/** Insert + invalidaciones compartidas (formulario y cola de estabilidad). */
+export async function executeWorkRecordInsert(
+  qc: QueryClient,
+  record: TablesInsert<'work_records'>,
+) {
+  const { data, error } = await supabase.from('work_records').insert(record).select().single()
+  if (error) throw error
+  qc.invalidateQueries({ queryKey: ['work_records', record.parcel_id] })
+  qc.invalidateQueries({ queryKey: ['farm_parcel_statuses'] })
+  return data
+}
+
+export function useInsertWorkRecord(options?: { suppressErrorToast?: boolean }) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: async (record: TablesInsert<'work_records'>) => {
-      const { data, error } = await supabase.from('work_records').insert(record).select().single()
-      if (error) throw error; return data
+    mutationFn: (record: TablesInsert<'work_records'>) => executeWorkRecordInsert(qc, record),
+    onError: (err: Error) => {
+      console.error(err)
+      if (!options?.suppressErrorToast) {
+        toast({ title: 'Error', description: err.message, variant: 'destructive' })
+      }
     },
-    onSuccess: (_, vars) => { qc.invalidateQueries({ queryKey: ['work_records', vars.parcel_id] }); qc.invalidateQueries({ queryKey: ['farm_parcel_statuses'] }) },
-    onError: (err: Error) => { console.error(err); toast({ title: 'Error', description: err.message, variant: 'destructive' }) }
   })
 }
 

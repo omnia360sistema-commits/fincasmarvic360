@@ -1,0 +1,54 @@
+Fase 3 — Capacitor / Android (Marvic 360)
+========================================
+
+Versiones
+---------
+- Capacitor: 7.6.1 (@capacitor/core, cli, android alineados). Capacitor 8 exige Node ≥22.
+- Node recomendado: 20 LTS (ver "engines" en package.json).
+
+Requisitos en la máquina de build
+---------------------------------
+- Android Studio o solo Android SDK + Java 17.
+- Variable ANDROID_HOME o archivo android/local.properties:
+    sdk.dir=/ruta/al/Android/Sdk
+  (plantilla: local.properties.example)
+
+Arranque del proyecto Android
+------------------------------
+1) npm install
+2) Sync web → nativo (obligatorio antes de Gradle si no existe assets/public):
+     npm run cap:sync
+   Modo URL remota (APK carga el mismo sitio que el despliegue web; actualizaciones sin reinstalar):
+     export CAPACITOR_SERVER_URL="https://TU-DOMINIO.com"
+     npm run cap:sync
+   Comprueba que el hosting sirva la SPA con fallback a index.html para rutas (Vite/React Router).
+
+Debug APK
+---------
+  cd android && ./gradlew assembleDebug
+Salida típica:
+  android/app/build/outputs/apk/debug/app-debug.apk
+
+Release APK firmado
+-------------------
+1) Generar keystore (una vez), p. ej.:
+   keytool -genkey -v -keystore marvic-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias marvic
+2) Copiar android/keystore.properties.example → android/keystore.properties y rellenar (no versionar).
+3) Colocar el .jks en android/ (o ajustar storeFile en keystore.properties).
+4)  cd android && ./gradlew assembleRelease
+Salida típica:
+  android/app/build/outputs/apk/release/app-release.apk
+
+Permisos declarados (AndroidManifest)
+---------------------------------------
+INTERNET, CAMERA, ACCESS_FINE_LOCATION, ACCESS_COARSE_LOCATION,
+READ_MEDIA_IMAGES, READ_EXTERNAL_STORAGE (hasta API 32).
+
+PWA
+---
+El build Vite sigue generando el service worker (vite-plugin-pwa). En WebView remoto el comportamiento
+depende del navegador embebido; la actualización de UI/HTML/JS viene del servidor cuando usas server.url.
+
+Validación manual en dispositivo
+---------------------------------
+Login, navegación, mapa, formularios, cola offline y recuperación de borradores (probar con URL de producción).

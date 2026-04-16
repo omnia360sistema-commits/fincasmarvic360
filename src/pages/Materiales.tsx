@@ -217,8 +217,8 @@ export default function Materiales() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen p-4 pb-10 max-w-6xl mx-auto w-full text-slate-200">
-      <div className="flex items-center gap-3 mb-6 shrink-0">
+    <div className="flex flex-col min-h-screen pt-4 pb-10 pr-4 pl-14 md:p-4 md:pb-10 max-w-6xl mx-auto w-full text-slate-200">
+      <div className="flex flex-col gap-3 mb-6 shrink-0 max-md:items-stretch md:flex-row md:items-center">
         <div className="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center border border-teal-500/30">
           <Package className="w-5 h-5 text-teal-400" />
         </div>
@@ -248,7 +248,7 @@ export default function Materiales() {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0">
-        <TabsList className="bg-slate-900 border border-white/5 shrink-0 grid w-full grid-cols-3">
+        <TabsList className="bg-slate-900 border border-white/5 shrink-0 grid w-full grid-cols-1 md:grid-cols-3">
           <TabsTrigger value="fitosanitarios_abonos" className="text-xs font-bold uppercase tracking-wider data-[state=active]:bg-teal-500/10 data-[state=active]:text-teal-400">Fitosanitarios & Abonos</TabsTrigger>
           <TabsTrigger value="material_riego" className="text-xs font-bold uppercase tracking-wider data-[state=active]:bg-teal-500/10 data-[state=active]:text-teal-400">Material de Riego</TabsTrigger>
           <TabsTrigger value="plastico" className="text-xs font-bold uppercase tracking-wider data-[state=active]:bg-teal-500/10 data-[state=active]:text-teal-400">Plásticos & Estructuras</TabsTrigger>

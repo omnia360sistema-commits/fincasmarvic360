@@ -4,6 +4,7 @@ import { Menu, X, ChevronRight } from 'lucide-react';
 import { useSidebar } from '../context/SidebarContext';
 import { useTheme } from '../context/ThemeContext';
 import { NAV_ITEMS } from '../constants/navItems';
+import { useStability } from '@/stability';
 
 // Devuelve el id del módulo raíz que contiene la ruta actual
 function getActiveRootId(pathname: string): string | null {
@@ -28,8 +29,13 @@ export default function GlobalSidebar() {
   const location = useLocation();
   const navRef = useRef<HTMLElement>(null);
   const activeItemRef = useRef<HTMLDivElement>(null);
+  const { pendingQueueCount, queueErrorCount } = useStability();
 
   const isDark = theme === 'dark';
+  const queueTitle =
+    pendingQueueCount > 0
+      ? `${pendingQueueCount} envío(s) en cola${queueErrorCount ? ` · ${queueErrorCount} con error` : ''}`
+      : '';
 
   // Accordion: id del módulo raíz expandido
   const [openId, setOpenId] = useState<string | null>(
@@ -102,16 +108,37 @@ export default function GlobalSidebar() {
       {/* Botón hamburguesa */}
       <button
         onClick={toggle}
-        className={`fixed top-3 left-3 z-[60] flex items-center justify-center w-10 h-10 rounded-lg
+        className={`fixed z-[60] flex items-center justify-center w-10 h-10 rounded-lg
+          top-[max(0.75rem,env(safe-area-inset-top))] left-[max(0.75rem,env(safe-area-inset-left))]
           backdrop-blur-sm border transition-colors duration-200
           ${isDark
             ? 'bg-slate-900/95 hover:bg-slate-800 text-slate-200 border-slate-700'
             : 'bg-slate-100/95 hover:bg-slate-200 text-slate-700 border-slate-300'
           }`}
         aria-label={isOpen ? 'Cerrar menú' : 'Abrir menú'}
+        title={queueTitle || undefined}
       >
         {isOpen ? <X size={20} /> : <Menu size={20} />}
       </button>
+
+      {pendingQueueCount > 0 && (
+        <span
+          className={`fixed z-[60] pointer-events-none text-[10px] font-bold tabular-nums leading-none px-1.5 py-0.5 rounded
+            top-[max(0.75rem,env(safe-area-inset-top))] left-[max(3.25rem,calc(0.75rem+2.5rem+0.25rem+env(safe-area-inset-left)))]
+            ${queueErrorCount > 0
+              ? isDark
+                ? 'bg-amber-500/25 text-amber-200 border border-amber-500/40'
+                : 'bg-amber-100 text-amber-900 border border-amber-400/60'
+              : isDark
+                ? 'bg-slate-700/80 text-slate-200 border border-slate-600'
+                : 'bg-slate-200/95 text-slate-700 border border-slate-400/50'
+            }`}
+          title={queueTitle}
+          aria-live="polite"
+        >
+          {pendingQueueCount}
+        </span>
+      )}
 
       {/* Backdrop */}
       {isOpen && (
@@ -125,6 +152,7 @@ export default function GlobalSidebar() {
       {/* Panel lateral */}
       <div
         className={`fixed top-0 left-0 h-full w-72 z-[80] flex flex-col
+          pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
           transition-transform duration-300 ease-in-out
           ${isOpen ? 'translate-x-0' : '-translate-x-full'}
           ${isDark

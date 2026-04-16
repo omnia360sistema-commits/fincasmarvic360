@@ -1,6 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useInsertWorkRecord, useCuadrillas } from '@/hooks/useParcelData';
 import { toast } from '@/hooks/use-toast';
+import type { TablesInsert } from '@/integrations/supabase/types';
+import { useStability, useFormDraft } from '@/stability';
+import * as draftStore from '@/stability/draftStore';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -30,8 +33,43 @@ export default function RegisterWorkForm({
   const [horaSalida, setHoraSalida]   = useState('');
   const [description, setDescription] = useState('');
 
-  const mutation = useInsertWorkRecord();
+  const mutation = useInsertWorkRecord({ suppressErrorToast: true });
   const { data: cuadrillas, isLoading: loadingCuadrillas } = useCuadrillas();
+  const { enqueue } = useStability();
+
+  const draftScope = `register_work:${parcelId}`;
+  const snapshot = useMemo(
+    () => ({
+      date,
+      workType,
+      cuadrillaId,
+      workers,
+      hours,
+      horaEntrada,
+      horaSalida,
+      description,
+    }),
+    [date, workType, cuadrillaId, workers, hours, horaEntrada, horaSalida, description]
+  );
+
+  const hydrateDraft = useCallback((d: typeof snapshot) => {
+    setDate(d.date);
+    setWorkType(d.workType);
+    setCuadrillaId(d.cuadrillaId);
+    setWorkers(d.workers);
+    setHours(d.hours);
+    setHoraEntrada(d.horaEntrada);
+    setHoraSalida(d.horaSalida);
+    setDescription(d.description);
+  }, []);
+
+  const { clearDraft } = useFormDraft({
+    scope: draftScope,
+    type: 'trabajo',
+    enabled: true,
+    snapshot,
+    hydrate: hydrateDraft,
+  });
 
   // Calcular horas automáticamente si hay entrada y salida
   const calcularHoras = (entrada: string, salida: string) => {
@@ -54,8 +92,9 @@ export default function RegisterWorkForm({
     calcularHoras(horaEntrada, val);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const clientId = crypto.randomUUID();
 
     const horaEntradaISO = horaEntrada
       ? new Date(`${date}T${horaEntrada}:00`).toISOString()
@@ -64,28 +103,43 @@ export default function RegisterWorkForm({
       ? new Date(`${date}T${horaSalida}:00`).toISOString()
       : null;
 
-    mutation.mutate(
-      {
-        parcel_id:   parcelId,
-        date,
-        work_type:   workType,
-        cuadrilla_id: cuadrillaId || null,
-        workers_count: workers ? parseInt(workers, 10) : null,
-        hours_worked: hours ? parseFloat(hours) : null,
-        hora_entrada: horaEntradaISO,
-        hora_salida:  horaSalidaISO,
-        notas: description || null,
-      },
-      {
-        onSuccess: () => {
-          toast({ title: '✅ Trabajo registrado', description: 'El registro se guardó correctamente.' });
-          onClose();
-        },
-      onError: (err: unknown) => {
-        toast({ title: 'Error', description: err instanceof Error ? err.message : 'Error desconocido', variant: 'destructive' });
-        },
-      }
-    );
+    const payload: TablesInsert<'work_records'> = {
+      parcel_id: parcelId,
+      date,
+      work_type: workType,
+      cuadrilla_id: cuadrillaId || null,
+      workers_count: workers ? parseInt(workers, 10) : null,
+      hours_worked: hours ? parseFloat(hours) : null,
+      hora_entrada: horaEntradaISO,
+      hora_salida: horaSalidaISO,
+      notas: description || null,
+    };
+
+    try {
+      await mutation.mutateAsync(payload);
+      await clearDraft();
+      toast({ title: '✅ Trabajo registrado', description: 'El registro se guardó correctamente.' });
+      onClose();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Error desconocido';
+      await enqueue({
+        operationKey: 'work_record_insert',
+        payload,
+        linkedDraftScope: draftScope,
+        clientId,
+      });
+      await draftStore.saveDraft({
+        scope: draftScope,
+        type: 'trabajo',
+        status: 'pending',
+        data: snapshot,
+      });
+      toast({
+        title: 'Envío en cola',
+        description: `No se pudo guardar ahora. Se reintentará automáticamente. (${msg})`,
+        variant: 'destructive',
+      });
+    }
   };
 
   return (

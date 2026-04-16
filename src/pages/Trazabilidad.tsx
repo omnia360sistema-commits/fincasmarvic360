@@ -364,8 +364,8 @@ export default function Trazabilidad() {
   }
 
   return (
-    <div className="flex flex-col min-h-screen p-4 pb-10 max-w-6xl mx-auto w-full text-slate-200">
-        <div className="flex items-center gap-3 mb-6 shrink-0">
+    <div className="flex flex-col min-h-screen pt-4 pb-10 pr-4 pl-14 md:p-4 md:pb-10 max-w-6xl mx-auto w-full text-slate-200">
+        <div className="flex flex-col gap-3 mb-6 shrink-0 max-md:items-stretch md:flex-row md:items-center">
           <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
             <Package className="w-5 h-5 text-emerald-400" />
           </div>
@@ -376,7 +376,7 @@ export default function Trazabilidad() {
         </div>
 
         <Tabs defaultValue="palots" className="flex-1 flex flex-col min-h-0">
-          <TabsList className="bg-slate-900 border border-white/5 shrink-0 grid w-full grid-cols-4">
+          <TabsList className="bg-slate-900 border border-white/5 shrink-0 grid w-full grid-cols-2 md:grid-cols-4">
             <TabsTrigger value="palots" className="text-xs font-bold uppercase tracking-wider data-[state=active]:bg-[#6d9b7d]/10 data-[state=active]:text-[#6d9b7d]">PALOTS</TabsTrigger>
             <TabsTrigger value="camaras" className="text-xs font-bold uppercase tracking-wider data-[state=active]:bg-[#6d9b7d]/10 data-[state=active]:text-[#6d9b7d]">CÁMARAS</TabsTrigger>
             <TabsTrigger value="scanner" className="text-xs font-bold uppercase tracking-wider data-[state=active]:bg-[#6d9b7d]/10 data-[state=active]:text-[#6d9b7d]">SCANNER QR</TabsTrigger>

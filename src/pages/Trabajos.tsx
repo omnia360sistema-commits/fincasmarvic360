@@ -1107,19 +1107,21 @@ export default function Trabajos() {
     <div className={`min-h-screen ${isDark ? 'bg-[#020617] text-white' : 'bg-slate-50 text-slate-900'} flex flex-col`}>
 
       {/* HEADER */}
-      <header className={`w-full ${isDark ? 'bg-slate-900/80 border-white/10' : 'bg-white/90 border-slate-200'} border-b pl-14 pr-4 py-2 flex items-center gap-3 z-50`}>
-        <button onClick={() => navigate('/dashboard')} className="flex items-center gap-1.5 text-slate-400 hover:text-[#6d9b7d] transition-colors">
+      <header className={`w-full ${isDark ? 'bg-slate-900/80 border-white/10' : 'bg-white/90 border-slate-200'} border-b pl-14 pr-4 py-2 flex flex-col gap-2 max-md:items-stretch md:flex-row md:items-center md:gap-3 z-50`}>
+        <div className="flex items-center gap-3 min-w-0">
+        <button onClick={() => navigate('/dashboard')} className="flex items-center gap-1.5 text-slate-400 hover:text-[#6d9b7d] transition-colors shrink-0">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-[9px] font-black uppercase tracking-widest">Dashboard</span>
         </button>
-        <span className="text-slate-600">|</span>
-        <Briefcase className="w-4 h-4 text-amber-400" />
-        <div>
+        <span className="text-slate-600 hidden sm:inline">|</span>
+        <Briefcase className="w-4 h-4 text-amber-400 shrink-0" />
+        <div className="min-w-0">
           <p className="text-[11px] font-black uppercase tracking-wider leading-tight">Planificación de Trabajos</p>
           <p className="text-[8px] text-slate-500 leading-tight">Gestión y seguimiento de trabajos diarios</p>
         </div>
+        </div>
 
-        <div className="ml-auto flex items-center gap-2">
+        <div className="flex items-center gap-2 max-md:w-full md:ml-auto">
           {incUrgentes > 0 && (
             <button onClick={() => setTab('incidencias')}
               className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/30 text-red-400 text-[9px] font-black uppercase tracking-widest animate-pulse"
@@ -1148,7 +1150,7 @@ export default function Trabajos() {
       <main className="flex-1 px-4 py-5 max-w-4xl mx-auto w-full">
 
         {/* KPIs */}
-        <div className="grid grid-cols-3 gap-3 mb-5">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-5">
           {[
             { label: 'Planificados hoy', value: trabajosDia.length,  color: '#6d9b7d' },
             { label: 'Inc. abiertas',    value: incAbiertas,          color: incAbiertas > 0 ? '#ef4444' : '#34d399' },
@@ -1162,7 +1164,7 @@ export default function Trabajos() {
         </div>
 
         {/* TABS PRINCIPALES */}
-        <div className={`flex gap-1 mb-5 ${isDark ? 'bg-slate-900/60 border-white/10' : 'bg-white border-slate-200'} border rounded-xl p-1`}>
+        <div className={`flex flex-wrap gap-1 mb-5 ${isDark ? 'bg-slate-900/60 border-white/10' : 'bg-white border-slate-200'} border rounded-xl p-1`}>
           {([
             { id: 'diaria',      label: 'Planificación diaria', icon: Calendar },
             { id: 'campana',     label: 'Campaña',              icon: Leaf },

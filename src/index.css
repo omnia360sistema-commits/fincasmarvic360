@@ -109,6 +109,15 @@
     @apply bg-background text-foreground font-sans;
     font-family: 'Inter', sans-serif;
   }
+
+  /* iOS: evita zoom automático al enfocar inputs (solo viewports estrechos) */
+  @media (max-width: 767px) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]):not([type="reset"]),
+    textarea,
+    select {
+      font-size: 1rem;
+    }
+  }
 }
 
 @layer utilities {
