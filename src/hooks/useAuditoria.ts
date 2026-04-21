@@ -1,5 +1,24 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from '@/hooks/use-toast';
+
+export type TablaOrigenAudit = 'trabajos_registro' | 'inventario_movimientos' | 'logistica_viajes' | 'personal';
+
+export function useDeleteAuditOrigen() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ tabla, id }: { tabla: TablaOrigenAudit; id: string }) => {
+      const { error } = await supabase.from(tabla).delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['audit_trail'] });
+      toast({ title: 'Registro eliminado' });
+    },
+    onError: (err: Error) =>
+      toast({ title: 'Error al eliminar', description: err.message, variant: 'destructive' }),
+  });
+}
 
 export interface AuditEntry {
   id: string;

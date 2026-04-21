@@ -1212,6 +1212,7 @@ export type Database = {
           notas: string | null
           precio_unitario: number | null
           producto_id: string | null
+          responsable: string | null
           ubicacion_id: string | null
           unidad: string | null
         }
@@ -1228,6 +1229,7 @@ export type Database = {
           notas?: string | null
           precio_unitario?: number | null
           producto_id?: string | null
+          responsable?: string | null
           ubicacion_id?: string | null
           unidad?: string | null
         }
@@ -1244,6 +1246,7 @@ export type Database = {
           notas?: string | null
           precio_unitario?: number | null
           producto_id?: string | null
+          responsable?: string | null
           ubicacion_id?: string | null
           unidad?: string | null
         }

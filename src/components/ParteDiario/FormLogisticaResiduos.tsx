@@ -1,8 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import { Truck, Plus, Camera, X } from 'lucide-react'
-import { supabase } from '@/integrations/supabase/client'
 import type { Tables } from '@/integrations/supabase/types'
-import { useAddResiduos, useGanaderos, useAddGanadero } from '@/hooks/useParteDiario'
+import { useAddResiduos, useGanaderos, useAddGanadero, useUpdateResiduosVegetales } from '@/hooks/useParteDiario'
 import { usePersonal } from '@/hooks/usePersonal'
 import { AudioInput } from '@/components/base'
 import { uploadImage } from '@/utils/uploadImage'
@@ -56,6 +55,7 @@ export const FormLogisticaResiduos = React.memo(({ parteId, residuos, fecha, esH
   const { data: ganaderos = [] } = useGanaderos()
 
   const addResiduos = useAddResiduos()
+  const updateResiduos = useUpdateResiduosVegetales()
   const addGanadero = useAddGanadero()
 
   const editar = useCallback((e: Tables<'parte_residuos_vegetales'>) => {
@@ -107,8 +107,10 @@ export const FormLogisticaResiduos = React.memo(({ parteId, residuos, fecha, esH
       }
 
       if (editIdD) {
-        await supabase.from('parte_residuos_vegetales').update(patch).eq('id', editIdD)
-        if (foto_url) await supabase.from('parte_residuos_vegetales').update({ foto_url }).eq('id', editIdD)
+        await updateResiduos.mutateAsync({
+          id: editIdD,
+          updates: foto_url ? { ...patch, foto_url } : patch,
+        })
       } else {
         await addResiduos.mutateAsync({ ...patch, foto_url })
       }

@@ -73,7 +73,7 @@ export default function AudioInput({
           onChange={e => onChange(e.target.value)}
           placeholder={placeholder}
           rows={rows}
-          className="w-full rounded border border-slate-600 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:border-sky-400 resize-y pr-10"
+          className="w-full rounded border border-slate-600 bg-slate-800 text-slate-100 px-3 py-2 text-sm focus:outline-none focus:border-emerald-500 resize-y pr-10"
         />
 
         {SpeechAPI && (

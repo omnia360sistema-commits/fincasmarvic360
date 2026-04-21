@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState, useMemo } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
   ArrowLeft, AlertTriangle, CheckCircle2, Clock,
@@ -8,7 +8,8 @@ import {
 } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { PDFExportModal, type PDFExportParams } from '@/components/base'
-import { generarPDFCorporativoBase, pdfCorporateSection, pdfCorporateTable } from '@/utils/pdfUtils'
+import { useAuth } from '@/context/AuthContext'
+import { generarPDFCorporativoBase, nombreFirmaPdfFromUser, pdfCorporateSection, pdfCorporateTable } from '@/utils/pdfUtils'
 
 // ── Tipos de alerta ───────────────────────────────────────────────────────────
 
@@ -157,7 +158,7 @@ function useAlertas() {
 const SEV_CONFIG: Record<Severidad, { bg: string; border: string; badge: string; icon: React.ElementType; label: string }> = {
   critica: { bg: 'bg-red-500/10',    border: 'border-red-500/30',    badge: 'bg-red-500/20 text-red-400',          icon: ShieldAlert,    label: 'CRÍTICA'  },
   urgente: { bg: 'bg-amber-500/10',  border: 'border-amber-500/30',  badge: 'bg-amber-500/20 text-amber-400',      icon: AlertTriangle,  label: 'URGENTE'  },
-  aviso:   { bg: 'bg-sky-500/10',    border: 'border-sky-500/30',    badge: 'bg-sky-500/20 text-sky-400',          icon: CalendarClock,  label: 'AVISO'    },
+  aviso:   { bg: 'bg-emerald-500/10', border: 'border-emerald-500/30', badge: 'bg-emerald-500/20 text-emerald-400', icon: CalendarClock,  label: 'AVISO'    },
   ok:      { bg: 'bg-green-500/10',  border: 'border-green-500/30',  badge: 'bg-green-500/20 text-green-400',      icon: CheckCircle2,   label: 'OK'       },
 }
 
@@ -170,8 +171,21 @@ const MODULO_ICON: Record<string, React.ElementType> = {
 
 export default function EstadoGeneral() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const { user } = useAuth()
+  const firmaPdf = nombreFirmaPdfFromUser(user)
   const { data: alertas = [], isLoading, refetch } = useAlertas()
   const [pdfOpen, setPdfOpen] = useState(false)
+
+  const nivelUrl = searchParams.get('nivel')
+  const filtroSev = useMemo((): Severidad | null => {
+    if (nivelUrl === 'critico') return 'critica'
+    if (nivelUrl === 'urgente') return 'urgente'
+    if (nivelUrl === 'aviso') return 'aviso'
+    return null
+  }, [nivelUrl])
+
+  const alertasLista = filtroSev ? alertas.filter(a => a.severidad === filtroSev) : alertas
 
   const criticas = alertas.filter(a => a.severidad === 'critica').length
   const urgentes = alertas.filter(a => a.severidad === 'urgente').length
@@ -198,6 +212,7 @@ export default function EstadoGeneral() {
       fecha: new Date(),
       filename: `estado_general_${new Date().toISOString().slice(0, 10)}.pdf`,
       accentColor: [148, 163, 184], // slate
+      firmaNombre: firmaPdf,
       bloques: [
         (ctx) => {
           pdfCorporateSection(ctx, 'Resumen Ejecutivo')
@@ -285,7 +300,7 @@ export default function EstadoGeneral() {
           {[
             { label: 'Críticas',  value: criticas, color: 'text-red-400',   bg: 'bg-red-500/10 border-red-500/20' },
             { label: 'Urgentes',  value: urgentes, color: 'text-amber-400', bg: 'bg-amber-500/10 border-amber-500/20' },
-            { label: 'Avisos',    value: avisos,   color: 'text-sky-400',   bg: 'bg-sky-500/10 border-sky-500/20' },
+            { label: 'Avisos',    value: avisos,   color: 'text-emerald-400', bg: 'bg-emerald-500/10 border-emerald-500/20' },
           ].map(k => (
             <div key={k.label} className={`rounded-xl border p-3 text-center ${k.bg}`}>
               <p className="text-[9px] font-black uppercase tracking-widest text-slate-400 mb-1">{k.label}</p>
@@ -308,9 +323,15 @@ export default function EstadoGeneral() {
           </div>
         )}
 
+        {!isLoading && alertas.length > 0 && alertasLista.length === 0 && filtroSev && (
+          <div className="text-center py-12 text-slate-500 text-sm font-medium">
+            No hay alertas en el nivel seleccionado.
+          </div>
+        )}
+
         {/* Lista de alertas agrupadas por módulo */}
         {(['critica', 'urgente', 'aviso'] as Severidad[]).map(sev => {
-          const grupo = alertas.filter(a => a.severidad === sev)
+          const grupo = alertasLista.filter(a => a.severidad === sev)
           if (grupo.length === 0) return null
           const cfg = SEV_CONFIG[sev]
           return (

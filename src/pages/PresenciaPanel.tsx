@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { usePresenciaTiempoReal } from '@/hooks/usePresencia'
 import { useCuadrillas } from '@/hooks/useCatalogos'
 import { Users, RefreshCw, Download, FileText } from 'lucide-react'
 import { formatHora, formatFechaCompleta } from '@/utils/dateFormat'
-import { generarPDFCorporativoBase, PDF_COLORS, pdfCorporateSection, pdfCorporateTable, PDF_MARGIN } from '@/utils/pdfUtils'
+import { useAuth } from '@/context/AuthContext'
+import { generarPDFCorporativoBase, nombreFirmaPdfFromUser, PDF_COLORS, pdfCorporateSection, pdfCorporateTable, PDF_MARGIN } from '@/utils/pdfUtils'
 import { SelectWithOther } from '@/components/base'
 import { toast } from '@/hooks/use-toast'
 import * as XLSX from 'xlsx'
@@ -34,6 +36,9 @@ interface PresenciaAcumulada {
 }
 
 export default function PresenciaPanel() {
+  const { user } = useAuth()
+  const [searchParams] = useSearchParams()
+  const firmaPdf = nombreFirmaPdfFromUser(user)
   const { data: presencias, isLoading, refetch } = usePresenciaTiempoReal()
   const { data: cuadrillas } = useCuadrillas()
   
@@ -145,6 +150,19 @@ export default function PresenciaPanel() {
     return () => clearInterval(interval)
   }, [refetch])
 
+  useEffect(() => {
+    const v = searchParams.get('vista')
+    if (v === 'activas') {
+      requestAnimationFrame(() => {
+        document.getElementById('presencia-seccion-activas')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    } else if (v === 'horas') {
+      requestAnimationFrame(() => {
+        document.getElementById('presencia-seccion-horas')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      })
+    }
+  }, [searchParams])
+
   // Generar PDF corporativo
   const generarPDF = () => {
     const bloques: Parameters<typeof generarPDFCorporativoBase>[0]['bloques'] = [(ctx) => {
@@ -208,7 +226,8 @@ export default function PresenciaPanel() {
       fecha: new Date(),
       filename: `Presencia_Horas_${new Date().toISOString().split('T')[0]}.pdf`,
       bloques,
-      accentColor: PDF_COLORS.accent
+      accentColor: PDF_COLORS.accent,
+      firmaNombre: firmaPdf,
     })
   }
 
@@ -263,7 +282,7 @@ export default function PresenciaPanel() {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
-          <RefreshCw className="w-8 h-8 animate-spin text-sky-400 mx-auto mb-2" />
+          <RefreshCw className="w-8 h-8 animate-spin text-emerald-500 mx-auto mb-2" />
           <p className="text-slate-400">Cargando presencia...</p>
         </div>
       </div>
@@ -277,7 +296,7 @@ export default function PresenciaPanel() {
       {/* ENCABEZADO */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <Users className="w-6 h-6 text-sky-400" />
+          <Users className="w-6 h-6 text-emerald-500" />
           <h1 className="text-3xl font-black text-white uppercase tracking-tight">
             Panel de Presencia
           </h1>
@@ -343,11 +362,11 @@ export default function PresenciaPanel() {
       </div>
 
       {/* CONTADOR DE ACTIVAS */}
-      <div className="bg-slate-900/50 border border-sky-500/20 rounded-lg p-4 mb-6">
+      <div id="presencia-seccion-activas" className="scroll-mt-24 bg-slate-900/50 border border-emerald-600/30 rounded-lg p-4 mb-6">
         <p className="text-xs text-slate-500 uppercase tracking-widest mb-1">
           Cuadrillas activas
         </p>
-        <p className="text-3xl font-black text-sky-400">
+        <p className="text-3xl font-black text-emerald-400">
           {cuadrillasActivas}
         </p>
       </div>
@@ -398,7 +417,7 @@ export default function PresenciaPanel() {
                         </p>
                       </td>
                       <td className="py-4 px-4">
-                        <p className="text-sky-400 font-mono">
+                        <p className="text-emerald-400 font-mono">
                           {formatHora(presencia.hora_entrada)}
                         </p>
                       </td>
@@ -426,7 +445,7 @@ export default function PresenciaPanel() {
 
       {/* TABLA RESUMEN / INFORME DE HORAS */}
       {resumen.length > 0 && (
-        <div className="mb-8">
+        <div id="presencia-seccion-horas" className="scroll-mt-24 mb-8">
           <h2 className="text-lg font-bold text-white mb-4 uppercase">Resumen de Horas</h2>
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
@@ -486,7 +505,7 @@ export default function PresenciaPanel() {
       <div className="flex gap-4 mb-8 pt-6 border-t border-slate-700">
         <button
           onClick={() => refetch()}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-sky-500/20 border border-sky-500/50 text-sky-400 text-sm font-semibold hover:bg-sky-500/30 transition"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600/20 border border-emerald-500/50 text-emerald-400 text-sm font-semibold hover:bg-emerald-600/30 transition"
         >
           <RefreshCw className="w-4 h-4" />
           Actualizar

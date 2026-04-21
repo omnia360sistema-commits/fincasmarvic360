@@ -1,57 +1,24 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import React, { useState, useEffect } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, Database, Download, Server, FileJson,
   FileSpreadsheet, Loader2, Calendar, FileText
 } from 'lucide-react'
-import { supabase } from '@/integrations/supabase/client'
-import type { Json, Tables } from '@/integrations/supabase/types'
 import { RecordActions } from '@/components/base'
 import { toast } from '@/hooks/use-toast'
-import { useCreatedBy } from '@/hooks/useCreatedBy'
 import { FINCAS_NOMBRES as FINCAS } from '@/constants/farms'
-import { matchHarvestsToPlantings } from '@/utils/harvestPlantingMatch'
-
-type ErpContenidoMeta = {
-  formato?: string
-  registros_exportados?: number
-  notas?: string
-}
-
-function isPlainObject(v: unknown): v is Record<string, unknown> {
-  return v !== null && typeof v === 'object' && !Array.isArray(v)
-}
-
-function parseErpContenido(contenido: Json | null): ErpContenidoMeta {
-  if (!isPlainObject(contenido)) {
-    return {}
-  }
-  const formato = typeof contenido.formato === 'string' ? contenido.formato : undefined
-  const registros_exportados =
-    typeof contenido.registros_exportados === 'number' &&
-    Number.isFinite(contenido.registros_exportados)
-      ? contenido.registros_exportados
-      : undefined
-  const notas = typeof contenido.notas === 'string' ? contenido.notas : undefined
-  return { formato, registros_exportados, notas }
-}
-
-/** Fila de historial: registro BD + metadatos seguros desde `contenido` (orden por `generado_at`). */
-type ErpHistorialFila = Tables<'erp_exportaciones'> & ErpContenidoMeta
-
-function horasTrabajadasDesdeTexto(horaInicio: string | null, horaFin: string | null): number | undefined {
-  if (!horaInicio || !horaFin) return undefined
-  const t0 = new Date(horaInicio).getTime()
-  const t1 = new Date(horaFin).getTime()
-  if (!Number.isFinite(t0) || !Number.isFinite(t1) || t1 <= t0) return undefined
-  return Math.round(((t1 - t0) / (1000 * 60 * 60)) * 100) / 100
-}
+import {
+  useErpExportacionesHistorial,
+  useDeleteErpExportacion,
+  useInsertErpExportacion,
+  fetchProduccionErpRows,
+  fetchCostesErpExportPayload,
+  fetchAnalisisErpRows,
+} from '@/hooks/useIntegracionERP'
 
 export default function IntegracionERP() {
   const navigate = useNavigate()
-  const qc = useQueryClient()
-  const createdBy = useCreatedBy()
+  const [searchParams] = useSearchParams()
 
   const [fechaInicio, setFechaInicio] = useState(() => {
     const d = new Date(); d.setMonth(d.getMonth() - 1); return d.toISOString().split('T')[0]
@@ -63,54 +30,31 @@ export default function IntegracionERP() {
   const [loadingCostes, setLoadingCostes] = useState(false)
   const [loadingAgro, setLoadingAgro] = useState(false)
 
-  // ── Historial de Exportaciones ──
-  const { data: historial = [], isLoading: loadingHistorial } = useQuery({
-    queryKey: ['erp_exportaciones'],
-    queryFn: async (): Promise<ErpHistorialFila[]> => {
-      const { data, error } = await supabase
-        .from('erp_exportaciones')
-        .select('*')
-        .order('generado_at', { ascending: false })
-        .limit(50)
-      if (error) throw error
-      const rows = data ?? []
-      return rows.map((row) => {
-        const meta = parseErpContenido(row.contenido)
-        return { ...row, ...meta }
-      })
-    },
-  })
+  const { data: historial = [], isLoading: loadingHistorial } = useErpExportacionesHistorial()
+  const deleteExport = useDeleteErpExportacion()
+  const insertExport = useInsertErpExportacion()
 
-  const deleteExport = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from('erp_exportaciones').delete().eq('id', id)
-      if (error) throw error
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ['erp_exportaciones'] })
-      toast({ title: 'Exportación eliminada del historial' })
-    },
-    onError: (e: Error) => toast({ title: 'Error', description: e.message, variant: 'destructive' })
-  })
-
-  const registrarExportacion = async (tipo: string, formato: string, registros: number) => {
-    const notas = `Período: ${fechaInicio} a ${fechaFin}${fincaFiltro ? ` | Finca: ${fincaFiltro}` : ''}`
-    const contenido: Json = {
-      formato,
-      registros_exportados: registros,
-      notas,
-    }
-    const { error } = await supabase.from('erp_exportaciones').insert({
-      tipo,
-      fecha: new Date().toISOString().split('T')[0],
-      contenido,
-      created_by: createdBy,
+  useEffect(() => {
+    const s = searchParams.get('seccion')
+    if (!s) return
+    const id =
+      s === 'produccion' ? 'erp-seccion-produccion' :
+      s === 'costes' ? 'erp-seccion-costes' :
+      s === 'biologicos' ? 'erp-seccion-biologicos' :
+      s === 'historial' ? 'erp-seccion-historial' : null
+    if (!id) return
+    requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
     })
-    if (error) {
-      toast({ title: 'No se pudo registrar la exportación', description: error.message, variant: 'destructive' })
-      return
+  }, [searchParams])
+
+  async function registrarExportacion(tipo: string, formato: string, registros: number) {
+    const notas = `Período: ${fechaInicio} a ${fechaFin}${fincaFiltro ? ` | Finca: ${fincaFiltro}` : ''}`
+    try {
+      await insertExport.mutateAsync({ tipo, formato, registros, notas })
+    } catch {
+      /* toast en el hook; no interrumpir el flujo de exportación ya completada */
     }
-    qc.invalidateQueries({ queryKey: ['erp_exportaciones'] })
   }
 
   // ── Helpers de Exportación ──
@@ -137,32 +81,7 @@ export default function IntegracionERP() {
   const exportarProduccion = async (formato: 'csv' | 'json') => {
     setLoadingProd(true)
     try {
-      const { data: rawHarvests, error } = await supabase.from('harvests')
-        .select('*, tickets_pesaje(numero_albaran, destino, peso_neto_kg)')
-        .gte('date', fechaInicio).lte('date', fechaFin)
-      if (error) throw error
-
-      const parcelIds = [...new Set((rawHarvests || []).map(h => h.parcel_id).filter(Boolean))]
-      const { data: plantingsData } = await supabase.from('plantings')
-        .select('parcel_id, crop, variedad, date')
-        .in('parcel_id', parcelIds.length > 0 ? parcelIds : ['__none__'])
-
-      const harvests = matchHarvestsToPlantings(rawHarvests || [], plantingsData || [])
-
-      const exportData = harvests.map(h => {
-        const tickets = Array.isArray(h.tickets_pesaje) ? h.tickets_pesaje : [h.tickets_pesaje].filter(Boolean)
-        const ticket = tickets.length > 0 ? tickets[0] as { numero_albaran?: string; destino?: string; peso_neto_kg?: number } : null
-        
-        return {
-          parcela: h.parcel_id,
-          cultivo: h.crop,
-          variedad: h.variedad || '',
-          fecha_cosecha: h.date,
-          kg_neto: ticket?.peso_neto_kg || h.production_kg || 0,
-          destino: ticket?.destino || '',
-          albaran: ticket?.numero_albaran || ''
-        }
-      })
+      const exportData = await fetchProduccionErpRows(fechaInicio, fechaFin)
 
       const resultStr = formato === 'json' ? JSON.stringify(exportData, null, 2) : convertToCSV(exportData)
       downloadFile(resultStr, `ERP_Produccion_${new Date().getTime()}.${formato}`, formato === 'json')
@@ -179,34 +98,7 @@ export default function IntegracionERP() {
   const exportarCostes = async (formato: 'csv' | 'json') => {
     setLoadingCostes(true)
     try {
-      // Mano de Obra
-      const { data: trabajos } = await supabase.from('work_records').select('id, date, parcel_id, work_type, hours_worked, workers_count')
-        .gte('date', fechaInicio).lte('date', fechaFin)
-      
-      // Maquinaria
-      const { data: maqRaw } = await supabase
-        .from('trabajos_registro')
-        .select('id, fecha, tractor_id, hora_inicio, hora_fin')
-        .not('tractor_id', 'is', null)
-        .gte('fecha', fechaInicio)
-        .lte('fecha', fechaFin)
-      const maquinaria = (maqRaw ?? []).map((m) => ({
-        fecha: m.fecha,
-        horas_trabajadas: horasTrabajadasDesdeTexto(m.hora_inicio, m.hora_fin) ?? 0,
-        gasolina_litros: 0,
-      }))
-
-      // Insumos
-      const { data: insumos } = await supabase.from('inventario_entradas').select('id, fecha, cantidad, unidad, importe_total, proveedor_id')
-        .gte('fecha', fechaInicio).lte('fecha', fechaFin)
-
-      const exportData = {
-        mano_de_obra: (trabajos || []).map(t => ({ fecha: t.date, operacion: t.work_type, horas_totales: (Number(t.hours_worked) || 0) * (t.workers_count ?? 1), parcela: t.parcel_id })),
-        maquinaria: (maquinaria || []).map(m => ({ fecha: m.fecha, horas_motor: m.horas_trabajadas, litros_gasoil: m.gasolina_litros })),
-        insumos: (insumos || []).map(i => ({ fecha: i.fecha, cantidad: i.cantidad, unidad: i.unidad, coste_total: i.importe_total }))
-      }
-
-      const totalRegistros = exportData.mano_de_obra.length + exportData.maquinaria.length + exportData.insumos.length
+      const { exportData, totalRegistros } = await fetchCostesErpExportPayload(fechaInicio, fechaFin)
       let resultStr = ''
 
       if (formato === 'json') {
@@ -232,12 +124,7 @@ export default function IntegracionERP() {
   const exportarAnalisis = async (formato: 'csv' | 'json') => {
     setLoadingAgro(true)
     try {
-      const { data } = await supabase.from('analisis_suelo').select('*').gte('fecha', fechaInicio).lte('fecha', fechaFin)
-      const exportData = (data || []).map(a => ({
-        fecha: a.fecha, parcela: a.parcel_id, ph: a.ph, 
-        ec: a.conductividad_ec, nitrogeno: a.nitrogeno_ppm,
-        fosforo: a.fosforo_ppm, potasio: a.potasio_ppm, mo: a.materia_organica
-      }))
+      const exportData = await fetchAnalisisErpRows(fechaInicio, fechaFin)
 
       const resultStr = formato === 'json' ? JSON.stringify(exportData, null, 2) : convertToCSV(exportData)
       downloadFile(resultStr, `ERP_Analisis_${new Date().getTime()}.${formato}`, formato === 'json')
@@ -299,7 +186,7 @@ export default function IntegracionERP() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           
           {/* Producción */}
-          <div className="bg-slate-900/60 border border-indigo-500/20 rounded-xl p-5 flex flex-col h-full shadow-lg">
+          <div id="erp-seccion-produccion" className="scroll-mt-24 bg-slate-900/60 border border-indigo-500/20 rounded-xl p-5 flex flex-col h-full shadow-lg">
             <div className="flex-1">
               <div className="w-10 h-10 rounded-lg bg-indigo-500/10 flex items-center justify-center mb-3 border border-indigo-500/20">
                 <Server className="w-5 h-5 text-indigo-400" />
@@ -318,7 +205,7 @@ export default function IntegracionERP() {
           </div>
 
           {/* Costes */}
-          <div className="bg-slate-900/60 border border-amber-500/20 rounded-xl p-5 flex flex-col h-full shadow-lg">
+          <div id="erp-seccion-costes" className="scroll-mt-24 bg-slate-900/60 border border-amber-500/20 rounded-xl p-5 flex flex-col h-full shadow-lg">
             <div className="flex-1">
               <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center mb-3 border border-amber-500/20">
                 <Database className="w-5 h-5 text-amber-400" />
@@ -337,7 +224,7 @@ export default function IntegracionERP() {
           </div>
 
           {/* Análisis */}
-          <div className="bg-slate-900/60 border border-green-500/20 rounded-xl p-5 flex flex-col h-full shadow-lg">
+          <div id="erp-seccion-biologicos" className="scroll-mt-24 bg-slate-900/60 border border-green-500/20 rounded-xl p-5 flex flex-col h-full shadow-lg">
             <div className="flex-1">
               <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center mb-3 border border-green-500/20">
                 <FileText className="w-5 h-5 text-green-400" />
@@ -358,7 +245,7 @@ export default function IntegracionERP() {
         </div>
 
         {/* Estado de Integración / Historial */}
-        <div className="bg-slate-900/60 border border-white/10 rounded-xl overflow-hidden shadow-lg mt-6">
+        <div id="erp-seccion-historial" className="scroll-mt-24 bg-slate-900/60 border border-white/10 rounded-xl overflow-hidden shadow-lg mt-6">
           <div className="px-5 py-4 border-b border-white/10 bg-slate-800/40 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Download className="w-4 h-4 text-slate-400" />

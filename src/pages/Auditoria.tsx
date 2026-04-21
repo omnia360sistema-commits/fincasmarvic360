@@ -1,11 +1,11 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { ShieldCheck, Filter, Loader2, Wrench, Package, Truck, Users, FileText, Trash2 } from 'lucide-react'
-import { useAuditTrail, AuditEntry } from '@/hooks/useAuditoria'
+import { useAuditTrail, AuditEntry, useDeleteAuditOrigen, type TablaOrigenAudit } from '@/hooks/useAuditoria'
 import { PDFExportModal, type PDFExportParams } from '@/components/base'
-import { generarPDFCorporativoBase, pdfCorporateSection, pdfCorporateTable } from '@/utils/pdfUtils'
+import { useAuth } from '@/context/AuthContext'
+import { generarPDFCorporativoBase, nombreFirmaPdfFromUser, pdfCorporateSection, pdfCorporateTable } from '@/utils/pdfUtils'
 import { AUDITORIA_EDITABLE } from '@/constants/modoPiloto'
-import { supabase } from '@/integrations/supabase/client'
-import { useQueryClient } from '@tanstack/react-query'
 import { toast } from '@/hooks/use-toast'
 
 const MODULO_ICON: Record<string, React.ElementType> = {
@@ -17,12 +17,15 @@ const MODULO_ICON: Record<string, React.ElementType> = {
 
 const MODULO_COLOR: Record<string, string> = {
   'Trabajos': 'text-amber-400',
-  'Inventario': 'text-sky-400',
+  'Inventario': 'text-emerald-500',
   'Logística': 'text-purple-400',
   'Personal': 'text-pink-400',
 }
 
 export default function Auditoria() {
+  const { user } = useAuth()
+  const [searchParams] = useSearchParams()
+  const firmaPdf = nombreFirmaPdfFromUser(user)
   const [fechaDesde, setFechaDesde] = useState(() => new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10))
   const [fechaHasta, setFechaHasta] = useState(() => new Date().toISOString().slice(0, 10))
   const [modulo, setModulo] = useState('')
@@ -30,13 +33,26 @@ export default function Auditoria() {
   const [pdfOpen, setPdfOpen] = useState(false)
 
   const { data: trail = [], isLoading } = useAuditTrail({ fechaDesde, fechaHasta, modulo, usuario })
-  const qc = useQueryClient()
+  const deleteOrigen = useDeleteAuditOrigen()
+
+  useEffect(() => {
+    const f = searchParams.get('filtro')
+    if (!f) return
+    const id =
+      f === 'fecha' ? 'auditoria-filtro-fecha' :
+      f === 'modulo' ? 'auditoria-filtro-modulo' :
+      f === 'usuario' ? 'auditoria-filtro-usuario' : null
+    if (!id) return
+    requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    })
+  }, [searchParams])
 
   async function handleDeleteEntry(entry: AuditEntry) {
     if (!AUDITORIA_EDITABLE) return
     if (!window.confirm(`¿Eliminar el registro origen de este evento?\n\n${entry.modulo} — ${entry.accion}\n${entry.detalle}`)) return
     const [prefix, id] = entry.id.split(/-(.*)/)
-    const tablaPorPrefijo: Record<string, string> = {
+    const tablaPorPrefijo: Record<string, TablaOrigenAudit> = {
       trab: 'trabajos_registro',
       inv: 'inventario_movimientos',
       log: 'logistica_viajes',
@@ -47,13 +63,11 @@ export default function Auditoria() {
       toast({ title: 'Error', description: 'No se puede identificar el registro origen', variant: 'destructive' })
       return
     }
-    const { error } = await supabase.from(tabla as 'trabajos_registro').delete().eq('id', id)
-    if (error) {
-      toast({ title: 'Error al eliminar', description: error.message, variant: 'destructive' })
-      return
+    try {
+      await deleteOrigen.mutateAsync({ tabla, id })
+    } catch {
+      /* toasts en el hook */
     }
-    qc.invalidateQueries({ queryKey: ['audit_trail'] })
-    toast({ title: 'Registro eliminado' })
   }
 
   const handleExportPDF = async ({ desde, hasta, filtros }: PDFExportParams) => {
@@ -69,6 +83,7 @@ export default function Auditoria() {
       fecha: new Date(),
       filename: `auditoria_${desde}_${hasta}.pdf`,
       accentColor: [245, 158, 11], // amber
+      firmaNombre: firmaPdf,
       bloques: [
         (ctx) => {
           pdfCorporateSection(ctx, 'Resumen')
@@ -175,15 +190,15 @@ export default function Auditoria() {
           <h3 className="text-xs font-black uppercase tracking-widest text-white">Filtros de Búsqueda</h3>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div>
+          <div id="auditoria-filtro-fecha" className="scroll-mt-24">
             <label className="block text-[9px] text-slate-500 uppercase font-bold mb-1">Desde</label>
             <input type="date" value={fechaDesde} onChange={e => setFechaDesde(e.target.value)} className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
           </div>
-          <div>
+          <div className="scroll-mt-24">
             <label className="block text-[9px] text-slate-500 uppercase font-bold mb-1">Hasta</label>
             <input type="date" value={fechaHasta} onChange={e => setFechaHasta(e.target.value)} className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
           </div>
-          <div>
+          <div id="auditoria-filtro-modulo" className="scroll-mt-24">
             <label className="block text-[9px] text-slate-500 uppercase font-bold mb-1">Módulo</label>
             <select value={modulo} onChange={e => setModulo(e.target.value)} className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white">
               <option value="">Todos</option>
@@ -193,7 +208,7 @@ export default function Auditoria() {
               <option value="Personal">Personal</option>
             </select>
           </div>
-          <div>
+          <div id="auditoria-filtro-usuario" className="scroll-mt-24">
             <label className="block text-[9px] text-slate-500 uppercase font-bold mb-1">Usuario</label>
             <input type="text" value={usuario} onChange={e => setUsuario(e.target.value)} placeholder="Email o nombre..." className="w-full bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-xs text-white" />
           </div>

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { supabase } from '@/integrations/supabase/client'
-import type { TablesInsert } from '@/integrations/supabase/types'
+import type { TablesInsert, TablesUpdate } from '@/integrations/supabase/types'
 import { logLiaEvento } from '@/utils/liaLogger'
 import { useAuth } from '@/context/AuthContext'
 import { useCreatedBy } from './useCreatedBy'
@@ -279,6 +279,35 @@ export function useAddResiduos() {
         ganadero_id: record.ganadero_id,
         hora_salida_nave: record.hora_salida_nave,
       });
+      qc.invalidateQueries({ queryKey: ['parte_residuos_vegetales', data.parte_id] })
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  })
+}
+
+export function useUpdateResiduosVegetales() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: async ({
+      id,
+      updates,
+    }: {
+      id: string
+      updates: TablesUpdate<'parte_residuos_vegetales'>
+    }) => {
+      const { data, error } = await supabase
+        .from('parte_residuos_vegetales')
+        .update(updates)
+        .eq('id', id)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['parte_residuos_vegetales', data.parte_id] })
     },
     onError: (error: Error) => {

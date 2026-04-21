@@ -1,4 +1,6 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState, useCallback, useMemo } from 'react'
+import { useAuth } from '@/context/AuthContext'
+import { nombreFirmaPdfFromUser } from '@/utils/pdfUtils'
 import { User, Plus, Camera, X } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import type { Tables } from '@/integrations/supabase/types'
@@ -25,6 +27,11 @@ interface FormAnotacionesLibresProps {
 }
 
 export const FormAnotacionesLibres = React.memo(({ parteId, personales, esHoy, onDelete }: FormAnotacionesLibresProps) => {
+  const { user } = useAuth()
+  const etiquetaPersonal = useMemo(() => {
+    const n = nombreFirmaPdfFromUser(user)
+    return `Parte personal — ${n}`
+  }, [user])
   const [modalOpen, setModalOpen] = useState(false)
   const [formC, setFormC] = useState<FormC>(initC())
   const [editIdC, setEditIdC] = useState<string | null>(null)
@@ -66,7 +73,7 @@ export const FormAnotacionesLibres = React.memo(({ parteId, personales, esHoy, o
           <div className="flex items-center gap-2">
             <span className="text-[9px] font-black px-1.5 py-0.5 rounded border text-green-400 border-green-400/40 bg-green-400/5">C</span>
             <User className="w-3.5 h-3.5 text-slate-400" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-white">Parte Personal JuanPe</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-white">{etiquetaPersonal}</span>
           </div>
           {esHoy && parteId && (
             <button
@@ -99,7 +106,7 @@ export const FormAnotacionesLibres = React.memo(({ parteId, personales, esHoy, o
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
           <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-slate-900 border-b border-white/10 px-5 py-3 flex items-center justify-between">
-              <span className="text-sm font-black uppercase tracking-widest text-green-400">C · Parte Personal JuanPe</span>
+              <span className="text-sm font-black uppercase tracking-widest text-green-400">C · {etiquetaPersonal}</span>
               <button onClick={() => setModalOpen(false)} className="text-slate-500 hover:text-white text-lg leading-none">×</button>
             </div>
             <div className="p-5 space-y-4">

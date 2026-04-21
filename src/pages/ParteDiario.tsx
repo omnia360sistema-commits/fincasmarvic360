@@ -1,10 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   ArrowLeft, ChevronDown, FileText, LogOut,
 } from 'lucide-react'
-import { supabase } from '@/integrations/supabase/client'
-import type { Tables } from '@/integrations/supabase/types'
 import {
   usePartePorFecha,
   useEnsureParteHoy,
@@ -20,434 +18,25 @@ import { FormEstadoFinca } from '@/components/ParteDiario/FormEstadoFinca'
 import { FormTrabajosRealizado } from '@/components/ParteDiario/FormTrabajosRealizado'
 import { FormAnotacionesLibres } from '@/components/ParteDiario/FormAnotacionesLibres'
 import { FormLogisticaResiduos } from '@/components/ParteDiario/FormLogisticaResiduos'
-import { formatHora } from '@/utils/dateFormat'
-import { loadPdfImage, type PdfImage } from '@/utils/pdfUtils'
+import { nombreFirmaPdfFromUser } from '@/utils/pdfUtils'
+import { useAuth } from '@/context/AuthContext'
 import { useTheme } from '@/context/ThemeContext'
 import { ejecutarCosechaDiaria } from '@/utils/liaCosechadora'
-import { ESTADOS_PARCELA } from '@/constants/estadosParcela'
-import jsPDF from 'jspdf'
-
-// ─── Constantes ──────────────────────────────────────────────────────────────
-
-const HOY = new Date().toISOString().split('T')[0]
-
-// ─── Fecha cabecera ejecutiva: "miércoles, 25 de marzo de 2026" ───────────────
-
-function formatFechaEjecutiva(fecha: string): string {
-  try {
-    return new Date(fecha + 'T12:00:00').toLocaleDateString('es-ES', {
-      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-    })
-  } catch {
-    return fecha
-  }
-}
-
-function addDaysISO(fecha: string, days: number): string {
-  const d = new Date(fecha + 'T12:00:00')
-  d.setDate(d.getDate() + days)
-  return d.toISOString().split('T')[0]
-}
-
-/** Bloque C: INCIDENCIA si el texto contiene la palabra "incidencia". */
-function esIncidenciaPartePersonal(texto: string): boolean {
-  return /\bincidencia\b/i.test(texto)
-}
-
-function estadoPartePersonalRow(texto: string): 'COMPLETADO' | 'INCIDENCIA' {
-  return esIncidenciaPartePersonal(texto) ? 'INCIDENCIA' : 'COMPLETADO'
-}
-
-function prioridadPlanningDesdeNotas(notas: string | null): 'ALTA' | 'MEDIA' {
-  if (/\b(urgente|prioridad\s*alta|crític|critico)\b/i.test(notas ?? '')) return 'ALTA'
-  return 'MEDIA'
-}
-
-type EntradaPDF =
-  | { ts: string; tipo: 'A'; data: Tables<'parte_estado_finca'> }
-  | { ts: string; tipo: 'B'; data: Tables<'parte_trabajo'> }
-  | { ts: string; tipo: 'C'; data: Tables<'parte_personal'> }
-  | { ts: string; tipo: 'D'; data: Tables<'parte_residuos_vegetales'> }
-
-function buildEntradasOrdenadas(
-  estadosFinca: Tables<'parte_estado_finca'>[],
-  trabajos: Tables<'parte_trabajo'>[],
-  personales: Tables<'parte_personal'>[],
-  residuos: Tables<'parte_residuos_vegetales'>[],
-): EntradaPDF[] {
-  return [
-    ...estadosFinca.map(e => ({ ts: e.created_at, tipo: 'A' as const, data: e })),
-    ...trabajos.map(e => ({ ts: e.hora_inicio ?? e.created_at, tipo: 'B' as const, data: e })),
-    ...personales.map(e => ({ ts: e.fecha_hora, tipo: 'C' as const, data: e })),
-    ...residuos.map(e => ({ ts: e.hora_salida_nave ?? e.created_at, tipo: 'D' as const, data: e })),
-  ].sort((a, b) => a.ts.localeCompare(b.ts))
-}
-
-function computeInicioJornada(entradas: EntradaPDF[]): string {
-  const times: number[] = []
-  for (const e of entradas) {
-    if (e.tipo === 'A') times.push(new Date(e.data.created_at).getTime())
-    if (e.tipo === 'B' && e.data.hora_inicio) times.push(new Date(e.data.hora_inicio).getTime())
-    if (e.tipo === 'C') times.push(new Date(e.data.fecha_hora).getTime())
-    if (e.tipo === 'D' && e.data.hora_salida_nave) times.push(new Date(e.data.hora_salida_nave).getTime())
-  }
-  if (times.length === 0) return '—'
-  const min = new Date(Math.min(...times))
-  return `${min.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} h`
-}
-
-function collectZonasTrabajo(entradas: EntradaPDF[]): string {
-  const set = new Set<string>()
-  for (const e of entradas) {
-    if (e.tipo === 'A' && e.data.finca) set.add(e.data.finca)
-    if (e.tipo === 'B' && e.data.finca) set.add(e.data.finca)
-  }
-  return [...set].filter(Boolean).join(' / ') || '—'
-}
-
-function collectNombresPersonal(entradas: EntradaPDF[]): string {
-  const names = new Set<string>()
-  for (const e of entradas) {
-    if (e.tipo === 'A' && e.data.nombres_operarios) {
-      e.data.nombres_operarios.split(/[,;]/).map(s => s.trim()).filter(Boolean).forEach(n => names.add(n))
-    }
-    if (e.tipo === 'B' && e.data.nombres_operarios) {
-      e.data.nombres_operarios.split(/[,;]/).map(s => s.trim()).filter(Boolean).forEach(n => names.add(n))
-    }
-    if (e.tipo === 'C' && e.data.con_quien) {
-      e.data.con_quien.split(/[,;]/).map(s => s.trim()).filter(Boolean).forEach(n => names.add(n))
-    }
-  }
-  return [...names].join(', ') || '—'
-}
-
-/**
- * Motor de formato corporativo ejecutivo para todos los PDFs del Parte Diario.
- * Cabecera por página, pie con firma y numeración; contenido sobre fondo blanco.
- */
-function generarPDFCorporativo(
-  tituloInforme: string,
-  subtituloInforme: string,
-  fechaISO: string,
-  logoData: PdfImage | null,
-) {
-  const doc = new jsPDF({ unit: 'mm', format: 'a4' })
-  const M = 14
-  const PAGE_W = 210
-  const PAGE_H = 297
-  const TW = PAGE_W - 2 * M
-  const FOOTER_LINE_Y = 282
-  const FOOTER_TEXT_Y = 287
-  const CONTENT_MAX_Y = FOOTER_LINE_Y - 6
-
-  let y = M
-  const fechaLarga = formatFechaEjecutiva(fechaISO)
-
-  function drawPageBackground() {
-    doc.setFillColor(255, 255, 255)
-    doc.rect(0, 0, PAGE_W, PAGE_H, 'F')
-  }
-
-  function drawHeader() {
-    drawPageBackground()
-    const top = M
-    let bandBottom = top
-    if (logoData) {
-      const logoW = 45
-      const logoH = Math.min(logoW * (logoData.natH / logoData.natW), 22)
-      doc.setFillColor(255, 255, 255)
-      doc.rect(M - 0.5, top - 0.5, logoW + 1, logoH + 1, 'F')
-      doc.addImage(logoData.b64, 'JPEG', M, top, logoW, logoH)
-      bandBottom = Math.max(bandBottom, top + logoH)
-    }
-    const right = PAGE_W - M
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(14)
-    doc.setTextColor(0, 0, 0)
-    doc.text(tituloInforme.toUpperCase(), right, top + 4, { align: 'right' })
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    doc.setTextColor(100, 116, 139)
-    doc.text(subtituloInforme, right, top + 9, { align: 'right' })
-    doc.text(fechaLarga, right, top + 14, { align: 'right' })
-    bandBottom = Math.max(bandBottom, top + 16)
-    y = bandBottom + 2
-    doc.setDrawColor(200, 200, 200)
-    doc.setLineWidth(0.35)
-    doc.line(M, y, PAGE_W - M, y)
-    y += 5
-  }
-
-  function checkPage(need: number) {
-    if (y + need > CONTENT_MAX_Y) {
-      doc.addPage()
-      y = M
-      drawHeader()
-    }
-  }
-
-  /** Resumen 2 columnas (solo parte completo). Sin borde exterior. */
-  function addResumenDosColumnas(rows: Array<{ label: string; value: string }>) {
-    let stripe = 0
-    const rowH = 6
-    const labelX = M + 2
-    const valueX = M + 52
-    for (const row of rows) {
-      const valueLines = doc.splitTextToSize(row.value, TW - 56) as string[]
-      const linesH = Math.max(1, valueLines.length) * 4.2 + 2
-      checkPage(linesH + rowH)
-      const fill = stripe % 2 === 0 ? [255, 255, 255] : [248, 250, 252]
-      doc.setFillColor(fill[0], fill[1], fill[2])
-      doc.rect(M, y - 4.5, TW, Math.max(rowH, linesH + 1), 'F')
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9)
-      doc.setTextColor(100, 116, 139)
-      doc.text(row.label, labelX, y)
-      doc.setFont('helvetica', 'bold')
-      doc.setFontSize(10)
-      doc.setTextColor(0, 0, 0)
-      let yy = y
-      valueLines.forEach((line, i) => {
-        if (i > 0) {
-          yy += 4.2
-          checkPage(5)
-        }
-        doc.text(line, valueX, yy)
-      })
-      y = yy + 5
-      stripe++
-      doc.setFont('helvetica', 'normal')
-    }
-    y += 2
-  }
-
-  function addSectionHeader(letra: string, titulo: string, horario: string) {
-    checkPage(10)
-    doc.setFillColor(30, 41, 59)
-    doc.rect(M, y, TW, 7, 'F')
-    doc.setTextColor(255, 255, 255)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
-    const extra = horario ? `  ${horario}` : ''
-    doc.text(`[${letra}] ${titulo.toUpperCase()}${extra}`, M + 2, y + 4.8)
-    y += 9
-    doc.setTextColor(0, 0, 0)
-  }
-
-  let pairStripe = 0
-
-  function resetPairStripe() {
-    pairStripe = 0
-  }
-
-  function addKeyValueRow(label: string, value: string | null | undefined) {
-    if (value === null || value === undefined || value === '') return
-    const lines = doc.splitTextToSize(String(value), TW - 58) as string[]
-    const blockH = 5 + lines.length * 4
-    checkPage(blockH + 2)
-    const fill = pairStripe % 2 === 0 ? [255, 255, 255] : [248, 250, 252]
-    doc.setFillColor(fill[0], fill[1], fill[2])
-    doc.rect(M, y - 4, TW, blockH + 1, 'F')
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(9)
-    doc.setTextColor(100, 116, 139)
-    doc.text(label, M + 2, y)
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(10)
-    doc.setTextColor(0, 0, 0)
-    let yy = y
-    lines.forEach((ln, i) => {
-      if (i > 0) {
-        yy += 4
-        checkPage(4)
-      }
-      doc.text(ln, M + 55, yy)
-    })
-    y = yy + 5
-    pairStripe++
-  }
-
-  async function addPhoto120(url: string | null, pie: string) {
-    if (!url) return
-    const img = await loadPdfImage(url)
-    if (!img) return
-    const w = 120
-    const h = Math.min(w * (img.natH / img.natW), 95)
-    checkPage(h + 14)
-    const x = (PAGE_W - w) / 2
-    doc.addImage(img.b64, 'JPEG', x, y, w, h)
-    y += h + 2
-    if (pie) {
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(8)
-      doc.setTextColor(100, 116, 139)
-      const capLines = doc.splitTextToSize(pie, TW) as string[]
-      capLines.forEach(ln => {
-        checkPage(4)
-        doc.text(ln, PAGE_W / 2, y, { align: 'center' })
-        y += 3.5
-      })
-    }
-    y += 2
-  }
-
-  /** Tabla HORA | ACTIVIDAD | ESTADO (bloque C). */
-  function addTablaPartePersonal(
-    filas: Array<{ hora: string; actividad: string; estado: 'COMPLETADO' | 'INCIDENCIA' }>,
-  ) {
-    checkPage(14)
-    const c1 = M + 2
-    const c2 = M + 24
-    const c3 = M + 138
-    const headerH = 6
-    doc.setFillColor(30, 41, 59)
-    doc.rect(M, y, TW, headerH, 'F')
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
-    doc.setTextColor(255, 255, 255)
-    doc.text('HORA', c1, y + 4.2)
-    doc.text('ACTIVIDAD', c2, y + 4.2)
-    doc.text('ESTADO', c3, y + 4.2)
-    y += headerH + 1
-    let stripe = 0
-    for (const f of filas) {
-      const actLines = doc.splitTextToSize(f.actividad, 108) as string[]
-      const rowH = Math.max(6, actLines.length * 3.8 + 2)
-      checkPage(rowH + 1)
-      const fill = stripe % 2 === 0 ? [255, 255, 255] : [248, 250, 252]
-      doc.setFillColor(fill[0], fill[1], fill[2])
-      doc.rect(M, y - 1, TW, rowH, 'F')
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9)
-      doc.setTextColor(100, 116, 139)
-      doc.text(f.hora, c1, y + 3.5)
-      doc.setTextColor(0, 0, 0)
-      let yy = y + 3.5
-      actLines.forEach(ln => {
-        doc.text(ln, c2, yy)
-        yy += 3.8
-      })
-      doc.setFont('helvetica', 'bold')
-      if (f.estado === 'INCIDENCIA') {
-        doc.setTextColor(239, 68, 68)
-      } else {
-        doc.setTextColor(0, 0, 0)
-      }
-      doc.text(f.estado, c3, y + 3.5)
-      y += rowH
-      stripe++
-    }
-    y += 3
-    doc.setTextColor(0, 0, 0)
-  }
-
-  /** Tabla planning: Nº | TAREA | RESPONSABLE | PRIORIDAD */
-  function addTablaPlanning(
-    filas: Array<{ num: number; tarea: string; responsable: string; prioridad: 'ALTA' | 'MEDIA' }>,
-  ) {
-    checkPage(14)
-    const colN = M + 3
-    const colT = M + 14
-    const colR = M + 95
-    const colP = M + 155
-    const headerH = 6
-    doc.setFillColor(30, 41, 59)
-    doc.rect(M, y, TW, headerH, 'F')
-    doc.setFont('helvetica', 'bold')
-    doc.setFontSize(9)
-    doc.setTextColor(255, 255, 255)
-    doc.text('Nº', colN, y + 4.2)
-    doc.text('TAREA', colT, y + 4.2)
-    doc.text('RESPONSABLE', colR, y + 4.2)
-    doc.text('PRIORIDAD', colP, y + 4.2)
-    y += headerH + 1
-    let stripe = 0
-    for (const f of filas) {
-      const tLines = doc.splitTextToSize(f.tarea, 75) as string[]
-      const rowH = Math.max(6, tLines.length * 3.8 + 2)
-      checkPage(rowH + 1)
-      const fill = stripe % 2 === 0 ? [255, 255, 255] : [248, 250, 252]
-      doc.setFillColor(fill[0], fill[1], fill[2])
-      doc.rect(M, y - 1, TW, rowH, 'F')
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(9)
-      doc.setTextColor(0, 0, 0)
-      doc.text(String(f.num), colN, y + 3.5)
-      let yy = y + 3.5
-      tLines.forEach(ln => {
-        doc.text(ln, colT, yy)
-        yy += 3.8
-      })
-      doc.text(f.responsable || '—', colR, y + 3.5)
-      doc.setFont('helvetica', 'bold')
-      if (f.prioridad === 'ALTA') {
-        doc.setTextColor(239, 68, 68)
-      } else {
-        doc.setTextColor(51, 65, 85)
-      }
-      doc.text(f.prioridad, colP, y + 3.5)
-      y += rowH
-      stripe++
-    }
-    y += 3
-    doc.setTextColor(0, 0, 0)
-  }
-
-  function addMutedParagraph(texto: string) {
-    checkPage(12)
-    doc.setFont('helvetica', 'normal')
-    doc.setFontSize(10)
-    doc.setTextColor(100, 116, 139)
-    const lines = doc.splitTextToSize(texto, TW) as string[]
-    lines.forEach(ln => {
-      checkPage(5)
-      doc.text(ln, M, y)
-      y += 4.5
-    })
-    y += 2
-  }
-
-  function finalize(filename: string) {
-    const total = doc.getNumberOfPages()
-    const pieFecha = new Date(fechaISO + 'T12:00:00').toLocaleDateString('es-ES', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
-    })
-    for (let i = 1; i <= total; i++) {
-      doc.setPage(i)
-      doc.setDrawColor(200, 200, 200)
-      doc.setLineWidth(0.25)
-      doc.line(M, FOOTER_LINE_Y, PAGE_W - M, FOOTER_LINE_Y)
-      doc.setFont('helvetica', 'normal')
-      doc.setFontSize(8)
-      doc.setTextColor(71, 85, 105)
-      const left = `Firmado: JuanPe — Dirección Técnica de Campo  |  Agrícola Marvic 360  |  ${pieFecha}`
-      doc.text(left, M, FOOTER_TEXT_Y)
-      doc.text(`Página ${i} de ${total}`, PAGE_W - M, FOOTER_TEXT_Y, { align: 'right' })
-    }
-    doc.save(filename)
-  }
-
-  drawHeader()
-
-  return {
-    doc,
-    checkPage,
-    addResumenDosColumnas,
-    addSectionHeader,
-    resetPairStripe,
-    addKeyValueRow,
-    addPhoto120,
-    addTablaPartePersonal,
-    addTablaPlanning,
-    addMutedParagraph,
-    finalize,
-  }
-}
-
-// ─── Componente principal ─────────────────────────────────────────────────────
+import { HOY } from '@/utils/parteDiarioHelpers'
+import {
+  ejecutarParteDiarioPdfOpcion,
+  type ParteDiarioPdfDeps,
+} from '@/utils/parteDiarioPdfOpciones'
+import {
+  ModalCierreJornadaParteDiario,
+  type CierreJornadaResultado,
+} from '@/components/ParteDiario/ModalCierreJornadaParteDiario'
 
 export default function ParteDiario() {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const { user } = useAuth()
+  const firmaNombre = nombreFirmaPdfFromUser(user)
   const { theme } = useTheme()
   const pdfMenuRef = useRef<HTMLDivElement>(null)
   const [fecha, setFecha]           = useState(HOY)
@@ -458,9 +47,7 @@ export default function ParteDiario() {
 
   // Cerrar jornada
   const [showCierre, setShowCierre] = useState(false)
-  const [cierreResultado, setCierreResultado] = useState<{
-    ejecutados: number; pendientes: number; arrastrados: number; incidenciasArrastradas: number
-  } | null>(null)
+  const [cierreResultado, setCierreResultado] = useState<CierreJornadaResultado | null>(null)
 
   const ensureHoy                             = useEnsureParteHoy()
   const { data: parte, isLoading: cargando }  = usePartePorFecha(fecha)
@@ -493,6 +80,15 @@ export default function ParteDiario() {
     return () => document.removeEventListener('mousedown', onDown)
   }, [pdfMenuOpen])
 
+  useEffect(() => {
+    const b = searchParams.get('bloque')?.toUpperCase()
+    if (!b || !['A', 'B', 'C', 'D'].includes(b)) return
+    const id = `parte-bloque-${b.toLowerCase()}`
+    requestAnimationFrame(() => {
+      document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }, [searchParams])
+
   // ── Navegación de fechas ──
   function irAnterior() {
     const d = new Date(fecha + 'T12:00:00')
@@ -511,7 +107,7 @@ export default function ParteDiario() {
     if (!parteId || !confirm('¿Cerrar la jornada de hoy? Se marcarán trabajos ejecutados/pendientes y se arrastrarán a mañana.')) return
     try {
       const res = await cerrarJornada.mutateAsync(fecha)
-      setCierreResultado(res as { ejecutados: number; pendientes: number; arrastrados: number; incidenciasArrastradas: number })
+      setCierreResultado(res as CierreJornadaResultado)
       setShowCierre(true)
       // Ejecutar cosechadora LIA sin bloquear
       ejecutarCosechaDiaria(fecha)
@@ -526,283 +122,21 @@ export default function ParteDiario() {
     deleteEntrada.mutate({ tabla, id, parteId })
   }
 
-  // ─────────────────────────────────────────────────────────────────
-  // PDF — formato corporativo ejecutivo (5 variantes)
-  // ─────────────────────────────────────────────────────────────────
-
-  async function fetchIncidenciasTrabajosDelDia(fechaDia: string) {
-    const { data, error } = await supabase
-      .from('trabajos_incidencias')
-      .select('*')
-      .eq('fecha', fechaDia)
-      .order('created_at')
-    if (error) throw error
-    return data ?? []
-  }
-
-  async function fetchPlanningManana(fechaActual: string) {
-    const manana = addDaysISO(fechaActual, 1)
-    const { data: parteM, error: e1 } = await supabase
-      .from('partes_diarios')
-      .select('id')
-      .eq('fecha', manana)
-      .maybeSingle()
-    if (e1) throw e1
-    if (!parteM?.id) return { manana, tareas: [] as Tables<'parte_trabajo'>[] }
-    const { data: tareas, error: e2 } = await supabase
-      .from('parte_trabajo')
-      .select('*')
-      .eq('parte_id', parteM.id)
-      .order('created_at')
-    if (e2) throw e2
-    return { manana, tareas: tareas ?? [] }
-  }
-
-  async function generarParteCompleto() {
-    if (!parteId) return
-    setGenPdf(true)
-    try {
-      const logoData = await loadPdfImage(`${window.location.origin}/MARVIC_logo.png`)
-      const pdf = generarPDFCorporativo(
-        'PARTE DIARIO',
-        'Informe integral de la jornada',
-        fecha,
-        logoData,
-      )
-      const entradas = buildEntradasOrdenadas(estadosFinca, trabajos, personales, residuos)
-      const responsable = parte?.responsable ?? 'JuanPe'
-      pdf.addResumenDosColumnas([
-        { label: 'Responsable', value: responsable },
-        { label: 'Inicio jornada', value: computeInicioJornada(entradas) },
-        { label: 'Zonas de trabajo', value: collectZonasTrabajo(entradas) },
-        { label: 'Personal implicado', value: collectNombresPersonal(entradas) },
-      ])
-
-      if (entradas.length === 0) {
-        pdf.addMutedParagraph('Sin entradas registradas para este día.')
-      }
-
-      for (const entrada of entradas) {
-        if (entrada.tipo === 'A') {
-          const e = entrada.data
-          pdf.addSectionHeader('A', 'ESTADO FINCA / PARCELA', formatHora(e.created_at))
-          pdf.resetPairStripe()
-          pdf.addKeyValueRow('Finca', e.finca)
-          pdf.addKeyValueRow('Parcela / Sector', e.parcel_id)
-          pdf.addKeyValueRow('Estado', ESTADOS_PARCELA.find(s => s.value === e.estado)?.label ?? e.estado ?? null)
-          pdf.addKeyValueRow('Número de operarios', e.num_operarios?.toString())
-          pdf.addKeyValueRow('Nombres operarios', e.nombres_operarios)
-          pdf.addKeyValueRow('Notas', e.notas)
-          await pdf.addPhoto120(e.foto_url, 'Fotografía del estado (1)')
-          await pdf.addPhoto120(e.foto_url_2, 'Fotografía del estado (2)')
-        } else if (entrada.tipo === 'B') {
-          const e = entrada.data
-          const rangoHora = e.hora_inicio
-            ? `${formatHora(e.hora_inicio)} → ${formatHora(e.hora_fin)}`
-            : formatHora(e.created_at)
-          pdf.addSectionHeader('B', 'TRABAJO EN CURSO', rangoHora)
-          pdf.resetPairStripe()
-          pdf.addKeyValueRow('Tipo de trabajo', e.tipo_trabajo)
-          pdf.addKeyValueRow('Finca', e.finca)
-          pdf.addKeyValueRow('Ámbito', e.ambito === 'finca_completa' ? 'Finca completa' : 'Parcelas concretas')
-          if (e.parcelas?.length) pdf.addKeyValueRow('Parcelas', e.parcelas.join(', '))
-          pdf.addKeyValueRow('Número de operarios', e.num_operarios?.toString())
-          pdf.addKeyValueRow('Nombres operarios', e.nombres_operarios)
-          if (e.hora_inicio) pdf.addKeyValueRow('Hora inicio', formatHora(e.hora_inicio))
-          if (e.hora_fin) pdf.addKeyValueRow('Hora fin', formatHora(e.hora_fin))
-          pdf.addKeyValueRow('Notas', e.notas)
-          await pdf.addPhoto120(e.foto_url, 'Fotografía del trabajo (1)')
-          await pdf.addPhoto120(e.foto_url_2, 'Fotografía del trabajo (2)')
-        } else if (entrada.tipo === 'C') {
-          const e = entrada.data
-          pdf.addSectionHeader('C', 'PARTE PERSONAL JUANPE', formatHora(e.fecha_hora))
-          pdf.resetPairStripe()
-          pdf.addKeyValueRow('Texto', e.texto)
-          pdf.addKeyValueRow('Con quién', e.con_quien)
-          pdf.addKeyValueRow('Dónde', e.donde)
-          await pdf.addPhoto120(e.foto_url, 'Fotografía — parte personal')
-        } else if (entrada.tipo === 'D') {
-          const e = entrada.data
-          pdf.addSectionHeader(
-            'D',
-            'RESIDUOS VEGETALES',
-            e.hora_salida_nave ? `${formatHora(e.hora_salida_nave)}` : '',
-          )
-          pdf.resetPairStripe()
-          pdf.addKeyValueRow('Conductor', e.nombre_conductor)
-          pdf.addKeyValueRow('Hora salida nave', formatHora(e.hora_salida_nave))
-          pdf.addKeyValueRow('Ganadero / Destino', e.nombre_ganadero)
-          pdf.addKeyValueRow('Hora llegada ganadero', formatHora(e.hora_llegada_ganadero))
-          pdf.addKeyValueRow('Hora regreso nave', formatHora(e.hora_regreso_nave))
-          pdf.addKeyValueRow('Notas descarga', e.notas_descarga)
-          await pdf.addPhoto120(e.foto_url, 'Fotografía — residuos vegetales')
-        }
-      }
-
-      pdf.finalize(`Parte_Diario_${fecha}.pdf`)
-    } finally {
-      setGenPdf(false)
-    }
-  }
-
-  async function generarSoloIncidencias() {
-    if (!parteId) return
-    setGenPdf(true)
-    try {
-      const logoData = await loadPdfImage(`${window.location.origin}/MARVIC_logo.png`)
-      const pdf = generarPDFCorporativo(
-        'INCIDENCIAS DE JORNADA',
-        'Consolidado de incidencias del día',
-        fecha,
-        logoData,
-      )
-      const incidenciasPersonal = personales.filter(p => esIncidenciaPartePersonal(p.texto))
-      const incTrab = await fetchIncidenciasTrabajosDelDia(fecha)
-
-      if (incidenciasPersonal.length === 0 && incTrab.length === 0) {
-        pdf.addMutedParagraph('Sin incidencias registradas para esta jornada.')
-      }
-
-      for (const e of incidenciasPersonal) {
-        pdf.addSectionHeader('C', 'PARTE PERSONAL — INCIDENCIA', formatHora(e.fecha_hora))
-        pdf.resetPairStripe()
-        pdf.addKeyValueRow('Texto', e.texto)
-        pdf.addKeyValueRow('Con quién', e.con_quien)
-        pdf.addKeyValueRow('Dónde', e.donde)
-        await pdf.addPhoto120(e.foto_url, 'Evidencia fotográfica')
-      }
-
-      for (const inc of incTrab) {
-        const hora = inc.created_at ? formatHora(inc.created_at) : ''
-        pdf.addSectionHeader('I', 'INCIDENCIA TRABAJOS', hora)
-        pdf.resetPairStripe()
-        pdf.addKeyValueRow('Título', inc.titulo)
-        pdf.addKeyValueRow('Descripción', inc.descripcion)
-        pdf.addKeyValueRow('Estado', inc.estado)
-        pdf.addKeyValueRow('Finca', inc.finca)
-        pdf.addKeyValueRow('Parcela', inc.parcel_id)
-        pdf.addKeyValueRow('Urgente', inc.urgente ? 'Sí' : 'No')
-        pdf.addKeyValueRow('Notas resolución', inc.notas_resolucion)
-        await pdf.addPhoto120(inc.foto_url, 'Fotografía incidencia')
-      }
-
-      pdf.finalize(`Incidencias_${fecha}.pdf`)
-    } finally {
-      setGenPdf(false)
-    }
-  }
-
-  async function generarSoloResiduos() {
-    if (!parteId) return
-    setGenPdf(true)
-    try {
-      const logoData = await loadPdfImage(`${window.location.origin}/MARVIC_logo.png`)
-      const pdf = generarPDFCorporativo(
-        'RESIDUOS VEGETALES',
-        'Registro de movimientos del día',
-        fecha,
-        logoData,
-      )
-      if (residuos.length === 0) {
-        pdf.addMutedParagraph('Sin registros de residuos vegetales para este día.')
-      }
-      for (const e of residuos) {
-        pdf.addSectionHeader(
-          'D',
-          'RESIDUOS VEGETALES',
-          e.hora_salida_nave ? `${formatHora(e.hora_salida_nave)}` : '',
-        )
-        pdf.resetPairStripe()
-        pdf.addKeyValueRow('Conductor', e.nombre_conductor)
-        pdf.addKeyValueRow('Hora salida nave', formatHora(e.hora_salida_nave))
-        pdf.addKeyValueRow('Ganadero / Destino', e.nombre_ganadero)
-        pdf.addKeyValueRow('Hora llegada ganadero', formatHora(e.hora_llegada_ganadero))
-        pdf.addKeyValueRow('Hora regreso nave', formatHora(e.hora_regreso_nave))
-        pdf.addKeyValueRow('Notas descarga', e.notas_descarga)
-        await pdf.addPhoto120(e.foto_url, 'Fotografía — residuos vegetales')
-      }
-      pdf.finalize(`Residuos_${fecha}.pdf`)
-    } finally {
-      setGenPdf(false)
-    }
-  }
-
-  async function generarPartePersonal() {
-    if (!parteId) return
-    setGenPdf(true)
-    try {
-      const logoData = await loadPdfImage(`${window.location.origin}/MARVIC_logo.png`)
-      const pdf = generarPDFCorporativo(
-        'PARTE PERSONAL JUANPE',
-        'Registro cronológico de actividades',
-        fecha,
-        logoData,
-      )
-      const ordenados = [...personales].sort((a, b) => a.fecha_hora.localeCompare(b.fecha_hora))
-      if (ordenados.length === 0) {
-        pdf.addMutedParagraph('Sin anotaciones en el parte personal para este día.')
-      } else {
-        pdf.addTablaPartePersonal(
-          ordenados.map(p => ({
-            hora: formatHora(p.fecha_hora),
-            actividad: [p.texto, p.con_quien ? `Con: ${p.con_quien}` : '', p.donde ? `En: ${p.donde}` : '']
-              .filter(Boolean)
-              .join(' · '),
-            estado: estadoPartePersonalRow(p.texto),
-          })),
-        )
-        for (const p of ordenados) {
-          if (p.foto_url) {
-            pdf.checkPage(100)
-            await pdf.addPhoto120(p.foto_url, `Foto — ${formatHora(p.fecha_hora)}`)
-          }
-        }
-      }
-      pdf.finalize(`Parte_Personal_${fecha}.pdf`)
-    } finally {
-      setGenPdf(false)
-    }
-  }
-
-  async function generarPlanning() {
-    if (!parteId) return
-    setGenPdf(true)
-    try {
-      const logoData = await loadPdfImage(`${window.location.origin}/MARVIC_logo.png`)
-      const { manana, tareas } = await fetchPlanningManana(fecha)
-      const pdf = generarPDFCorporativo(
-        'PLANNING OPERATIVO',
-        `Tareas previstas — ${formatFechaEjecutiva(manana)}`,
-        manana,
-        logoData,
-      )
-      if (tareas.length === 0) {
-        pdf.addMutedParagraph('Sin tareas planificadas para mañana.')
-      } else {
-        pdf.addTablaPlanning(
-          tareas.map((t, i) => ({
-            num: i + 1,
-            tarea: [t.tipo_trabajo, t.finca, t.ambito === 'finca_completa' ? 'Finca completa' : (t.parcelas?.join(', ') ?? '')]
-              .filter(Boolean)
-              .join(' · '),
-            responsable: t.nombres_operarios ?? '—',
-            prioridad: prioridadPlanningDesdeNotas(t.notas),
-          })),
-        )
-      }
-      pdf.finalize(`Planning_${manana}.pdf`)
-    } finally {
-      setGenPdf(false)
-    }
+  const pdfDeps: ParteDiarioPdfDeps = {
+    parteId,
+    fecha,
+    firmaNombre,
+    parte,
+    estadosFinca,
+    trabajos,
+    personales,
+    residuos,
+    setGenPdf,
   }
 
   async function onElegirOpcionPdf(opcion: 1 | 2 | 3 | 4 | 5) {
     setPdfMenuOpen(false)
-    if (opcion === 1) await generarParteCompleto()
-    else if (opcion === 2) await generarSoloIncidencias()
-    else if (opcion === 3) await generarSoloResiduos()
-    else if (opcion === 4) await generarPartePersonal()
-    else await generarPlanning()
+    await ejecutarParteDiarioPdfOpcion(opcion, pdfDeps)
   }
 
   // ─────────────────────────────────────────────────────────────────
@@ -861,14 +195,14 @@ export default function ParteDiario() {
                 { k: 1 as const, label: 'Parte completo del día' },
                 { k: 2 as const, label: 'Solo incidencias de la jornada' },
                 { k: 3 as const, label: 'Solo residuos vegetales' },
-                { k: 4 as const, label: 'Solo parte personal JuanPe' },
+                { k: 4 as const, label: `Solo parte personal (${firmaNombre})` },
                 { k: 5 as const, label: 'Planning del día siguiente' },
               ].map(({ k, label }) => (
                 <button
                   key={k}
                   type="button"
                   disabled={generandoPdf}
-                  onClick={() => onElegirOpcionPdf(k)}
+                  onClick={() => { void onElegirOpcionPdf(k) }}
                   className={`w-full px-3 py-2.5 text-left text-xs font-medium transition-colors disabled:opacity-50 ${
                     theme === 'dark'
                       ? 'hover:bg-slate-800 text-slate-200'
@@ -911,39 +245,43 @@ export default function ParteDiario() {
           </div>
         )}
 
-        {/* BLOQUE A */}
-        <FormEstadoFinca
-          parteId={parteId}
-          estadosFinca={estadosFinca}
-          esHoy={esHoy}
-          onDelete={(id) => eliminar('parte_estado_finca', id)}
-        />
+        <div id="parte-bloque-a" className="scroll-mt-4">
+          <FormEstadoFinca
+            parteId={parteId}
+            estadosFinca={estadosFinca}
+            esHoy={esHoy}
+            onDelete={(id) => eliminar('parte_estado_finca', id)}
+          />
+        </div>
 
-        {/* BLOQUE B */}
-        <FormTrabajosRealizado
-          parteId={parteId}
-          trabajos={trabajos}
-          fecha={fecha}
-          esHoy={esHoy}
-          onDelete={(id) => eliminar('parte_trabajo', id)}
-        />
+        <div id="parte-bloque-b" className="scroll-mt-4">
+          <FormTrabajosRealizado
+            parteId={parteId}
+            trabajos={trabajos}
+            fecha={fecha}
+            esHoy={esHoy}
+            onDelete={(id) => eliminar('parte_trabajo', id)}
+          />
+        </div>
 
-        {/* BLOQUE C */}
-        <FormAnotacionesLibres
-          parteId={parteId}
-          personales={personales}
-          esHoy={esHoy}
-          onDelete={(id) => eliminar('parte_personal', id)}
-        />
+        <div id="parte-bloque-c" className="scroll-mt-4">
+          <FormAnotacionesLibres
+            parteId={parteId}
+            personales={personales}
+            esHoy={esHoy}
+            onDelete={(id) => eliminar('parte_personal', id)}
+          />
+        </div>
 
-        {/* BLOQUE D */}
-        <FormLogisticaResiduos
-          parteId={parteId}
-          residuos={residuos}
-          fecha={fecha}
-          esHoy={esHoy}
-          onDelete={(id) => eliminar('parte_residuos_vegetales', id)}
-        />
+        <div id="parte-bloque-d" className="scroll-mt-4">
+          <FormLogisticaResiduos
+            parteId={parteId}
+            residuos={residuos}
+            fecha={fecha}
+            esHoy={esHoy}
+            onDelete={(id) => eliminar('parte_residuos_vegetales', id)}
+          />
+        </div>
 
       </main>
 
@@ -961,51 +299,12 @@ export default function ParteDiario() {
         </span>
       </footer>
 
-      {/* ══════════════════════════════════════════════════════════ */}
-      {/* MODAL — RESULTADO CIERRE DE JORNADA                       */}
-      {/* ══════════════════════════════════════════════════════════ */}
-      {showCierre && cierreResultado && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-white/10 rounded-xl w-full max-w-md shadow-2xl">
-            <div className="border-b border-white/10 px-5 py-3 flex items-center justify-between">
-              <span className="text-sm font-black uppercase tracking-widest text-orange-400">Jornada cerrada</span>
-              <button onClick={() => setShowCierre(false)} className="text-slate-500 hover:text-white text-lg leading-none">×</button>
-            </div>
-            <div className="p-5 space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                {[
-                  { label: 'Trabajos ejecutados', value: cierreResultado.ejecutados, color: 'text-green-400' },
-                  { label: 'Pendientes arrastrados', value: cierreResultado.arrastrados, color: 'text-orange-400' },
-                  { label: 'Incidencias arrastradas', value: cierreResultado.incidenciasArrastradas, color: 'text-red-400' },
-                  { label: 'Pendientes marcados', value: cierreResultado.pendientes, color: 'text-slate-400' },
-                ].map(({ label, value, color }) => (
-                  <div key={label} className="bg-slate-800/60 border border-white/10 rounded-lg px-3 py-3 text-center">
-                    <p className={`text-2xl font-black ${color}`}>{value}</p>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-widest mt-1">{label}</p>
-                  </div>
-                ))}
-              </div>
-              <p className="text-[11px] text-slate-500 text-center">
-                Los trabajos pendientes e incidencias urgentes han sido arrastrados a manana con prioridad alta.
-              </p>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setShowCierre(false)}
-                  className="flex-1 py-2.5 rounded-lg border border-white/10 text-slate-400 text-sm hover:border-white/20 transition-colors"
-                >
-                  Cerrar
-                </button>
-                <button
-                  onClick={() => { setShowCierre(false); navigate('/trabajos') }}
-                  className="flex-1 py-2.5 rounded-lg bg-orange-600 text-white text-sm font-black hover:bg-orange-500 transition-colors"
-                >
-                  Ver planificacion
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <ModalCierreJornadaParteDiario
+        open={showCierre}
+        resultado={cierreResultado}
+        onClose={() => setShowCierre(false)}
+        onVerPlanificacion={() => { setShowCierre(false); navigate('/trabajos') }}
+      />
 
     </div>
   )

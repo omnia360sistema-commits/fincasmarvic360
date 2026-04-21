@@ -28,7 +28,7 @@ export class ErrorBoundary extends Component<Props, State> {
         <div className="min-h-screen bg-[#020617] flex items-center justify-center flex-col gap-4 text-center px-8">
           <span className="text-red-400 text-sm font-black tracking-widest uppercase">Error Inesperado</span>
           <span className="text-slate-400 text-xs">{this.state.error?.message || 'Ha ocurrido un error en la aplicación.'}</span>
-          <button onClick={() => window.location.href = '/'} className="px-4 py-2 mt-4 bg-sky-500 text-slate-900 rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-sky-400 transition-colors">Volver al Inicio</button>
+          <button onClick={() => window.location.href = '/'} className="px-4 py-2 mt-4 bg-emerald-600 text-white rounded-lg text-xs font-bold uppercase tracking-widest hover:bg-emerald-500 transition-colors">Volver al Inicio</button>
         </div>
       );
     }

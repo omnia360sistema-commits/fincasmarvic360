@@ -9,7 +9,8 @@ import {
 import { supabase } from '@/integrations/supabase/client'
 import { FINCAS_NOMBRES as FINCAS } from '@/constants/farms'
 import { PDFExportModal, type PDFExportParams } from '@/components/base'
-import { generarPDFCorporativoBase, pdfCorporateSection, pdfCorporateTable } from '@/utils/pdfUtils'
+import { useAuth } from '@/context/AuthContext'
+import { generarPDFCorporativoBase, nombreFirmaPdfFromUser, pdfCorporateSection, pdfCorporateTable } from '@/utils/pdfUtils'
 import { horasEntreMarcasISO } from '@/utils/horasTrabajo'
 import type { Tables } from '@/integrations/supabase/types'
 
@@ -212,6 +213,8 @@ const HACE30 = new Date(Date.now() - 30 * 86400000).toISOString().split('T')[0]
 
 export default function Historicos() {
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const firmaPdf = nombreFirmaPdfFromUser(user)
 
   const [desde,    setDesde]   = useState(HACE30)
   const [hasta,    setHasta]   = useState(HOY)
@@ -257,6 +260,7 @@ export default function Historicos() {
       fecha: new Date(),
       filename: `historicos_${d1}_${d2}.pdf`,
       accentColor: [148, 163, 184], // slate
+      firmaNombre: firmaPdf,
       bloques: [
         (ctx) => {
           pdfCorporateSection(ctx, 'Resumen')

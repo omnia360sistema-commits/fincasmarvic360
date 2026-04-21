@@ -1,4 +1,5 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Package, Plus, Loader2, MapPin, X, Search, MinusCircle, FileText } from 'lucide-react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useMaterialesStock, useAddMaterial, useDeleteMaterial, MaterialStockRow } from '@/hooks/useMateriales'
@@ -7,10 +8,42 @@ import { SelectWithOther, AudioInput, PDFExportModal, RecordActions, type PDFExp
 import { useCatalogoLocal } from '@/hooks/useCatalogoLocal'
 import { toast } from '@/hooks/use-toast'
 import { supabase } from '@/integrations/supabase/client'
-import { generarPDFCorporativoBase, pdfCorporateSection, pdfCorporateTable } from '@/utils/pdfUtils'
+import { useAuth } from '@/context/AuthContext'
+import { generarPDFCorporativoBase, nombreFirmaPdfFromUser, pdfCorporateSection, pdfCorporateTable } from '@/utils/pdfUtils'
+
+const URL_TAB_TO_INTERNAL: Record<string, string> = {
+  fitosanitarios: 'fitosanitarios_abonos',
+  riego: 'material_riego',
+  plastico: 'plastico',
+}
+
+const INTERNAL_TO_URL: Record<string, string> = {
+  fitosanitarios_abonos: 'fitosanitarios',
+  material_riego: 'riego',
+  plastico: 'plastico',
+}
 
 export default function Materiales() {
-  const [activeTab, setActiveTab] = useState('fitosanitarios_abonos')
+  const { user } = useAuth()
+  const firmaPdf = nombreFirmaPdfFromUser(user)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const urlTab = searchParams.get('tab')
+  const activeTab =
+    urlTab && URL_TAB_TO_INTERNAL[urlTab] ? URL_TAB_TO_INTERNAL[urlTab] : 'fitosanitarios_abonos'
+
+  const setActiveTab = useCallback(
+    (v: string) => {
+      setSearchParams(
+        prev => {
+          const p = new URLSearchParams(prev)
+          p.set('tab', INTERNAL_TO_URL[v] ?? 'fitosanitarios')
+          return p
+        },
+        { replace: true }
+      )
+    },
+    [setSearchParams]
+  )
   const [searchTerm, setSearchTerm] = useState('')
   const { data: stock, isLoading } = useMaterialesStock(activeTab)
   
@@ -24,6 +57,24 @@ export default function Materiales() {
   const mutDeleteMaterial = useDeleteMaterial()
 
   const [showModal, setShowModal] = useState(false)
+
+  useEffect(() => {
+    if (searchParams.get('accion') === 'registro') setShowModal(true)
+  }, [searchParams])
+
+  const closeModal = () => {
+    setShowModal(false)
+    if (searchParams.get('accion') === 'registro') {
+      setSearchParams(
+        prev => {
+          const p = new URLSearchParams(prev)
+          p.delete('accion')
+          return p
+        },
+        { replace: true }
+      )
+    }
+  }
   const [ubicacionId, setUbicacionId] = useState('')
   const [productoId, setProductoId] = useState('')
   const [productoNombre, setProductoNombre] = useState('')
@@ -67,6 +118,7 @@ export default function Materiales() {
       fecha: new Date(),
       filename: `materiales_${desde}_${hasta}.pdf`,
       accentColor: [20, 184, 166], // teal
+      firmaNombre: firmaPdf,
       bloques: [
         (ctx) => {
           pdfCorporateSection(ctx, 'Resumen')
@@ -156,7 +208,7 @@ export default function Materiales() {
         descripcion: finalProdId === 'nuevo' ? productoNombre : (productos.find(p => p.id === finalProdId)?.nombre || null)
       } as unknown as Parameters<typeof mutAddMaterial.mutateAsync>[0])
       
-      setShowModal(false)
+      closeModal()
       resetForm()
     } catch (err) {
       console.error(err)
@@ -281,7 +333,7 @@ export default function Materiales() {
           <div className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-6">
               <h3 className="text-lg font-black text-white">Registrar Material</h3>
-              <button onClick={() => { setShowModal(false); resetForm(); }}><X className="w-5 h-5 text-slate-500 hover:text-white" /></button>
+              <button type="button" onClick={() => { closeModal(); resetForm(); }}><X className="w-5 h-5 text-slate-500 hover:text-white" /></button>
             </div>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>

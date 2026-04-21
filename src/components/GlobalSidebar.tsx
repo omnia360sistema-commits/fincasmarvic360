@@ -5,18 +5,16 @@ import { useSidebar } from '../context/SidebarContext';
 import { useTheme } from '../context/ThemeContext';
 import { NAV_ITEMS } from '../constants/navItems';
 import { useStability } from '@/stability';
+import { isNavTargetActive } from '@/lib/navUrlMatch';
 
-// Devuelve el id del módulo raíz que contiene la ruta actual
-function getActiveRootId(pathname: string): string | null {
+function getActiveRootId(pathname: string, search: string): string | null {
   for (const item of NAV_ITEMS) {
     if (item.children?.length) {
-      if (item.children.some(c => pathname === c.ruta || pathname.startsWith(c.ruta + '/'))) {
+      if (item.children.some(c => isNavTargetActive(pathname, search, c.ruta))) {
         return item.id;
       }
-    } else if (item.ruta) {
-      if (pathname === item.ruta || pathname.startsWith(item.ruta + '/')) {
-        return item.id;
-      }
+    } else if (item.ruta && isNavTargetActive(pathname, search, item.ruta)) {
+      return item.id;
     }
   }
   return null;
@@ -37,30 +35,19 @@ export default function GlobalSidebar() {
       ? `${pendingQueueCount} envío(s) en cola${queueErrorCount ? ` · ${queueErrorCount} con error` : ''}`
       : '';
 
-  // Accordion: id del módulo raíz expandido
-  const [openId, setOpenId] = useState<string | null>(
-    () => getActiveRootId(location.pathname)
-  );
+  const [openIds, setOpenIds] = useState<Set<string>>(() => {
+    const id = getActiveRootId(location.pathname, location.search);
+    return id ? new Set([id]) : new Set();
+  });
 
-  // Sincronizar openId con cambios de ruta — abrir el módulo activo
   useEffect(() => {
-    const activeRoot = getActiveRootId(location.pathname);
+    const activeRoot = getActiveRootId(location.pathname, location.search);
     if (activeRoot) {
-      setOpenId(activeRoot);
+      setOpenIds(prev => new Set([...prev, activeRoot]));
     }
     close();
-  }, [location.pathname, close]);
+  }, [location.pathname, location.search, close]);
 
-  // Cerrar con Escape
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') close();
-    };
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [close]);
-
-  // Scroll automático al elemento activo cuando se abre el sidebar
   useEffect(() => {
     if (!isOpen) return;
     const frame = requestAnimationFrame(() => {
@@ -78,24 +65,38 @@ export default function GlobalSidebar() {
     return () => cancelAnimationFrame(frame);
   }, [isOpen]);
 
-  // Click en módulo raíz:
-  //   - si tiene children → toggle accordion
-  //   - si no tiene → navegar
-  const handleRootClick = (item: typeof NAV_ITEMS[0]) => {
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') close();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [close]);
+
+  const handleRootClick = (item: (typeof NAV_ITEMS)[0]) => {
     if (!item.activo) return;
     if (item.children?.length) {
-      setOpenId(prev => (prev === item.id ? null : item.id));
+      setOpenIds(prev => {
+        const n = new Set(prev);
+        if (n.has(item.id)) n.delete(item.id);
+        else n.add(item.id);
+        return n;
+      });
     } else if (item.ruta) {
       navigate(item.ruta);
       close();
     }
   };
 
-  // Click en chevron: solo toggle accordion (no navega)
-  const handleChevronClick = (e: React.MouseEvent, item: typeof NAV_ITEMS[0]) => {
+  const handleChevronClick = (e: React.MouseEvent, item: (typeof NAV_ITEMS)[0]) => {
     e.stopPropagation();
     if (!item.activo) return;
-    setOpenId(prev => (prev === item.id ? null : item.id));
+    setOpenIds(prev => {
+      const n = new Set(prev);
+      if (n.has(item.id)) n.delete(item.id);
+      else n.add(item.id);
+      return n;
+    });
   };
 
   const handleChildClick = (ruta: string) => {
@@ -103,9 +104,10 @@ export default function GlobalSidebar() {
     close();
   };
 
+  const accent = 'var(--marvic-verde-claro, #40916C)';
+
   return (
     <>
-      {/* Botón hamburguesa */}
       <button
         onClick={toggle}
         className={`fixed z-[60] flex items-center justify-center w-10 h-10 rounded-lg
@@ -140,7 +142,6 @@ export default function GlobalSidebar() {
         </span>
       )}
 
-      {/* Backdrop */}
       {isOpen && (
         <div
           className="fixed inset-0 bg-black/60 z-[70] transition-opacity duration-200"
@@ -149,7 +150,6 @@ export default function GlobalSidebar() {
         />
       )}
 
-      {/* Panel lateral */}
       <div
         className={`fixed top-0 left-0 h-full w-72 z-[80] flex flex-col
           pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]
@@ -160,7 +160,6 @@ export default function GlobalSidebar() {
             : 'bg-slate-50 border-r border-slate-300'
           }`}
       >
-        {/* Cabecera */}
         <div className={`flex items-center justify-between px-4 py-4 border-b shrink-0
           ${isDark ? 'border-slate-700/80' : 'border-slate-300'}`}
         >
@@ -182,22 +181,16 @@ export default function GlobalSidebar() {
           </button>
         </div>
 
-        {/* Lista de módulos */}
         <nav ref={navRef} className="flex-1 overflow-y-auto py-1">
           {NAV_ITEMS.map(item => {
             const hasChildren = !!item.children?.length;
-            const isExpanded = openId === item.id;
+            const isExpanded = openIds.has(item.id);
 
             const isActive = item.children?.length
-              ? item.children.some(c =>
-                  location.pathname === c.ruta ||
-                  location.pathname.startsWith(c.ruta + '/'))
+              ? item.children.some(c => isNavTargetActive(location.pathname, location.search, c.ruta))
               : item.ruta
-                ? location.pathname === item.ruta ||
-                  location.pathname.startsWith(item.ruta + '/')
+                ? isNavTargetActive(location.pathname, location.search, item.ruta)
                 : false;
-
-            const Icon = item.icono;
 
             return (
               <div
@@ -205,68 +198,53 @@ export default function GlobalSidebar() {
                 ref={isActive ? activeItemRef : undefined}
                 className="mb-0.5"
               >
-                {/* Botón raíz */}
                 <button
+                  type="button"
                   onClick={() => handleRootClick(item)}
                   disabled={!item.activo}
-                  className={`w-full flex items-center gap-3 px-4 py-2.5 text-left
-                    transition-all duration-200 ease-in-out border-l-2 group
+                  className={`nav-parent w-full flex items-center gap-2 px-4 py-2.5 text-left text-sm font-medium
+                    transition-all duration-200 ease-in-out border-l-2 border-transparent rounded-md
                     ${!item.activo
-                      ? 'opacity-35 cursor-not-allowed border-transparent'
+                      ? 'opacity-35 cursor-not-allowed'
                       : isActive
                         ? isDark
-                          ? 'bg-slate-800/80 border-transparent'
-                          : 'bg-slate-200/90 border-transparent'
+                          ? 'bg-white/[0.06] text-[color:var(--marvic-verde-suave,#74C69D)]'
+                          : 'bg-emerald-900/[0.06] text-emerald-800'
                         : isDark
-                          ? 'hover:bg-slate-800/50 border-transparent'
-                          : 'hover:bg-slate-100/80 border-transparent'
+                          ? 'text-white hover:bg-[rgba(64,145,108,0.15)]'
+                          : 'text-slate-800 hover:bg-emerald-900/[0.08]'
                     }`}
-                  style={isActive && item.activo ? { borderLeftColor: item.color } : undefined}
+                  style={isActive && item.activo ? { borderLeftColor: accent } : undefined}
                 >
-                  {/* Icono */}
-                  <span className="shrink-0 flex items-center justify-center w-5 h-5">
-                    <Icon
-                      size={18}
-                      style={{ color: item.activo ? item.color : undefined }}
-                      className={!item.activo
-                        ? isDark ? 'text-slate-600' : 'text-slate-400'
-                        : ''
-                      }
-                    />
-                  </span>
-
-                  {/* Label */}
-                  <span className={`text-sm font-semibold flex-1 leading-none
-                    ${!item.activo
+                  <span
+                    className={`flex-1 leading-snug ${!item.activo
                       ? isDark ? 'text-slate-600' : 'text-slate-400'
-                      : isActive
-                        ? isDark ? 'text-white' : 'text-slate-900'
-                        : isDark
-                          ? 'text-slate-300 group-hover:text-slate-100'
-                          : 'text-slate-700 group-hover:text-slate-900'
+                      : ''
                     }`}
                   >
                     {item.label}
                   </span>
 
-                  {/* WIP badge */}
                   {!item.activo && (
                     <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium
-                      ${isDark
-                        ? 'bg-slate-800 text-slate-500'
-                        : 'bg-slate-200 text-slate-400'
-                      }`}
+                      ${isDark ? 'bg-slate-800 text-slate-500' : 'bg-slate-200 text-slate-400'}`}
                     >
                       WIP
                     </span>
                   )}
 
-                  {/* Chevron accordion — click independiente */}
                   {hasChildren && item.activo && (
                     <span
                       role="button"
+                      tabIndex={0}
                       aria-label={isExpanded ? 'Colapsar' : 'Expandir'}
                       onClick={(e) => handleChevronClick(e, item)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          handleChevronClick(e as unknown as React.MouseEvent, item);
+                        }
+                      }}
                       className={`shrink-0 flex items-center justify-center w-5 h-5 rounded
                         transition-colors duration-150
                         ${isDark
@@ -282,71 +260,42 @@ export default function GlobalSidebar() {
                     </span>
                   )}
 
-                  {/* Punto activo (solo raíces sin hijos) */}
                   {!hasChildren && isActive && item.activo && (
                     <span
-                      className="w-1.5 h-1.5 rounded-full shrink-0"
-                      style={{ backgroundColor: item.color }}
+                      className="w-1.5 h-1.5 rounded-full shrink-0 bg-[color:var(--marvic-verde-claro,#40916C)]"
                     />
                   )}
                 </button>
 
-                {/* Hijos (accordion) */}
                 {hasChildren && isExpanded && (
                   <div
-                    className={`ml-7 border-l
+                    className={`ml-3 border-l pl-1
                       ${isDark ? 'border-slate-700/50' : 'border-slate-200'}`}
                   >
                     {item.children!.map(child => {
-                      const childActive =
-                        location.pathname === child.ruta ||
-                        location.pathname.startsWith(child.ruta + '/');
-                      const ChildIcon = child.icono;
+                      const childActive = isNavTargetActive(
+                        location.pathname,
+                        location.search,
+                        child.ruta
+                      );
 
                       return (
                         <button
+                          type="button"
                           key={child.id}
                           onClick={() => handleChildClick(child.ruta)}
-                          className={`w-full flex items-center gap-2.5 pl-3 pr-4 py-2 text-left
-                            transition-all duration-200 ease-in-out group
+                          className={`nav-child w-full block text-left text-xs py-2 pl-3 pr-3 rounded
+                            transition-all duration-200
                             ${childActive
                               ? isDark
-                                ? 'bg-slate-800/60'
-                                : 'bg-slate-200/60'
+                                ? 'text-[color:var(--marvic-verde-suave,#74C69D)] bg-white/[0.04]'
+                                : 'text-emerald-800 bg-emerald-900/[0.06]'
                               : isDark
-                                ? 'hover:bg-slate-800/40'
-                                : 'hover:bg-slate-100/80'
+                                ? 'text-slate-400 hover:text-white hover:bg-white/[0.05]'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/80'
                             }`}
                         >
-                          <span className="shrink-0 flex items-center justify-center w-4 h-4">
-                            <ChildIcon
-                              size={13}
-                              style={{ color: childActive ? item.color : undefined }}
-                              className={
-                                childActive
-                                  ? ''
-                                  : isDark
-                                    ? 'text-slate-600 group-hover:text-slate-400'
-                                    : 'text-slate-400 group-hover:text-slate-600'
-                              }
-                            />
-                          </span>
-                          <span className={`text-xs font-medium flex-1
-                            ${childActive
-                              ? isDark ? 'text-white' : 'text-slate-900'
-                              : isDark
-                                ? 'text-slate-400 group-hover:text-slate-200'
-                                : 'text-slate-500 group-hover:text-slate-800'
-                            }`}
-                          >
-                            {child.label}
-                          </span>
-                          {childActive && (
-                            <span
-                              className="w-1.5 h-1.5 rounded-full shrink-0"
-                              style={{ backgroundColor: item.color }}
-                            />
-                          )}
+                          {child.label}
                         </button>
                       );
                     })}
@@ -357,12 +306,8 @@ export default function GlobalSidebar() {
           })}
         </nav>
 
-        {/* Pie */}
         <div className={`px-4 py-3 border-t text-xs shrink-0
-          ${isDark
-            ? 'border-slate-700/80 text-slate-600'
-            : 'border-slate-300 text-slate-400'
-          }`}
+          ${isDark ? 'border-slate-700/80 text-slate-600' : 'border-slate-300 text-slate-400'}`}
         >
           v4.0
         </div>

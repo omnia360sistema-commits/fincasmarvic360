@@ -1,0 +1,522 @@
+
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+
+.section-title {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-text-secondary);
+  margin: 1.5rem 0 0.75rem;
+  padding-bottom: 6px;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+
+.item {
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: var(--border-radius-lg);
+  padding: 12px 14px;
+  margin-bottom: 8px;
+  background: var(--color-background-primary);
+}
+
+.item-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.badge-green { background: #EAF3DE; color: #3B6D11; }
+.badge-yellow { background: #FAEEDA; color: #854F0B; }
+.badge-red { background: #FCEBEB; color: #A32D2D; }
+.badge-pct { background: var(--color-background-secondary); color: var(--color-text-secondary); font-size: 10px; padding: 2px 8px; border-radius: 20px; margin-left: auto; flex-shrink: 0; }
+
+.item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+}
+
+.item-def {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  margin-bottom: 6px;
+}
+
+.item-fix {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  padding-left: 10px;
+  border-left: 2px solid var(--color-border-secondary);
+}
+
+.item-fix span {
+  display: block;
+}
+
+.progress-bar-wrap {
+  height: 3px;
+  background: var(--color-background-secondary);
+  border-radius: 2px;
+  margin-top: 8px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  border-radius: 2px;
+}
+
+.pb-green { background: #639922; }
+.pb-yellow { background: #BA7517; }
+.pb-red { background: #E24B4A; }
+
+.problem-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 9px 0;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+  font-size: 12px;
+}
+.problem-row:last-child { border-bottom: none; }
+
+.num {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--color-text-tertiary);
+  min-width: 16px;
+  padding-top: 1px;
+}
+
+.problem-title {
+  font-weight: 500;
+  color: var(--color-text-primary);
+  margin-bottom: 2px;
+  font-size: 12px;
+}
+
+.problem-desc {
+  color: var(--color-text-secondary);
+  line-height: 1.5;
+  font-size: 11px;
+}
+
+.sev { font-size: 10px; font-weight: 500; padding: 1px 7px; border-radius: 20px; flex-shrink: 0; margin-top: 1px; }
+.sev-alta { background: #FCEBEB; color: #A32D2D; }
+.sev-media { background: #FAEEDA; color: #854F0B; }
+.sev-baja { background: #EAF3DE; color: #3B6D11; }
+
+.summary-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 1.5rem;
+}
+.summary-card {
+  flex: 1;
+  background: var(--color-background-secondary);
+  border-radius: var(--border-radius-md);
+  padding: 10px 12px;
+  text-align: center;
+}
+.summary-card .val {
+  font-size: 22px;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  display: block;
+}
+.summary-card .lbl {
+  font-size: 10px;
+  color: var(--color-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+</style>
+
+<div style="padding: 0.5rem 0 2rem;">
+
+<div class="summary-row">
+  <div class="summary-card">
+    <span class="val" style="color:#639922;">5</span>
+    <span class="lbl">Operativos</span>
+  </div>
+  <div class="summary-card">
+    <span class="val" style="color:#BA7517;">9</span>
+    <span class="lbl">Con limitaciones</span>
+  </div>
+  <div class="summary-card">
+    <span class="val" style="color:#E24B4A;">4</span>
+    <span class="lbl">Críticos</span>
+  </div>
+</div>
+
+<div class="section-title">Módulos operativos</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-green">Operativo</span>
+    <span class="item-name">Materiales de campo</span>
+    <span class="badge-pct">90%</span>
+  </div>
+  <div class="item-def">Gestión de fitosanitarios, abonos, riego y plástico en campo. Registro de entradas y salidas desde móvil.</div>
+  <div class="item-fix"><span>Sin correcciones críticas detectadas. Tamaño de archivo moderado.</span></div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-green" style="width:90%"></div></div>
+</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-green">Operativo</span>
+    <span class="item-name">QR cuadrilla / Presencia (fichaje)</span>
+    <span class="badge-pct">85%</span>
+  </div>
+  <div class="item-def">Pantalla de fichaje sin usuario ni contraseña, fuera del menú principal. Las cuadrillas fichan escaneando su código QR.</div>
+  <div class="item-fix"><span>Ruta dedicada correctamente separada del resto de la app.</span><span>Riesgo menor: cualquiera con el identificador de cuadrilla puede fichar sin verificación de identidad ni ubicación.</span></div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-green" style="width:85%"></div></div>
+</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-green">Operativo</span>
+    <span class="item-name">Estado general / Alertas</span>
+    <span class="badge-pct">85%</span>
+  </div>
+  <div class="item-def">Panel de alertas de toda la explotación: ITV, revisiones, incidencias abiertas, certificaciones próximas a vencer.</div>
+  <div class="item-fix"><span>Lógica dentro del componente en lugar de en un archivo separado — deuda técnica menor, no bloquea el uso.</span></div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-green" style="width:85%"></div></div>
+</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-green">Operativo</span>
+    <span class="item-name">Históricos</span>
+    <span class="badge-pct">80%</span>
+  </div>
+  <div class="item-def">Buscador de registros pasados en seis fuentes de datos simultáneas, con filtros por fecha, módulo, finca y texto libre.</div>
+  <div class="item-fix"><span>Sin paginación real: límite de 200 registros por tabla. Con meses de uso intensivo los resultados serán incompletos.</span></div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-green" style="width:80%"></div></div>
+</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-green">Operativo</span>
+    <span class="item-name">Maquinaria</span>
+    <span class="badge-pct">75%</span>
+  </div>
+  <div class="item-def">9 tractores y 61 aperos. Registro de uso, mantenimiento y recorridos GPS con detección de paradas.</div>
+  <div class="item-fix"><span>Archivo de 1.878 líneas: cualquier cambio tiene riesgo alto de romper otra cosa.</span><span>Una inserción directa a la base de datos dentro del componente en lugar de usar el sistema de datos centralizado (línea ~868).</span></div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-green" style="width:75%"></div></div>
+</div>
+
+<div class="section-title">Módulos con limitaciones</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-yellow">Limitado</span>
+    <span class="item-name">Parte diario</span>
+    <span class="badge-pct">70%</span>
+  </div>
+  <div class="item-def">Registro diario en cuatro bloques: estado de finca, trabajos en curso, parte personal y residuos vegetales. Cierre de jornada y generación de informes.</div>
+  <div class="item-fix">
+    <span>El nombre "JuanPe" aparece hardcodeado en los informes PDF y en los textos de la pantalla — no usa el usuario real que ha iniciado sesión.</span>
+    <span>El bloque de residuos vegetales guarda los cambios directamente en la base de datos al editar, sin pasar por el sistema centralizado de datos. Puede causar pantallas desincronizadas.</span>
+    <span>La función de cierre de jornada existe correctamente en la base de datos y tiene manejo de errores.</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-yellow" style="width:70%"></div></div>
+</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-yellow">Limitado</span>
+    <span class="item-name">Trabajos</span>
+    <span class="badge-pct">70%</span>
+  </div>
+  <div class="item-def">Planificación diaria, campaña e incidencias. Los trabajos pendientes se arrastran al día siguiente.</div>
+  <div class="item-fix">
+    <span>Archivo de 1.334 líneas.</span>
+    <span>La identificación del usuario que crea registros está hardcodeada, pero el hook centralizado useCreatedBy.ts ya existe y es el camino correcto.</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-yellow" style="width:70%"></div></div>
+</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-yellow">Limitado</span>
+    <span class="item-name">Campo / Mapa de fincas</span>
+    <span class="badge-pct">70%</span>
+  </div>
+  <div class="item-def">Mapa interactivo de 13 fincas con 135 sectores georeferenciados. Posición GPS de tractores en tiempo real.</div>
+  <div class="item-fix">
+    <span>La documentación anterior decía que solo tenía modo oscuro, pero el código actual sí tiene variantes de color claro en la mayoría de bloques.</span>
+    <span>El hook de datos de parcelas carga muchos registros sin límite de cantidad.</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-yellow" style="width:70%"></div></div>
+</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-yellow">Limitado</span>
+    <span class="item-name">Presencia (panel de control)</span>
+    <span class="badge-pct">70%</span>
+  </div>
+  <div class="item-def">Monitor de cuadrillas activas en tiempo real. Resumen de horas, exportación a PDF y hoja de cálculo.</div>
+  <div class="item-fix">
+    <span>Archivo de 519 líneas, en el límite de lo manejable.</span>
+    <span>Sin problemas críticos identificados en este módulo.</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-yellow" style="width:70%"></div></div>
+</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-yellow">Limitado</span>
+    <span class="item-name">Trazabilidad</span>
+    <span class="badge-pct">60%</span>
+  </div>
+  <div class="item-def">Seguimiento de palots desde la parcela hasta la cámara de almacén. Las tablas existen en la base de datos pero con muy pocos datos reales.</div>
+  <div class="item-fix">
+    <span>Hay actualizaciones directas a la base de datos dentro del componente, igual que en residuos vegetales.</span>
+    <span>Requiere validación real en campo antes de considerarse funcional.</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-yellow" style="width:60%"></div></div>
+</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-yellow">Limitado</span>
+    <span class="item-name">Auditoría</span>
+    <span class="badge-pct">55%</span>
+  </div>
+  <div class="item-def">Registro cronológico de todas las acciones del sistema: quién hizo qué y cuándo. Filtrable por fecha, módulo y usuario.</div>
+  <div class="item-fix">
+    <span>Hay un borrado directo en la base de datos dentro del componente.</span>
+    <span>Mientras el nombre "JuanPe" siga hardcodeado en otros módulos, este registro de auditoría no sirve para identificar al usuario real.</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-yellow" style="width:55%"></div></div>
+</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-yellow">Limitado</span>
+    <span class="item-name">Exportar informe</span>
+    <span class="badge-pct">65%</span>
+  </div>
+  <div class="item-def">Generación de informes globales seleccionando rango de fechas y módulos. Incluye informes agronómicos especializados.</div>
+  <div class="item-fix">
+    <span>Muchas consultas concentradas en un solo archivo de 763 líneas.</span>
+    <span>Funciona pero puede ser lento en campo con conexión débil por el volumen de datos que carga.</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-yellow" style="width:65%"></div></div>
+</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-yellow">Limitado</span>
+    <span class="item-name">Integración sistema externo</span>
+    <span class="badge-pct">50%</span>
+  </div>
+  <div class="item-def">Exportación de datos hacia sistemas de gestión externos: producción, costes de campo y activos biológicos.</div>
+  <div class="item-fix">
+    <span>Hay inserciones y borrados directos a la base de datos dentro del componente.</span>
+    <span>No hay conexión real con ningún sistema externo — solo genera archivos de exportación.</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-yellow" style="width:50%"></div></div>
+</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-yellow">Limitado</span>
+    <span class="item-name">Panel de inicio (Dashboard)</span>
+    <span class="badge-pct">50%</span>
+  </div>
+  <div class="item-def">Pantalla de entrada a la app. Actualmente muestra contadores, tiempo meteorológico y un panel de inteligencia artificial desactivado.</div>
+  <div class="item-fix">
+    <span>Pendiente de rediseño completo acordado en abril 2026: 7 accesos directos, sin contadores inútiles, sin meteorología grande, verde corporativo, sin iconos.</span>
+    <span>El panel de inteligencia artificial está forzado a mostrar ceros para evitar un error interno.</span>
+    <span>Las consultas de parcelas no tienen límite de registros.</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-yellow" style="width:50%"></div></div>
+</div>
+
+<div class="section-title">Módulos con problemas críticos</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-red">Crítico</span>
+    <span class="item-name">Personal</span>
+    <span class="badge-pct">70%</span>
+  </div>
+  <div class="item-def">Fichas de los 5 tipos de trabajadores: operarios, encargados, conductores de maquinaria, conductores de camión y personal externo.</div>
+  <div class="item-fix">
+    <span>Archivo de 1.038 líneas. Cualquier modificación tiene riesgo alto de romper funcionalidad existente.</span>
+    <span>Requiere división en archivos más pequeños antes de tocar cualquier otra cosa aquí.</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-red" style="width:70%"></div></div>
+</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-red">Crítico</span>
+    <span class="item-name">Logística</span>
+    <span class="badge-pct">65%</span>
+  </div>
+  <div class="item-def">Camiones, vehículos de empresa, viajes, mantenimientos y repostajes. Registro de todos los movimientos de flota.</div>
+  <div class="item-fix">
+    <span>Archivo de 1.717 líneas — uno de los más grandes del proyecto.</span>
+    <span>El nombre "JuanPe" está hardcodeado en todos los registros que se crean: camiones, vehículos, viajes, mantenimientos y combustible.</span>
+    <span>Requiere división urgente antes de cualquier otro cambio.</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-red" style="width:65%"></div></div>
+</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-red">Crítico</span>
+    <span class="item-name">Inventario completo</span>
+    <span class="badge-pct">65%</span>
+  </div>
+  <div class="item-def">Inventario físico de activos en 6 ubicaciones y 7 categorías. Gestión de proveedores, entradas de stock y movimientos.</div>
+  <div class="item-fix">
+    <span>Dos archivos gigantes: Inventario.tsx con 1.086 líneas e InventarioUbicacion.tsx con 1.910 líneas — el más grande de todo el proyecto.</span>
+    <span>El campo "responsable" aparece en los formularios de la app pero no existe en la base de datos — los datos se pierden silenciosamente al guardar.</span>
+    <span>Uso de tipos de datos no verificados que pueden causar errores silenciosos.</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-red" style="width:65%"></div></div>
+</div>
+
+<div class="item">
+  <div class="item-header">
+    <span class="badge badge-red">Crítico</span>
+    <span class="item-name">Menú lateral</span>
+    <span class="badge-pct">40%</span>
+  </div>
+  <div class="item-def">Panel de navegación principal de la app. Actualmente tiene acordeón solo en Campo e Inventario, el resto son entradas planas.</div>
+  <div class="item-fix">
+    <span>Pendiente de rediseño acordado en abril 2026: 15 apartados en orden de uso, todos con subaccesos directos, sin iconos.</span>
+    <span>No existe navegación directa a una pestaña concreta dentro de un módulo — hay que añadirla con complejidad media-alta.</span>
+    <span>La pantalla de inicio tampoco tiene los 7 accesos directos acordados — complejidad baja-media.</span>
+  </div>
+  <div class="progress-bar-wrap"><div class="progress-bar pb-red" style="width:40%"></div></div>
+</div>
+
+<div class="section-title">Los 10 problemas más urgentes del sistema</div>
+
+<div style="border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 4px 14px; background: var(--color-background-primary);">
+
+<div class="problem-row">
+  <span class="num">1</span>
+  <div style="flex:1">
+    <div class="problem-title">Acceso abierto sin protección en 3 tablas</div>
+    <div class="problem-desc">Las tablas work_records, presencia_tiempo_real y cuadrillas permiten acceso total a cualquier visitante sin identificarse. Si la clave de acceso se filtra, cualquiera puede leer o escribir esos datos.</div>
+  </div>
+  <span class="sev sev-alta">Alta</span>
+</div>
+
+<div class="problem-row">
+  <span class="num">2</span>
+  <div style="flex:1">
+    <div class="problem-title">6 tablas de sistema sin protección de acceso</div>
+    <div class="problem-desc">Las tablas pilot_config, pilot_fallback_log, pilot_fallback_table_allowlist, pilot_fallback_user_allowlist, plantaciones_transformadas y raw_plantaciones_csv no tienen ningún control de acceso activo.</div>
+  </div>
+  <span class="sev sev-alta">Alta</span>
+</div>
+
+<div class="problem-row">
+  <span class="num">3</span>
+  <div style="flex:1">
+    <div class="problem-title">Archivos gigantes — alto riesgo en cualquier cambio</div>
+    <div class="problem-desc">InventarioUbicacion (1.910), Maquinaria (1.878), Logistica (1.717), Trabajos (1.334), Inventario (1.086), Personal (1.038) y ParteDiario (1.011) líneas. Cualquier corrección puede romper otro punto del mismo archivo sin detectarse.</div>
+  </div>
+  <span class="sev sev-alta">Alta</span>
+</div>
+
+<div class="problem-row">
+  <span class="num">4</span>
+  <div style="flex:1">
+    <div class="problem-title">Aplicación muy pesada para móvil en campo</div>
+    <div class="problem-desc">El archivo principal de la app pesa 2,7 MB comprimido, sin división en partes más pequeñas. En una conexión 4G débil de campo, la primera carga puede tardar mucho o fallar. No hay ningún mecanismo de carga progresiva.</div>
+  </div>
+  <span class="sev sev-alta">Alta</span>
+</div>
+
+<div class="problem-row">
+  <span class="num">5</span>
+  <div style="flex:1">
+    <div class="problem-title">Residuos vegetales guarda datos por camino diferente</div>
+    <div class="problem-desc">Al editar un viaje de residuos, los cambios van directamente a la base de datos sin pasar por el sistema centralizado de datos. Puede mostrar datos antiguos en pantalla aunque el guardado haya funcionado.</div>
+  </div>
+  <span class="sev sev-alta">Alta</span>
+</div>
+
+<div class="problem-row">
+  <span class="num">6</span>
+  <div style="flex:1">
+    <div class="problem-title">El lenguaje de programación no detecta errores por configuración</div>
+    <div class="problem-desc">TypeScript está configurado en modo permisivo: no avisa de valores vacíos, no avisa de tipos incorrectos. Hay errores silenciosos que solo aparecen cuando el sistema está en uso real.</div>
+  </div>
+  <span class="sev sev-media">Media</span>
+</div>
+
+<div class="problem-row">
+  <span class="num">7</span>
+  <div style="flex:1">
+    <div class="problem-title">Consultas sin límite de registros</div>
+    <div class="problem-desc">Varias pantallas cargan todos los datos de la base de datos sin poner un máximo. Cuando haya meses de datos acumulados, estas pantallas cargarán lento o se bloquearán en campo.</div>
+  </div>
+  <span class="sev sev-media">Media</span>
+</div>
+
+<div class="problem-row">
+  <span class="num">8</span>
+  <div style="flex:1">
+    <div class="problem-title">"JuanPe" hardcodeado — auditoría sin valor</div>
+    <div class="problem-desc">El nombre JuanPe aparece fijo en los informes PDF, en los textos de pantalla y en los registros de ParteDiario, pdfUtils y FormAnotacionesLibres. Mientras esto no se corrija, el registro de quién hizo qué no tiene valor real.</div>
+  </div>
+  <span class="sev sev-media">Media</span>
+</div>
+
+<div class="problem-row">
+  <span class="num">9</span>
+  <div style="flex:1">
+    <div class="problem-title">Operaciones de base de datos dispersas en las pantallas</div>
+    <div class="problem-desc">IntegracionERP, Trazabilidad, Auditoria, Maquinaria e InventarioUbicacion hacen operaciones directas a la base de datos dentro de las pantallas en lugar de usar los archivos de lógica centralizados. Duplica el trabajo y hace el manejo de errores inconsistente.</div>
+  </div>
+  <span class="sev sev-media">Media</span>
+</div>
+
+<div class="problem-row">
+  <span class="num">10</span>
+  <div style="flex:1">
+    <div class="problem-title">Cero pruebas automáticas</div>
+    <div class="problem-desc">No existe ningún archivo de prueba en todo el proyecto. Cualquier cambio en los archivos grandes es completamente ciego — no hay forma de saber si algo se ha roto hasta probarlo a mano.</div>
+  </div>
+  <span class="sev sev-baja">Baja</span>
+</div>
+
+</div>
+
+<div class="section-title">Lo que está bien y no hay que tocar</div>
+<div style="border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 10px 14px; background: var(--color-background-primary); font-size: 12px; color: var(--color-text-secondary); line-height: 1.8;">
+  <div>El proyecto compila sin errores en este momento.</div>
+  <div>El hook useCreatedBy.ts ya existe y centraliza correctamente la identificación del usuario — solo hay que usarlo donde falta.</div>
+  <div>La función de cierre de jornada existe en la base de datos y está bien conectada con el código.</div>
+  <div>El menú lateral ya tiene acordeón implementado para Campo e Inventario — es la base para extenderlo al resto.</div>
+  <div>Los informes PDF corporativos están bien construidos y centralizados.</div>
+  <div>El sistema de datos con React Query está bien usado en la mayoría de módulos.</div>
+  <div>No hay suscripciones en tiempo real activas — no hay drenaje de batería ni conexiones que gestionar.</div>
+</div>
+
+</div>

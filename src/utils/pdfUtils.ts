@@ -11,6 +11,17 @@
  */
 
 import jsPDF from 'jspdf'
+import type { User } from '@supabase/supabase-js'
+
+/** Nombre o email para pie de PDF y cabeceras «firmado por» (Etapa 2 — identidad real). */
+export function nombreFirmaPdfFromUser(user: User | null): string {
+  const meta = user?.user_metadata as Record<string, unknown> | undefined
+  const nombre = meta?.nombre
+  if (typeof nombre === 'string' && nombre.trim().length > 0) return nombre.trim()
+  const email = user?.email?.trim()
+  if (email && email.length > 0) return email
+  return 'Director técnico'
+}
 
 // ── Constantes globales de layout ────────────────────────────────────────────
 
@@ -331,12 +342,18 @@ export interface GenerarPDFCorporativoBaseConfig {
   filename: string
   bloques: CorporatePdfBlock[]
   accentColor?: [number, number, number]
+  /** Quien firma el pie corporativo; por defecto «Director técnico». */
+  firmaNombre?: string
 }
 
 const CORP_FOOTER_LINE_Y = 282
 const CORP_FOOTER_TEXT_Y = 287
 
-export function applyCorporateFootersAllPages(doc: jsPDF, fecha: Date): void {
+export function applyCorporateFootersAllPages(
+  doc: jsPDF,
+  fecha: Date,
+  firmaNombre: string = 'Director técnico',
+): void {
   const M = PDF_MARGIN
   const total = doc.getNumberOfPages()
   const pieFecha = fecha.toLocaleDateString('es-ES', {
@@ -351,7 +368,7 @@ export function applyCorporateFootersAllPages(doc: jsPDF, fecha: Date): void {
     doc.setFontSize(8)
     doc.setTextColor(71, 85, 105)
     doc.text(
-      `Firmado: JuanPe — Dirección Técnica de Campo  |  Agrícola Marvic 360  |  ${pieFecha}`,
+      `Firmado: ${firmaNombre} — Dirección Técnica de Campo  |  Agrícola Marvic 360  |  ${pieFecha}`,
       M,
       CORP_FOOTER_TEXT_Y,
     )
@@ -446,7 +463,7 @@ export function pdfCorporateTable(
 export async function generarPDFCorporativoBase(
   config: GenerarPDFCorporativoBaseConfig,
 ): Promise<void> {
-  const { titulo, subtitulo, fecha, filename, bloques, accentColor } = config
+  const { titulo, subtitulo, fecha, filename, bloques, accentColor, firmaNombre } = config
   const { doc, ctx } = await initPdf(accentColor ?? PDF_COLORS.accent)
   ctx.setCorporateMode({ titulo, subtitulo, fecha })
   ctx.addCorporatePageHeader()
@@ -454,6 +471,6 @@ export async function generarPDFCorporativoBase(
     await block(ctx, doc)
   }
   ctx.setCorporateMode(null)
-  applyCorporateFootersAllPages(doc, fecha)
+  applyCorporateFootersAllPages(doc, fecha, firmaNombre ?? 'Director técnico')
   doc.save(filename)
 }

@@ -424,6 +424,43 @@ export function useAddTipoTrabajoMaquinaria() {
   });
 }
 
+// ── Catálogo tipos mantenimiento (tractores) ─────────────────
+export function useTiposMantenimientoMaquinaria() {
+  return useQuery({
+    queryKey: ['catalogo_tipos_mantenimiento', 'maquinaria'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('catalogo_tipos_mantenimiento')
+        .select('nombre')
+        .eq('modulo', 'maquinaria')
+        .eq('activo', true)
+        .order('nombre');
+      if (error) throw error;
+      return (data ?? []).map((d) => d.nombre);
+    },
+    staleTime: 60000,
+  });
+}
+
+export function useAddTipoMantenimientoMaquinaria() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (nombre: string) => {
+      const { error } = await supabase
+        .from('catalogo_tipos_mantenimiento')
+        .insert({ nombre, modulo: 'maquinaria', activo: true });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['catalogo_tipos_mantenimiento', 'maquinaria'] });
+    },
+    onError: (error: Error) => {
+      console.error('[Hook Error]:', error.message);
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
 // ── useSyncMaquinariaInventario ───────────────────────────────
 export function useSyncMaquinariaInventario() {
   return useQuery<SyncMaquinariaInventario[]>({

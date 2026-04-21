@@ -102,9 +102,15 @@ export function useUpdatePalot() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       qc.invalidateQueries({ queryKey: ['palots'] });
-      toast({ title: 'Palot actualizado' });
+      qc.invalidateQueries({ queryKey: ['trazabilidad_timeline'] });
+      const { id: _id, ...rest } = variables;
+      const keys = Object.keys(rest);
+      const onlyEstado = keys.length === 1 && keys[0] === 'estado';
+      if (!onlyEstado) {
+        toast({ title: 'Palot actualizado' });
+      }
     },
     onError: (err: Error) => toast({ title: 'Error al actualizar palot', description: err.message, variant: 'destructive' })
   });
